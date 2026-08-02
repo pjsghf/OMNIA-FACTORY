@@ -1,0 +1,6 @@
+{
+  "name": "OMNIA Factory",
+  "description": "Plataforma e estúdio editorial completo para planejamento, redação, revisão e diagramação de livros pela Editora OMNIA.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

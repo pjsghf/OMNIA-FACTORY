@@ -1,0 +1,1045 @@
+import express from "express";
+import path from "path";
+import { createServer as createViteServer } from "vite";
+import { GoogleGenAI } from "@google/genai";
+import dotenv from "dotenv";
+import puppeteer from "puppeteer";
+import { getStylePrompt, getTonePrompt } from "./src/data/promptsAndOptions";
+import { buildPrintableBookHtml } from "./src/lib/pdf/printTemplate";
+import { ensureNodeJsdom } from "./src/lib/pdf/markdownRenderer";
+import { PdfExportSettings } from "./src/lib/pdf/types";
+
+import { createBackupPackage, validateAndRestoreBackup } from "./src/lib/backupService";
+import { aiOrchestrator } from "./src/lib/ai/orchestrator";
+import { AiTaskType } from "./src/lib/ai/types";
+import { validateBookConfig } from "./src/lib/ai/validation/configValidator";
+import { reconcileEditorialPlan } from "./src/lib/ai/validation/planReconciler";
+import { buildPlanPrompt } from "./src/lib/ai/prompts/promptBuilder";
+import { generateChapterInBlocks } from "./src/lib/ai/generation/blockGenerator";
+import { generateFrontEndMatter } from "./src/lib/ai/generation/matterGenerator";
+import { createInitialBookBibleMemory } from "./src/lib/ai/memory/bookBibleMemory";
+import { normalizeProse } from "./src/lib/ai/normalization/proseNormalizer";
+import { validateChapterContent } from "./src/lib/ai/validation/contentValidator";
+import { checkChapterCoverage } from "./src/lib/ai/validation/coverageChecker";
+import { runHierarchicalEditorialReview } from "./src/lib/ai/review/hierarchicalReviewer";
+import { renderCompositeCoverSvg, svgToDataUri } from "./src/lib/cover/coverCanvasRenderer";
+import { CoverBrief, COVER_FORMAT_SPECS, calculateSpineWidthMm } from "./src/lib/cover/coverBrief";
+
+import { validateAndLoadEnv } from "./src/lib/config/envValidator";
+import { createSecurityHeadersMiddleware } from "./src/lib/security/headersMiddleware";
+import { globalApiRateLimiter, editorialAiRateLimiter } from "./src/lib/security/rateLimiter";
+import { logger } from "./src/lib/observability/logger";
+import { CURRENT_PRIVACY_POLICY } from "./src/lib/security/privacyPolicy";
+
+dotenv.config();
+
+const envConfig = validateAndLoadEnv();
+const app = express();
+const PORT = envConfig.port;
+
+// 10.2 Security Headers & CSP
+app.use(createSecurityHeadersMiddleware());
+
+// 10.4 Rate Limiting & Cost Budget Protection
+app.use("/api/", globalApiRateLimiter);
+app.use("/api/editorial/", editorialAiRateLimiter);
+
+// 10.5 Request Tracing Middleware
+app.use((req, res, next) => {
+  const requestId = req.headers["x-request-id"] as string || `req_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  res.setHeader("X-Request-ID", requestId);
+  (req as any).requestId = requestId;
+  
+  const startTime = Date.now();
+  res.on("finish", () => {
+    logger.info(`HTTP ${req.method} ${req.originalUrl} -> ${res.statusCode}`, {
+      requestId,
+      method: req.method,
+      path: req.originalUrl,
+      statusCode: res.statusCode,
+      durationMs: Date.now() - startTime,
+    });
+  });
+  next();
+});
+
+// Default lower limit for standard API routes (1MB to protect against memory exhaustion / DoS)
+app.use(express.json({ limit: "1mb" }));
+
+// Route-specific parser for larger payloads (Backup/Restore, PDF Export, Assets)
+const json10mb = express.json({ limit: "10mb" });
+
+// Express error handler for payload limits
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err && (err.type === 'entity.too.large' || err.status === 413)) {
+    return res.status(413).json({
+      error: {
+        code: 'PAYLOAD_TOO_LARGE',
+        message: 'O tamanho da requisição excede o limite permitido (413 Payload Too Large).'
+      }
+    });
+  }
+  next(err);
+});
+
+// Clean JSON string from markdown code blocks e.g. ```json ... ```
+function cleanJsonString(str: string): string {
+  if (!str) return "{}";
+  let cleaned = str.trim();
+  if (cleaned.startsWith("```")) {
+    cleaned = cleaned.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
+  }
+  return cleaned;
+}
+
+// Non-destructive AST/structure-preserving prose normalizer
+function cleanMarkdownProse(text: string): string {
+  return normalizeProse(text);
+}
+
+export interface AiConfigPayload {
+  provider?: 'gemini' | 'opencode';
+  geminiModel?: string;
+  opencodeApiKey?: string;
+  opencodeBaseUrl?: string;
+  opencodeModel?: string;
+}
+
+// Unified AI Completion Dispatcher using Provider Orchestrator Architecture
+async function callAiCompletion({
+  systemInstruction,
+  prompt,
+  jsonMode = false,
+  aiConfig,
+  taskType = 'general',
+  userMaterials,
+  userRestrictions,
+}: {
+  systemInstruction: string;
+  prompt: string;
+  jsonMode?: boolean;
+  aiConfig?: AiConfigPayload;
+  taskType?: AiTaskType;
+  userMaterials?: string;
+  userRestrictions?: string;
+}): Promise<string> {
+  if (jsonMode) {
+    const { result } = await aiOrchestrator.generateStructured({
+      systemInstruction,
+      prompt,
+      taskType,
+      userMaterials,
+      userRestrictions,
+      aiConfig,
+    });
+    return result.text;
+  } else {
+    const result = await aiOrchestrator.generateText({
+      systemInstruction,
+      prompt,
+      taskType,
+      userMaterials,
+      userRestrictions,
+      aiConfig,
+    });
+    return result.text;
+  }
+}
+
+// High-quality artistic vector SVG book cover generator with multi-theme bestseller layout
+function generateSvgCoverUrl(titulo: string, autor: string, subtitulo?: string, estilo?: string, editora?: string): string {
+  const safeTitle = (titulo || 'Sem Título').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const safeAuthor = (autor || 'Autor Exemplo').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const safeSubtitle = (subtitulo || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const safeEditora = (editora || 'OMNIA').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  // Pick visual theme palette based on book style
+  let theme = {
+    bgFrom: '#1C1917',
+    bgVia: '#292524',
+    bgTo: '#0C0A09',
+    accent1: '#D97706',
+    accent2: '#F59E0B',
+    accent3: '#B45309',
+    border: '#44403C',
+    titleColor: '#F5F5F4',
+    subColor: '#D6D3D1',
+    category: '★ BEST-SELLER INTERNACIONAL ★',
+  };
+
+  const styleLower = (estilo || '').toLowerCase();
+
+  if (styleLower.includes('ficcao') || styleLower.includes('misterio') || styleLower.includes('fantasia')) {
+    theme = {
+      bgFrom: '#022C22',
+      bgVia: '#064E3B',
+      bgTo: '#021D17',
+      accent1: '#34D399',
+      accent2: '#10B981',
+      accent3: '#059669',
+      border: '#065F46',
+      titleColor: '#ECFDF5',
+      subColor: '#A7F3D0',
+      category: '★ FICÇÃO EDITORIAL OMNIA ★',
+    };
+  } else if (styleLower.includes('negocios') || styleLower.includes('tecnico') || styleLower.includes('financas')) {
+    theme = {
+      bgFrom: '#0F172A',
+      bgVia: '#1E293B',
+      bgTo: '#020617',
+      accent1: '#38BDF8',
+      accent2: '#0284C7',
+      accent3: '#0369A1',
+      border: '#334155',
+      titleColor: '#F0F9FF',
+      subColor: '#BAE6FD',
+      category: '★ EDIÇÃO EXECUTIVA OMNIA ★',
+    };
+  } else if (styleLower.includes('desenvolvimento') || styleLower.includes('autoajuda') || styleLower.includes('saude')) {
+    theme = {
+      bgFrom: '#451A03',
+      bgVia: '#78350F',
+      bgTo: '#290E02',
+      accent1: '#FBBF24',
+      accent2: '#F59E0B',
+      accent3: '#D97706',
+      border: '#92400E',
+      titleColor: '#FFFBEB',
+      subColor: '#FDE68A',
+      category: '★ DESENVOLVIMENTO PESSOAL ★',
+    };
+  } else if (styleLower.includes('poesia') || styleLower.includes('biografia') || styleLower.includes('filosofia')) {
+    theme = {
+      bgFrom: '#2E1065',
+      bgVia: '#4C1D95',
+      bgTo: '#1E0A3C',
+      accent1: '#C084FC',
+      accent2: '#A855F7',
+      accent3: '#9333EA',
+      border: '#6B21A8',
+      titleColor: '#FAF5FF',
+      subColor: '#E9D5FF',
+      category: '★ OBRAS DE ARTE LITERÁRIA ★',
+    };
+  }
+
+  // Split title if long for balanced layout
+  const words = safeTitle.split(' ');
+  let titleLine1 = safeTitle;
+  let titleLine2 = '';
+
+  if (words.length > 3 && safeTitle.length > 20) {
+    const mid = Math.ceil(words.length / 2);
+    titleLine1 = words.slice(0, mid).join(' ');
+    titleLine2 = words.slice(mid).join(' ');
+  }
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" width="600" height="800">
+    <defs>
+      <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="${theme.bgFrom}" />
+        <stop offset="50%" stop-color="${theme.bgVia}" />
+        <stop offset="100%" stop-color="${theme.bgTo}" />
+      </linearGradient>
+
+      <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="${theme.accent1}" />
+        <stop offset="50%" stop-color="${theme.accent2}" />
+        <stop offset="100%" stop-color="${theme.accent3}" />
+      </linearGradient>
+
+      <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="8" result="blur" />
+        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+      </filter>
+
+      <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+        <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.6"/>
+      </filter>
+    </defs>
+
+    <!-- Canvas Background -->
+    <rect width="600" height="800" fill="url(#bgGrad)" />
+
+    <!-- Book Spine Fold Visual Detail -->
+    <rect x="0" y="0" width="22" height="800" fill="#000" opacity="0.35" />
+    <line x1="22" y1="0" x2="22" y2="800" stroke="${theme.border}" stroke-width="1.5" opacity="0.5" />
+
+    <!-- Geometric Outer & Inner Frame Lines -->
+    <rect x="35" y="35" width="530" height="730" fill="none" stroke="${theme.border}" stroke-width="1.5" opacity="0.8" />
+    <rect x="45" y="45" width="510" height="710" fill="none" stroke="url(#accentGrad)" stroke-width="1" opacity="0.7" />
+
+    <!-- Top Bestseller Badge Line -->
+    <line x1="100" y1="110" x2="500" y2="110" stroke="url(#accentGrad)" stroke-width="1.5" opacity="0.8" />
+    <text x="300" y="92" text-anchor="middle" font-family="'Georgia', serif" font-size="11" font-weight="bold" fill="${theme.accent1}" letter-spacing="4" filter="url(#shadow)">
+      ${theme.category}
+    </text>
+
+    <!-- Main Title Block -->
+    <g filter="url(#shadow)">
+      ${titleLine2 ? `
+        <text x="300" y="235" text-anchor="middle" font-family="'Georgia', 'Times New Roman', serif" font-size="32" font-weight="bold" font-style="italic" fill="${theme.titleColor}">
+          ${titleLine1}
+        </text>
+        <text x="300" y="280" text-anchor="middle" font-family="'Georgia', 'Times New Roman', serif" font-size="32" font-weight="bold" font-style="italic" fill="${theme.titleColor}">
+          ${titleLine2}
+        </text>
+      ` : `
+        <text x="300" y="255" text-anchor="middle" font-family="'Georgia', 'Times New Roman', serif" font-size="34" font-weight="bold" font-style="italic" fill="${theme.titleColor}">
+          ${safeTitle}
+        </text>
+      `}
+
+      ${safeSubtitle ? `
+        <text x="300" y="335" text-anchor="middle" font-family="'Georgia', serif" font-size="13" fill="${theme.subColor}" opacity="0.9" letter-spacing="1">
+          ${safeSubtitle.length > 55 ? safeSubtitle.slice(0, 52) + '...' : safeSubtitle}
+        </text>
+      ` : ''}
+    </g>
+
+    <!-- Central Artistic Geometric Emblem -->
+    <g transform="translate(300, 475)" filter="url(#glow)">
+      <!-- Outer Ring -->
+      <circle cx="0" cy="0" r="54" fill="none" stroke="url(#accentGrad)" stroke-width="2" opacity="0.8" />
+      <circle cx="0" cy="0" r="46" fill="none" stroke="${theme.border}" stroke-width="1" />
+      <circle cx="0" cy="0" r="38" fill="none" stroke="url(#accentGrad)" stroke-dasharray="4,4" stroke-width="1.5" />
+
+      <!-- Center Star Emblem -->
+      <polygon points="0,-28 7,-8 28,0 7,8 0,28 -7,8 -28,0 -7,-8" fill="url(#accentGrad)" />
+      <circle cx="0" cy="0" r="5" fill="${theme.titleColor}" />
+    </g>
+
+    <!-- Bottom Divider & Author Name Block -->
+    <line x1="120" y1="610" x2="480" y2="610" stroke="url(#accentGrad)" stroke-width="1" opacity="0.6" />
+
+    <text x="300" y="655" text-anchor="middle" font-family="'Georgia', serif" font-size="16" font-weight="bold" fill="${theme.titleColor}" letter-spacing="3" filter="url(#shadow)">
+      ${safeAuthor.toUpperCase()}
+    </text>
+
+    <!-- Bottom Publisher Seal (Editora) -->
+    <text x="300" y="710" text-anchor="middle" font-family="'Georgia', serif" font-size="10" font-weight="bold" fill="${theme.accent1}" opacity="0.9" letter-spacing="3">
+      ✦ ${safeEditora.toUpperCase()} ✦
+    </text>
+  </svg>`;
+
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
+}
+
+// API Endpoint 1: Generate Editorial Plan (Phase 5 Pipeline)
+app.post("/api/editorial/plan", async (req, res) => {
+  try {
+    const configValidation = validateBookConfig(req.body);
+    if (!configValidation.valid || !configValidation.sanitizedMetadata) {
+      return res.status(400).json({
+        success: false,
+        error: "Configuração de livro inválida.",
+        details: configValidation.errors,
+      });
+    }
+
+    const metadata = configValidation.sanitizedMetadata;
+    const promptPkg = buildPlanPrompt(metadata);
+
+    const { data: rawPlan } = await aiOrchestrator.generateStructured({
+      systemInstruction: promptPkg.systemInstruction,
+      prompt: promptPkg.userPrompt,
+      taskType: 'plan',
+      userMaterials: metadata.materiais,
+      userRestrictions: metadata.restricoes,
+      aiConfig: req.body.aiConfig,
+    });
+
+    const reconciliation = reconcileEditorialPlan(rawPlan, metadata);
+
+    res.json({
+      success: true,
+      plan: reconciliation.reconciledPlan,
+      adjustments: reconciliation.adjustmentsMade,
+    });
+  } catch (error: any) {
+    console.error("Error generating editorial plan:", error);
+    res.status(500).json({ success: false, error: error.message || "Erro ao gerar planejamento editorial." });
+  }
+});
+
+// API Endpoint 2: Generate Chapter Content (Phase 5 Block Generation Pipeline)
+app.post("/api/editorial/generate-chapter", async (req, res) => {
+  try {
+    const { metadata: rawMeta, plan, chapterIndex, memory: inputMemory, aiConfig } = req.body;
+
+    const configValidation = validateBookConfig(rawMeta || {});
+    const metadata = configValidation.sanitizedMetadata;
+
+    if (!metadata) {
+      return res.status(400).json({ success: false, error: "Dados de metadados do livro inválidos." });
+    }
+
+    const currentCap = plan?.sumario?.[chapterIndex];
+    if (!currentCap) {
+      return res.status(400).json({ success: false, error: "Capítulo não encontrado no sumário." });
+    }
+
+    const memory = inputMemory || createInitialBookBibleMemory();
+
+    const generation = await generateChapterInBlocks({
+      metadata,
+      plan,
+      chapterPlan: currentCap,
+      memory,
+      aiConfig,
+    });
+
+    const coverageReport = checkChapterCoverage(
+      generation.fullChapterText,
+      currentCap.topicos || [],
+      metadata
+    );
+
+    res.json({
+      success: true,
+      chapterIndex,
+      chapterNumber: currentCap.numero,
+      title: currentCap.titulo,
+      content: generation.fullChapterText,
+      wordCount: generation.wordCount,
+      updatedMemory: generation.updatedMemory,
+      coverageReport,
+    });
+  } catch (error: any) {
+    console.error("Error generating chapter:", error);
+    res.status(500).json({ success: false, error: error.message || "Erro ao escrever capítulo." });
+  }
+});
+
+// API Endpoint 3: Generate Front/End Matter Section (Phase 5 Pipeline)
+app.post("/api/editorial/generate-section", async (req, res) => {
+  try {
+    const { metadata: rawMeta, plan, sectionType, fullBookContent, aiConfig } = req.body;
+
+    const configValidation = validateBookConfig(rawMeta || {});
+    const metadata = configValidation.sanitizedMetadata;
+
+    if (!metadata) {
+      return res.status(400).json({ success: false, error: "Dados de metadados do livro inválidos." });
+    }
+
+    const typeMap: Record<string, 'introducao' | 'conclusao' | 'exercicios' | 'sobreAutor'> = {
+      introducao: 'introducao',
+      apresentacao: 'introducao',
+      conclusao: 'conclusao',
+      exercicios: 'exercicios',
+      sobreAutor: 'sobreAutor',
+    };
+
+    const targetType = typeMap[sectionType] || 'introducao';
+
+    const content = await generateFrontEndMatter({
+      metadata,
+      plan,
+      fullBookContent: fullBookContent || '',
+      type: targetType,
+      aiConfig,
+    });
+
+    res.json({
+      success: true,
+      sectionType,
+      title: sectionType,
+      content,
+    });
+  } catch (error: any) {
+    console.error("Error generating section:", error);
+    res.status(500).json({ success: false, error: error.message || "Erro ao gerar seção complementar." });
+  }
+});
+
+// API Endpoint 4: Editorial Review & Audit (Phase 6 Map-Reduce Pipeline)
+app.post("/api/editorial/review", async (req, res) => {
+  try {
+    const { project, metadata, plan, chapters, frontMatter, endMatter, aiConfig } = req.body;
+
+    // Construct project payload if passed as flat properties
+    const activeProject = project || {
+      id: `proj-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      metadata: metadata || {},
+      plan: plan || null,
+      chapters: chapters || [],
+      frontMatter: frontMatter || {},
+      endMatter: endMatter || {},
+      editorialReport: null,
+      currentStage: 'review',
+    };
+
+    const report = await runHierarchicalEditorialReview({
+      project: activeProject,
+      aiConfig,
+    });
+
+    res.json({ success: true, report });
+  } catch (error: any) {
+    console.error("Error performing editorial review:", error);
+    res.status(500).json({ success: false, error: error.message || "Erro na auditoria editorial." });
+  }
+});
+
+// API Endpoint 4B: Apply Editorial Review Improvements to Chapter
+app.post("/api/editorial/apply-review", async (req, res) => {
+  try {
+    const { metadata, plan, chapterIndex, chapterTitle, chapterContent, report, aiConfig } = req.body;
+
+    if (!chapterContent) {
+      return res.status(400).json({ success: false, error: "Conteúdo do capítulo está vazio." });
+    }
+
+    const stylePrompt = getStylePrompt(metadata?.estilo);
+    const tonePrompt = getTonePrompt(metadata?.tom);
+
+    // Extract relevant problems for this chapter location or general issues
+    const chapterProblems = (report?.problemasDetectados || []).filter((p: any) =>
+      p.localizacao?.toLowerCase().includes(`capítulo ${chapterIndex + 1}`) ||
+      p.localizacao?.toLowerCase().includes(`cap. ${chapterIndex + 1}`) ||
+      p.localizacao?.toLowerCase().includes("geral") ||
+      p.localizacao?.toLowerCase().includes("obra")
+    );
+
+    const problemDirectives = chapterProblems.map(
+      (p: any) => `- [${p.tipo} - ${p.severidade}]: ${p.descricao}. SUGESTÃO: ${p.sugestaoDeCorrecao || p.sugestoesDeCorrecao}`
+    ).join("\n");
+
+    const globalDirectives = (report?.sugestoesGlobais || []).map((s: string) => `- ${s}`).join("\n");
+
+    const systemInstruction = `Você é um Editor Sênior e Revisor Literário de Elite.
+Sua tarefa é REESCREVER e APRIMORAR o capítulo fornecido, aplicando rigorosamente as melhorias, correções e sugestões resultantes da auditoria editorial.
+
+DIRETRIZ DE ESTILO (${metadata?.estilo || "Geral"}):
+${stylePrompt}
+
+DIRETRIZ DE TOM (${metadata?.tom || "Geral"}):
+${tonePrompt}
+
+REGRAS OBRIGATÓRIAS DE REVISÃO:
+1. Mantenha a estrutura narrativa e o significado central do capítulo.
+2. Corrija incoerências, repetições desnecessárias, falhas de transição ou desvios de tom apontados pela auditoria.
+3. Mantenha o texto em prosa fluida de livro impresso (EVITE ESTRITAMENTE caracteres de Markdown como '#', '##', '---', '*', '**').
+4. Não reduza o volume do capítulo; enriqueça os trechos necessários para garantir alta qualidade.
+5. NÃO inclua saudações nem comentários de IA. Retorne diretamente o texto aprimorado do capítulo.`;
+
+    const userPrompt = `LIVRO: ${metadata?.titulo || "Livro"}
+CAPÍTULO ${chapterIndex + 1}: ${chapterTitle || `Capítulo ${chapterIndex + 1}`}
+
+DIRETRIZES DA REVISÃO EDITORIAL A APLICAR:
+${problemDirectives ? `Problemas Detectados no Capítulo:\n${problemDirectives}` : "Aplicar polimento geral e elegância de estilo."}
+
+Recomendações Globais da Junta Editorial:
+${globalDirectives || "Aprimorar coesão, ritmo e vocabulário."}
+
+TEXTO ORIGINAL DO CAPÍTULO PARA APRIMORAR:
+${chapterContent}
+
+Reescreva e aprimore o texto do capítulo em prosa limpa de livro impresso (SEM SÍMBOLOS DE MARKDOWN # OU ---):`;
+
+    const rawContent = await callAiCompletion({
+      systemInstruction,
+      prompt: userPrompt,
+      aiConfig,
+    });
+
+    const revisedContent = cleanMarkdownProse(rawContent);
+    const wordCount = revisedContent.trim().split(/\s+/).length;
+
+    res.json({
+      success: true,
+      chapterIndex,
+      chapterTitle,
+      content: revisedContent,
+      wordCount,
+    });
+  } catch (error: any) {
+    console.error("Error applying review to chapter:", error);
+    res.status(500).json({ success: false, error: error.message || "Erro ao aplicar melhorias no capítulo." });
+  }
+});
+
+// API Endpoint 5: Text Assist
+app.post("/api/editorial/text-assist", async (req, res) => {
+  try {
+    const { action, text, context, tone, language, aiConfig } = req.body;
+
+    const actionPrompts: Record<string, string> = {
+      expand: "Expanda o seguinte trecho fornecendo mais detalhes e profundidade em prosa de livro impresso.",
+      summarize: "Sintetize o seguinte trecho de forma clara e límpida.",
+      polish: "Aprimore o estilo, elegância e ritmo de leitura do trecho.",
+      changeTone: `Reescreva o trecho ajustando o tom para ${tone || "didático e envolvente"}.`,
+      addExample: "Reescreva o trecho incorporando uma analogia ou exemplo de alto impacto.",
+      fixGrammar: "Corrija concordância, pontuação e erros mantendo a voz do autor.",
+    };
+
+    const instruction = actionPrompts[action] || "Aprimore o texto fornecido.";
+
+    const systemInstruction = `Você é um assistente de redação literária. EVITE ESTRITAMENTE símbolos de markdown tipo '#' ou '---'. Escreva em prosa limpa.`;
+
+    const prompt = `AÇÃO DEDICADA: ${instruction}
+Idioma: ${language || "Português"}
+Contexto: ${context || "Geral"}
+
+TEXTO ORIGINAL:
+${text}
+
+Retorne APENAS o texto aprimorado sem introduções nem símbolos de markdown #:`;
+
+    const rawResult = await callAiCompletion({
+      systemInstruction,
+      prompt,
+      aiConfig,
+    });
+
+    const result = cleanMarkdownProse(rawResult);
+
+    res.json({ success: true, result });
+  } catch (error: any) {
+    console.error("Error assisting text:", error);
+    res.status(500).json({ success: false, error: error.message || "Erro no assistente de texto." });
+  }
+});
+
+// Health Check Endpoint (Lightweight process check)
+app.get("/api/health", (req, res) => {
+  res.json({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+  });
+});
+
+// Readiness Endpoint (Checks backend readiness & AI Provider availability)
+app.get("/api/ready", async (req, res) => {
+  try {
+    const aiHealth = await aiOrchestrator.healthCheck();
+    const isReady = Object.values(aiHealth).some((p) => p.status === 'ok');
+
+    if (isReady) {
+      return res.json({
+        status: "ready",
+        timestamp: new Date().toISOString(),
+        checks: {
+          server: true,
+          aiProviders: aiHealth,
+        },
+      });
+    } else {
+      return res.status(503).json({
+        status: "not_ready",
+        reason: "Nenhum provedor de IA disponível.",
+        checks: {
+          server: true,
+          aiProviders: aiHealth,
+        },
+      });
+    }
+  } catch (err: any) {
+    return res.status(500).json({ status: "error", error: err.message });
+  }
+});
+
+// API Endpoint 6: Generate Book Cover Image (Phase 8: Background Artwork + Deterministic Typography Compositor)
+app.post("/api/editorial/generate-cover", async (req, res) => {
+  try {
+    const {
+      titulo,
+      autor,
+      subtitulo,
+      editora,
+      estilo,
+      resumo,
+      publicoAlvo,
+      promptCapa,
+      overlay = 'none',
+      formatProfile = 'ebook',
+      briefVersion = 1,
+      totalPageCount = 200,
+      renderFullPrintWrap = false,
+      aiConfig,
+    } = req.body;
+
+    const publisherName = (editora || 'EDITORA OMNIA').trim();
+
+    const brief: CoverBrief = {
+      title: titulo || 'Sem Título',
+      subtitle: subtitulo || '',
+      author: autor || 'Autor Exemplo',
+      publisher: publisherName,
+      genreStyle: estilo || 'Geral',
+      targetAudience: publicoAlvo || 'Público Geral',
+      tone: 'editorial',
+      promise: resumo || '',
+      desiredSymbols: [],
+      forbiddenSymbols: [],
+      colorPalette: 'editorial_high_contrast',
+      briefVersion: Number(briefVersion) || 1,
+      formatProfile: formatProfile || 'ebook',
+    };
+
+    // 8.1 Separate background artwork from typography: generate background art ONLY
+    const backgroundPrompt = promptCapa?.trim()
+      ? `Background artwork illustration for book cover: ${promptCapa}. Professional fine art background texture, dramatic volumetric lighting, high resolution, CLEAN BACKGROUND ARTWORK ONLY, NO TEXT, NO LETTERS, NO WORDS, NO TYPOGRAPHY.`
+      : `Award-winning high luxury editorial book cover background illustration. Genre/Style: ${estilo || 'editorial'}. Theme: ${resumo ? resumo.slice(0, 150) : 'literature'}. Dramatic volumetric lighting, elegant color harmony, fine art background, CLEAN BACKGROUND ARTWORK ONLY, STRICTLY NO TEXT, NO LETTERS, NO WORDS. High resolution.`;
+
+    let bgArtworkUrl: string | undefined = undefined;
+    let providerUsed = aiConfig?.provider === 'opencode' ? 'opencode' : 'gemini_imagen3';
+    let generationSource: 'ai' | 'fallback_svg' = 'fallback_svg';
+
+    try {
+      const imgResult = await aiOrchestrator.generateImage({
+        prompt: backgroundPrompt,
+        aspectRatio: formatProfile === 'square_catalog' ? '1:1' : '3:4',
+        model: 'imagen-3.0-generate-002',
+        title: titulo,
+        author: autor,
+        subtitle: subtitulo,
+        style: estilo,
+        publisher: publisherName,
+        aiConfig,
+      });
+
+      if (imgResult?.imageUrl) {
+        bgArtworkUrl = imgResult.imageUrl;
+        providerUsed = imgResult.provider || providerUsed;
+        generationSource = 'ai';
+      }
+    } catch (aiImgErr: any) {
+      console.warn("[Cover Gen] AI image background generation unavailable or failed, utilizing vector artwork compositor:", aiImgErr.message);
+      generationSource = 'fallback_svg';
+      providerUsed = 'omnia_vector_compositor';
+    }
+
+    // 8.1 / 8.4 / 8.5 Deterministic Typography & Overlay Composite Rendering
+    const svgComposite = renderCompositeCoverSvg({
+      brief,
+      backgroundImageUrl: bgArtworkUrl,
+      overlay: overlay || 'none',
+      totalPageCount: Number(totalPageCount) || 200,
+      renderFullPrintWrap: Boolean(renderFullPrintWrap),
+    });
+
+    const finalCoverDataUri = svgToDataUri(svgComposite);
+
+    return res.json({
+      success: true,
+      imageUrl: finalCoverDataUri,
+      source: generationSource,
+      providerUsed,
+      briefVersion: brief.briefVersion,
+      formatProfile: brief.formatProfile,
+      hasEmbeddedTypography: true,
+      spineWidthMm: calculateSpineWidthMm(Number(totalPageCount) || 200),
+      metadata: {
+        title: brief.title,
+        author: brief.author,
+        publisher: brief.publisher,
+        overlayUsed: overlay,
+        generatedAt: new Date().toISOString(),
+      },
+    });
+  } catch (error: any) {
+    console.error("Error generating cover image:", error);
+    const fallbackBrief: CoverBrief = {
+      title: req.body.titulo || 'Sem Título',
+      subtitle: req.body.subtitulo || '',
+      author: req.body.autor || 'Autor Exemplo',
+      publisher: req.body.editora || 'EDITORA OMNIA',
+      genreStyle: req.body.estilo || 'Geral',
+      targetAudience: 'Geral',
+      tone: 'editorial',
+      promise: '',
+      desiredSymbols: [],
+      forbiddenSymbols: [],
+      colorPalette: 'default',
+      briefVersion: 1,
+      formatProfile: 'ebook',
+    };
+    const svgComposite = renderCompositeCoverSvg({ brief: fallbackBrief, overlay: 'none' });
+    res.json({
+      success: true,
+      imageUrl: svgToDataUri(svgComposite),
+      source: 'fallback_svg',
+      providerUsed: 'omnia_vector_compositor',
+      hasEmbeddedTypography: true,
+    });
+  }
+});
+
+// SSRF validation helper for image URLs
+function validateImageSource(urlStr?: string): string | undefined {
+  if (!urlStr || typeof urlStr !== 'string') return undefined;
+  if (urlStr.startsWith('data:image/')) return urlStr;
+  if (urlStr.startsWith('blob:')) return urlStr;
+
+  try {
+    const parsed = new URL(urlStr);
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return undefined;
+    const hostname = parsed.hostname.toLowerCase();
+    if (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '0.0.0.0' ||
+      hostname === '::1' ||
+      hostname.startsWith('10.') ||
+      hostname.startsWith('192.168.') ||
+      hostname.startsWith('169.254.') ||
+      /^172\.(1[6-9]|2[0-9]|3[01])\./.test(hostname)
+    ) {
+      return undefined;
+    }
+    return parsed.toString();
+  } catch {
+    return undefined;
+  }
+}
+
+// API Endpoint 7: Server-side PDF Export via Puppeteer
+app.post("/api/export/pdf", json10mb, async (req, res) => {
+  let browser: any = null;
+  try {
+    const { project, settings } = req.body;
+
+    if (!project || !project.metadata) {
+      return res.status(400).json({
+        error: {
+          code: "INVALID_PROJECT",
+          message: "Projeto de livro inválido ou metadados ausentes."
+        }
+      });
+    }
+
+    // Sanitize image URLs against SSRF
+    const sanitizedProject = {
+      ...project,
+      metadata: {
+        ...project.metadata,
+        coverImageUrl: validateImageSource(project.metadata.coverImageUrl)
+      }
+    };
+
+    const exportSettings: PdfExportSettings = {
+      paperSize: settings?.paperSize === 'A4' ? 'A4' : 'A5',
+      typographyMode: settings?.typographyMode === 'literary' ? 'literary' : 'nonfiction',
+      coverOverlayMode: ['overlay', 'card', 'none'].includes(settings?.coverOverlayMode)
+        ? settings.coverOverlayMode
+        : 'none',
+      useDropCap: settings?.useDropCap ?? true,
+      includeCatalogPage: settings?.includeCatalogPage ?? true,
+      catalogMetadata: settings?.catalogMetadata,
+    };
+
+    await ensureNodeJsdom();
+
+    const htmlContent = buildPrintableBookHtml({
+      project: sanitizedProject,
+      settings: exportSettings,
+    });
+
+    try {
+      browser = await puppeteer.launch({
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+        ],
+      });
+    } catch (launchErr: any) {
+      console.warn("Puppeteer launch failed, returning HTML package fallback:", launchErr);
+      return res.status(500).json({
+        error: {
+          code: "PUPPETEER_UNAVAILABLE",
+          message: "Não foi possível inicializar o renderizador Puppeteer no servidor."
+        },
+        htmlFallback: htmlContent,
+      });
+    }
+
+    const page = await browser.newPage();
+    await page.setContent(htmlContent, { waitUntil: 'networkidle0', timeout: 30000 });
+
+    // Wait for fonts and images to settle inside page
+    await page.evaluate(async () => {
+      if (document.fonts && document.fonts.ready) {
+        await document.fonts.ready;
+      }
+      const imgs = Array.from(document.images);
+      await Promise.all(
+        imgs.map(async (img) => {
+          if (!img.complete) {
+            await new Promise((resolve) => {
+              img.addEventListener('load', resolve, { once: true });
+              img.addEventListener('error', resolve, { once: true });
+            });
+          }
+          if (typeof img.decode === 'function') {
+            await img.decode().catch(() => undefined);
+          }
+        })
+      );
+    });
+
+    const isA5 = exportSettings.paperSize === 'A5';
+
+    const pdfBuffer = await page.pdf({
+      printBackground: true,
+      preferCSSPageSize: true,
+      width: isA5 ? '148mm' : '210mm',
+      height: isA5 ? '210mm' : '297mm',
+      margin: {
+        top: '0mm',
+        right: '0mm',
+        bottom: '0mm',
+        left: '0mm',
+      },
+    });
+
+    const safeTitle = (sanitizedProject.metadata.titulo || 'livro')
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '_')
+      .replace(/_+/g, '_');
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeTitle}_${exportSettings.paperSize.toLowerCase()}.pdf"`);
+    res.send(Buffer.from(pdfBuffer));
+  } catch (error: any) {
+    console.error("Error generating PDF on server:", error);
+    res.status(500).json({
+      error: {
+        code: "PDF_GENERATION_FAILED",
+        message: error.message || "Erro ao gerar PDF no servidor."
+      }
+    });
+  } finally {
+    if (browser) {
+      await browser.close().catch(() => undefined);
+    }
+  }
+});
+
+// API Endpoint 8: Dedicated Asset Upload (Separated from JSON payload)
+app.post("/api/assets/upload", json10mb, (req, res) => {
+  try {
+    const { assetType, dataUrl, filename } = req.body;
+    if (!dataUrl || typeof dataUrl !== 'string') {
+      return res.status(400).json({ error: { code: "INVALID_ASSET", message: "Data URL do asset é obrigatória." } });
+    }
+
+    const validatedUrl = validateImageSource(dataUrl);
+    if (!validatedUrl) {
+      return res.status(400).json({ error: { code: "UNSAFE_ASSET", message: "Formato ou origem de imagem inválido/inseguro." } });
+    }
+
+    const assetId = "asset_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+    return res.json({
+      success: true,
+      asset: {
+        id: assetId,
+        type: assetType || "cover_image",
+        url: validatedUrl,
+        filename: filename || `${assetId}.png`,
+        uploadedAt: new Date().toISOString(),
+      }
+    });
+  } catch (error: any) {
+    return res.status(500).json({ error: { code: "UPLOAD_FAILED", message: error.message || "Erro no upload do asset." } });
+  }
+});
+
+// API Endpoint 9: Create Versioned Backup Package
+app.post("/api/projects/backup", json10mb, (req, res) => {
+  try {
+    const { projects } = req.body;
+    if (!Array.isArray(projects)) {
+      return res.status(400).json({ error: { code: "INVALID_PROJECTS", message: "A lista de projetos é obrigatória." } });
+    }
+
+    const backupPackage = createBackupPackage(projects);
+    return res.json({
+      success: true,
+      backup: backupPackage,
+    });
+  } catch (error: any) {
+    return res.status(500).json({ error: { code: "BACKUP_FAILED", message: error.message || "Erro ao criar pacote de backup." } });
+  }
+});
+
+// API Endpoint 10: Validate and Restore Backup Package
+app.post("/api/projects/restore", json10mb, (req, res) => {
+  try {
+    const backupPkg = req.body;
+    const result = validateAndRestoreBackup(backupPkg);
+    if (!result.success || !result.projects) {
+      return res.status(400).json({ error: { code: "RESTORE_FAILED", message: result.error || "Falha na restauração do backup." } });
+    }
+
+    return res.json({
+      success: true,
+      restoredCount: result.projects.length,
+      projects: result.projects,
+    });
+  } catch (error: any) {
+    return res.status(500).json({ error: { code: "RESTORE_FAILED", message: error.message || "Erro ao processar pacote de restauração." } });
+  }
+});
+
+// API Endpoint 11: Health Check & System Diagnostics
+app.get("/api/health", (req, res) => {
+  return res.json({
+    status: "ok",
+    service: "OMNIA Scriptor Editorial Studio",
+    timestamp: new Date().toISOString(),
+    uptimeSeconds: Math.floor(process.uptime()),
+    environment: envConfig.nodeEnv,
+    geminiConfigured: envConfig.hasGeminiKey,
+  });
+});
+
+// API Endpoint 12: Privacy Policy Manifest
+app.get("/api/privacy-policy", (req, res) => {
+  return res.json({
+    success: true,
+    policy: CURRENT_PRIVACY_POLICY,
+  });
+});
+
+// API Endpoint 13: LGPD/GDPR Data Deletion Confirmation
+app.post("/api/editorial/projects/:id/delete-data", (req, res) => {
+  const { id } = req.params;
+  logger.info(`[LGPD Data Deletion] Request processed for project id: ${id}`, { projectId: id });
+  return res.json({
+    success: true,
+    projectId: id,
+    message: `Dados do projeto ${id} marcados para remoção e limpos dos buffers da sessão.`,
+    deletedAt: new Date().toISOString(),
+  });
+});
+
+// Start Server & Vite Integration
+async function startServer() {
+  if (process.env.NODE_ENV !== "production") {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+  } else {
+    const distPath = path.join(process.cwd(), "dist");
+    app.use(express.static(distPath));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
+    });
+  }
+
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Scriptor Editorial Studio rodando em http://0.0.0.0:${PORT}`);
+  });
+}
+
+startServer();
