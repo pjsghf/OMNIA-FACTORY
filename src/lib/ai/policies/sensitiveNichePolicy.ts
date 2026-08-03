@@ -10,10 +10,23 @@ export interface SensitiveNichePolicy {
   toneConstraints: string;
 }
 
+/**
+ * Strips diacritics so the unaccented keywords below match real Portuguese text.
+ * The style slugs ("saude_bem_estar") are already unaccented, but a resumo or
+ * titulo naturally contains "saúde", "finanças", "psicologia" -- none of which
+ * matched, so the sensitive-niche policy never triggered from free-text fields.
+ */
+function foldAccents(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
 export function detectSensitiveNiche(metadata: Partial<BookMetadata>): SensitiveNichePolicy {
-  const estilo = (metadata.estilo || '').toLowerCase();
-  const resumo = (metadata.resumo || '').toLowerCase();
-  const titulo = (metadata.titulo || '').toLowerCase();
+  const estilo = foldAccents(metadata.estilo || '');
+  const resumo = foldAccents(metadata.resumo || '');
+  const titulo = foldAccents(metadata.titulo || '');
 
   const combined = `${estilo} ${resumo} ${titulo}`;
 

@@ -29,6 +29,13 @@ import {
   Check,
 } from 'lucide-react';
 
+/** Parses a value to a finite number, falling back when it is absent or garbage. */
+function toNumberOr(value: unknown, fallback: number): number {
+  if (value === undefined || value === null || value === '') return fallback;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 interface ConfigStageProps {
   metadata: BookMetadata;
   onChangeMetadata: (updated: BookMetadata) => void;
@@ -96,9 +103,12 @@ export const ConfigStage: React.FC<ConfigStageProps> = ({
           estilo: parsed.estilo || metadata.estilo,
           promptEstilo: parsed.promptEstilo || metadata.promptEstilo,
           tom: parsed.tom || metadata.tom,
-          qtdCapitulos: parsed.qtdCapitulos ? Number(parsed.qtdCapitulos) : metadata.qtdCapitulos,
-          minPalavras: parsed.minPalavras ? Number(parsed.minPalavras) : metadata.minPalavras,
-          maxPalavras: parsed.maxPalavras ? Number(parsed.maxPalavras) : metadata.maxPalavras,
+          // Number('abc') is NaN, which used to flow straight into metadata and
+          // then into Array(NaN) downstream. Keep the current value unless the
+          // imported field parses to a real number.
+          qtdCapitulos: toNumberOr(parsed.qtdCapitulos, metadata.qtdCapitulos),
+          minPalavras: toNumberOr(parsed.minPalavras, metadata.minPalavras),
+          maxPalavras: toNumberOr(parsed.maxPalavras, metadata.maxPalavras),
           materiais: parsed.materiais || metadata.materiais,
           informacoesObrigatorias:
             parsed.informacoesObrigatorias || metadata.informacoesObrigatorias,

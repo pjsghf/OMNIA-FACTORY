@@ -414,10 +414,15 @@ app.post('/api/editorial/generate-chapter', async (req, res) => {
     const configValidation = validateBookConfig(rawMeta || {});
     const metadata = configValidation.sanitizedMetadata;
 
-    if (!metadata) {
-      return res
-        .status(400)
-        .json({ success: false, error: 'Dados de metadados do livro inválidos.' });
+    // This endpoint used to read sanitizedMetadata while ignoring `valid`, so an
+    // invalid config (no title, 500 chapters, ...) silently generated against
+    // defaulted values instead of being rejected the way /plan rejects it.
+    if (!configValidation.valid || !metadata) {
+      return res.status(400).json({
+        success: false,
+        error: 'Dados de metadados do livro inválidos.',
+        details: configValidation.errors,
+      });
     }
 
     const currentCap = plan?.sumario?.[chapterIndex];
@@ -468,10 +473,12 @@ app.post('/api/editorial/generate-section', async (req, res) => {
     const configValidation = validateBookConfig(rawMeta || {});
     const metadata = configValidation.sanitizedMetadata;
 
-    if (!metadata) {
-      return res
-        .status(400)
-        .json({ success: false, error: 'Dados de metadados do livro inválidos.' });
+    if (!configValidation.valid || !metadata) {
+      return res.status(400).json({
+        success: false,
+        error: 'Dados de metadados do livro inválidos.',
+        details: configValidation.errors,
+      });
     }
 
     const typeMap: Record<string, 'introducao' | 'conclusao' | 'exercicios' | 'sobreAutor'> = {

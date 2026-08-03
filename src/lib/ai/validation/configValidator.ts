@@ -21,19 +21,34 @@ export function validateBookConfig(input: Partial<BookMetadata>): ValidationResu
     errors.autor = 'O nome do autor é obrigatório.';
   }
 
-  const qtdCapitulos = Number(input.qtdCapitulos) || 7;
+  // `Number(x) || fallback` already collapses NaN to the fallback, so the isNaN()
+  // guards below were unreachable. Detect the invalid input *before* defaulting.
+  const rawQtd = input.qtdCapitulos;
+  if (rawQtd !== undefined && rawQtd !== null && Number.isNaN(Number(rawQtd))) {
+    errors.qtdCapitulos = 'A quantidade de capítulos deve ser um número.';
+  }
+  const qtdCapitulos = Number(rawQtd) || 7;
   if (!Number.isInteger(qtdCapitulos) || qtdCapitulos < 1 || qtdCapitulos > 50) {
     errors.qtdCapitulos = 'A quantidade de capítulos deve ser um número inteiro entre 1 e 50.';
   }
 
-  let minPalavras = Number(input.minPalavras) || 1000;
-  let maxPalavras = Number(input.maxPalavras) || 2500;
+  const rawMin = input.minPalavras;
+  const rawMax = input.maxPalavras;
+  if (rawMin !== undefined && rawMin !== null && Number.isNaN(Number(rawMin))) {
+    errors.minPalavras = 'O mínimo de palavras deve ser um número.';
+  }
+  if (rawMax !== undefined && rawMax !== null && Number.isNaN(Number(rawMax))) {
+    errors.maxPalavras = 'O máximo de palavras deve ser um número.';
+  }
 
-  if (isNaN(minPalavras) || minPalavras < 300) {
+  const minPalavras = Number(rawMin) || 1000;
+  let maxPalavras = Number(rawMax) || 2500;
+
+  if (minPalavras < 300) {
     errors.minPalavras = 'O mínimo de palavras por capítulo deve ser pelo menos 300.';
   }
 
-  if (isNaN(maxPalavras) || maxPalavras > 20000) {
+  if (maxPalavras > 20000) {
     errors.maxPalavras = 'O máximo de palavras por capítulo não pode exceder 20.000.';
   }
 

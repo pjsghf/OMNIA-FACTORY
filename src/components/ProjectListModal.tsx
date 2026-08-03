@@ -84,8 +84,21 @@ export const ProjectListModal: React.FC<ProjectListModalProps> = ({
 
         const restored = validateAndRestoreBackup(parsed);
         if (restored.success && restored.projects && restored.projects.length > 0) {
+          if (
+            restored.checksumMismatch &&
+            !confirm(
+              'ATENÇÃO: a assinatura de integridade deste backup não confere — o arquivo pode ter sido editado ou corrompido após a exportação.\n\nDeseja restaurar mesmo assim?'
+            )
+          ) {
+            setMigrationNotice('Restauração cancelada: falha na verificação de integridade.');
+            return;
+          }
           onImportProject(restored.projects);
-          setMigrationNotice(`Restaurados ${restored.projects.length} projeto(s) com sucesso.`);
+          setMigrationNotice(
+            restored.checksumMismatch
+              ? `Restaurados ${restored.projects.length} projeto(s) — ATENÇÃO: checksum divergente.`
+              : `Restaurados ${restored.projects.length} projeto(s) com sucesso.`
+          );
         } else if (parsed.id && parsed.metadata && parsed.metadata.titulo) {
           onImportProject(parsed);
           setMigrationNotice('Projeto individual importado.');

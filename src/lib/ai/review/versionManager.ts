@@ -91,31 +91,15 @@ export function computeWordDiff(oldText: string, newText: string): WordDiffChunk
   return result;
 }
 
+/**
+ * Creates the next version entry for a chapter.
+ *
+ * `existingVersions` is what makes the numbering real: without it every entry was
+ * stamped versionNumber: 1, so the history panel showed a stack of "Versão 1".
+ * (A correct createNewChapterVersion existed alongside this one but was never
+ * imported anywhere; the two have been merged.)
+ */
 export function createChapterVersion({
-  chapterNumber,
-  content,
-  author = 'ia',
-  label,
-}: {
-  chapterNumber: number;
-  content: string;
-  author?: 'ia' | 'user' | 'review_patch';
-  label?: string;
-}): ChapterVersionItem {
-  const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
-  return {
-    id: `ver-c${chapterNumber}-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-    chapterNumber,
-    versionNumber: 1,
-    createdAt: new Date().toISOString(),
-    author,
-    label: label || `Versão (${author})`,
-    content,
-    wordCount,
-  };
-}
-
-export function createNewChapterVersion({
   chapterNumber,
   content,
   existingVersions = [],
@@ -127,26 +111,19 @@ export function createNewChapterVersion({
   existingVersions?: ChapterVersionItem[];
   author?: 'ia' | 'user' | 'review_patch';
   label?: string;
-}): { newVersion: ChapterVersionItem; allVersions: ChapterVersionItem[] } {
-  const currentChapterVersions = existingVersions.filter((v) => v.chapterNumber === chapterNumber);
-  const nextNum = currentChapterVersions.length + 1;
+}): ChapterVersionItem {
+  const versionNumber =
+    existingVersions.filter((v) => v.chapterNumber === chapterNumber).length + 1;
   const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
 
-  const newVersion: ChapterVersionItem = {
-    id: `ver-c${chapterNumber}-v${nextNum}-${Date.now()}`,
+  return {
+    id: `ver-c${chapterNumber}-v${versionNumber}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     chapterNumber,
-    versionNumber: nextNum,
+    versionNumber,
     createdAt: new Date().toISOString(),
     author,
-    label:
-      label ||
-      `Versão ${nextNum} (${author === 'review_patch' ? 'Correção de Auditoria' : author === 'user' ? 'Edição Manual' : 'Geração de IA'})`,
+    label: label || `Versão ${versionNumber} (${author})`,
     content,
     wordCount,
-  };
-
-  return {
-    newVersion,
-    allVersions: [newVersion, ...existingVersions],
   };
 }

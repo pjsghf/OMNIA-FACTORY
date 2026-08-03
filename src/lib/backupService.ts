@@ -66,6 +66,8 @@ export function validateAndRestoreBackup(backupPkg: any): {
   success: boolean;
   projects?: BookProject[];
   error?: string;
+  /** True when the manifest checksum does not match the payload (file was altered). */
+  checksumMismatch?: boolean;
 } {
   if (!backupPkg || typeof backupPkg !== 'object') {
     return { success: false, error: 'Pacote de backup inválido (formato não é objeto).' };
@@ -84,11 +86,16 @@ export function validateAndRestoreBackup(backupPkg: any): {
     return { success: false, error: 'Nenhum projeto encontrado no pacote de backup.' };
   }
 
-  // Validate checksum if manifest exists
+  // Validate checksum if manifest exists.
+  // A mismatch means the file was truncated or edited after export, so it is
+  // reported to the caller instead of only reaching the console -- restoring a
+  // corrupt backup over a good project is not recoverable.
+  let checksumMismatch = false;
   if (backupPkg.manifest?.checksum) {
     const rawProjectsString = JSON.stringify(projects);
     const calculated = calculateChecksum(rawProjectsString);
     if (calculated !== backupPkg.manifest.checksum) {
+      checksumMismatch = true;
       console.warn('Backup checksum mismatch, proceed with caution:', {
         expected: backupPkg.manifest.checksum,
         calculated,
@@ -108,5 +115,6 @@ export function validateAndRestoreBackup(backupPkg: any): {
   return {
     success: true,
     projects: validProjects,
+    checksumMismatch,
   };
 }

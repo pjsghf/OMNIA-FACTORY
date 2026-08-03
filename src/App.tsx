@@ -376,15 +376,16 @@ export default function App() {
           chapters[index] = updatedCap;
 
           // Save Version Item
+          const currentVersions = p.chapterVersions || {};
+          const capVersions = currentVersions[updatedCap.numero] || [];
+
           const versionItem = createChapterVersion({
             chapterNumber: updatedCap.numero,
             content: newContent,
+            existingVersions: capVersions,
             author: 'ia',
             label: 'Draft Inicial Gerado por IA',
           });
-
-          const currentVersions = p.chapterVersions || {};
-          const capVersions = currentVersions[updatedCap.numero] || [];
 
           return {
             ...p,
@@ -625,15 +626,16 @@ export default function App() {
             };
             chapters[chapterIndex] = updatedCap;
 
+            const currentVersions = p.chapterVersions || {};
+            const capVersions = currentVersions[updatedCap.numero] || [];
+
             const versionItem = createChapterVersion({
               chapterNumber: updatedCap.numero,
               content: newContent,
+              existingVersions: capVersions,
               author: 'review_patch',
               label: 'Revisão Editorial Aplicada (IA)',
             });
-
-            const currentVersions = p.chapterVersions || {};
-            const capVersions = currentVersions[updatedCap.numero] || [];
 
             return {
               ...p,
@@ -695,15 +697,16 @@ export default function App() {
                 };
                 chapters[i] = updatedCap;
 
+                const currentVersions = p.chapterVersions || {};
+                const capVersions = currentVersions[updatedCap.numero] || [];
+
                 const versionItem = createChapterVersion({
                   chapterNumber: updatedCap.numero,
                   content: newContent,
+                  existingVersions: capVersions,
                   author: 'review_patch',
                   label: 'Revisão Editorial Aplicada (IA)',
                 });
-
-                const currentVersions = p.chapterVersions || {};
-                const capVersions = currentVersions[updatedCap.numero] || [];
 
                 return {
                   ...p,
@@ -801,7 +804,16 @@ export default function App() {
   };
 
   const handleDeleteProject = (id: string) => {
-    if (projects.length <= 1) return;
+    // Used to return silently, so the confirmation dialog just closed and the
+    // project stayed put with no explanation.
+    if (projects.length <= 1) {
+      addToast(
+        'error',
+        'Exclusão Bloqueada',
+        'A biblioteca precisa manter ao menos um projeto. Crie um novo projeto antes de excluir este.'
+      );
+      return;
+    }
     const filtered = projects.filter((p) => p.id !== id);
     setProjects(filtered);
     if (currentProjectId === id && filtered[0]) {
