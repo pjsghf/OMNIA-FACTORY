@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Sparkles, Key, Cpu, Check, X, ShieldCheck, Globe, Zap } from 'lucide-react';
 import { AiConfig } from '../types';
+import { OPENCODE_DEFAULT_BASE_URL } from '../lib/ai/catalog';
 
 interface AiSettingsModalProps {
   config: AiConfig;
@@ -13,7 +14,7 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ config, onSave
   const [geminiModel, setGeminiModel] = useState<string>(config.geminiModel || 'gemini-3.6-flash');
   const [opencodeApiKey, setOpencodeApiKey] = useState<string>(config.opencodeApiKey || '');
   const [opencodeBaseUrl, setOpencodeBaseUrl] = useState<string>(
-    config.opencodeBaseUrl || 'https://opencode.go/api/v1'
+    config.opencodeBaseUrl || OPENCODE_DEFAULT_BASE_URL
   );
   const [opencodeModel, setOpencodeModel] = useState<string>(
     config.opencodeModel || 'opencode/claude-3-5-sonnet'
@@ -191,7 +192,7 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ config, onSave
                 type="text"
                 value={opencodeBaseUrl}
                 onChange={(e) => setOpencodeBaseUrl(e.target.value)}
-                placeholder="https://opencode.go/api/v1 ou https://openrouter.ai/api/v1"
+                placeholder={`${OPENCODE_DEFAULT_BASE_URL} ou https://openrouter.ai/api/v1`}
                 className="w-full bg-white border border-[#E7E5E4] p-2.5 text-xs text-[#1C1917] font-mono"
               />
             </div>

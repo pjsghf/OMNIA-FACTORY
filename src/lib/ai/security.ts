@@ -1,4 +1,5 @@
 import { URL } from 'url';
+import { OPENCODE_DEFAULT_BASE_URL } from './catalog';
 
 export interface SsrfCheckResult {
   safe: boolean;
@@ -77,8 +78,8 @@ export function validateProviderBaseUrl(rawUrl: string): SsrfCheckResult {
   const trimmed = rawUrl.trim();
 
   // Allow standard OpenCode default endpoints
-  if (trimmed === 'https://opencode.ai/zen/go/v1' || trimmed === 'https://opencode.ai/zen/go/v1/') {
-    return { safe: true, sanitizedUrl: 'https://opencode.ai/zen/go/v1' };
+  if (trimmed === OPENCODE_DEFAULT_BASE_URL || trimmed === `${OPENCODE_DEFAULT_BASE_URL}/`) {
+    return { safe: true, sanitizedUrl: OPENCODE_DEFAULT_BASE_URL };
   }
 
   try {

@@ -1,5 +1,17 @@
 import { ModelCapability, AiTaskType } from './types';
 
+/**
+ * Canonical OpenCode GO endpoint.
+ *
+ * The client defaults (App.tsx, AiSettingsModal) used to say
+ * "https://opencode.go/api/v1" -- a domain that does not exist -- while the
+ * provider fell back to the real one. Since the client always sends aiConfig,
+ * the bogus value won and the OpenCode provider could never connect in its
+ * default configuration. Kept here (a browser-safe module) so the UI and the
+ * server-side provider cannot drift apart again.
+ */
+export const OPENCODE_DEFAULT_BASE_URL = 'https://opencode.ai/zen/go/v1';
+
 export const GEMINI_MODEL_CATALOG: Record<string, ModelCapability> = {
   'gemini-3.6-flash': {
     id: 'gemini-3.6-flash',

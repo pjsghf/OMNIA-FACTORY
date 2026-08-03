@@ -21,6 +21,7 @@ import { TranslationModal } from './components/TranslationModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastContainer, ToastMessage } from './components/common/Toast';
 import { createChapterVersion } from './lib/ai/review/versionManager';
+import { OPENCODE_DEFAULT_BASE_URL } from './lib/ai/catalog';
 
 const DEFAULT_METADATA: BookMetadata = {
   titulo: 'O Código da Mente Inabalável',
@@ -51,7 +52,7 @@ const DEFAULT_AI_CONFIG: AiConfig = {
   provider: 'gemini',
   geminiModel: 'gemini-3.6-flash',
   opencodeApiKey: '',
-  opencodeBaseUrl: 'https://opencode.go/api/v1',
+  opencodeBaseUrl: OPENCODE_DEFAULT_BASE_URL,
   opencodeModel: 'opencode/claude-3-5-sonnet',
 };
 

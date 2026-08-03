@@ -17,6 +17,9 @@ import {
 import { executeWithRetry } from '../retry';
 import { sanitizePromptInputs } from '../security';
 
+/** Imagen calls routinely take longer than a text completion. */
+const IMAGE_TIMEOUT_MS = 120000;
+
 export class GeminiProvider implements AiProvider {
   public name = 'gemini';
 
@@ -60,11 +63,15 @@ export class GeminiProvider implements AiProvider {
 
     const outputText = await executeWithRetry({
       providerName: 'gemini',
-      operation: async (_signal) => {
+      operation: async (signal) => {
         const ai = this.getClient();
         const config: any = {
           systemInstruction: fullSystemInstruction,
           temperature: request.temperature ?? 0.7,
+          // executeWithRetry builds an AbortController and fires it on timeout, but
+          // the signal was being dropped here -- so the 30s budget never actually
+          // interrupted a hung Gemini call.
+          abortSignal: signal,
         };
 
         if (request.maxOutputTokens || modelCapability.maxOutputTokens) {
@@ -125,12 +132,13 @@ export class GeminiProvider implements AiProvider {
 
     const rawText = await executeWithRetry({
       providerName: 'gemini',
-      operation: async (_signal) => {
+      operation: async (signal) => {
         const ai = this.getClient();
         const config: any = {
           systemInstruction: fullSystemInstruction,
           temperature: request.temperature ?? 0.2, // Lower temp for structured tasks
           responseMimeType: 'application/json',
+          abortSignal: signal,
         };
 
         if (request.maxOutputTokens || modelCapability.maxOutputTokens) {
@@ -200,14 +208,25 @@ export class GeminiProvider implements AiProvider {
     }
 
     try {
-      const ai = this.getClient();
-      const imagenResponse = await ai.models.generateImages({
-        model: modelId,
-        prompt: request.prompt,
-        config: {
-          numberOfImages: 1,
-          aspectRatio: request.aspectRatio || '3:4',
-          outputMimeType: 'image/jpeg',
+      // maxAttempts: 1 -- image generation is billed per image, so a retry storm
+      // is a cost incident. This wrapper is here purely for the timeout, which the
+      // bare call lacked entirely (a hung request would never resolve).
+      const imagenResponse = await executeWithRetry({
+        providerName: 'gemini',
+        maxAttempts: 1,
+        timeoutMs: IMAGE_TIMEOUT_MS,
+        operation: async (signal) => {
+          const ai = this.getClient();
+          return ai.models.generateImages({
+            model: modelId,
+            prompt: request.prompt,
+            config: {
+              numberOfImages: 1,
+              aspectRatio: request.aspectRatio || '3:4',
+              outputMimeType: 'image/jpeg',
+              abortSignal: signal,
+            },
+          });
         },
       });
 

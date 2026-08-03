@@ -10,6 +10,7 @@ import {
   getModelCapability,
   calculateEstimatedCost,
   getDefaultModel,
+  OPENCODE_DEFAULT_BASE_URL,
 } from '../catalog';
 import { executeWithRetry } from '../retry';
 import { validateProviderBaseUrl, sanitizePromptInputs } from '../security';
@@ -36,7 +37,7 @@ export class OpenCodeProvider implements AiProvider {
       throw new Error('Chave de API do OpenCode GO (opencodeApiKey) não fornecida.');
     }
 
-    const rawBaseUrl = request.aiConfig?.opencodeBaseUrl || 'https://opencode.ai/zen/go/v1';
+    const rawBaseUrl = request.aiConfig?.opencodeBaseUrl || OPENCODE_DEFAULT_BASE_URL;
     const ssrfCheck = validateProviderBaseUrl(rawBaseUrl);
     if (!ssrfCheck.safe || !ssrfCheck.sanitizedUrl) {
       throw new Error(`Segurança de Rede (SSRF): ${ssrfCheck.reason}`);
@@ -125,7 +126,7 @@ export class OpenCodeProvider implements AiProvider {
       throw new Error('Chave de API do OpenCode GO (opencodeApiKey) não fornecida.');
     }
 
-    const rawBaseUrl = request.aiConfig?.opencodeBaseUrl || 'https://opencode.ai/zen/go/v1';
+    const rawBaseUrl = request.aiConfig?.opencodeBaseUrl || OPENCODE_DEFAULT_BASE_URL;
     const ssrfCheck = validateProviderBaseUrl(rawBaseUrl);
     if (!ssrfCheck.safe || !ssrfCheck.sanitizedUrl) {
       throw new Error(`Segurança de Rede (SSRF): ${ssrfCheck.reason}`);
