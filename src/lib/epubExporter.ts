@@ -327,7 +327,11 @@ li {
 
   // Chapters
   project.chapters.forEach((cap) => {
-    const cleanedContent = cleanChapterProse(cap.content || '*Capítulo pendente*', cap.numero, cap.titulo);
+    const cleanedContent = cleanChapterProse(
+      cap.content || '*Capítulo pendente*',
+      cap.numero,
+      cap.titulo
+    );
     const ast = parseMarkdownToAST(cleanedContent);
     items.push({
       id: `chap_${cap.numero}`,

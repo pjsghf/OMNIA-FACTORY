@@ -27,7 +27,15 @@ export const TARGET_LANGUAGES: TranslationLanguageOption[] = [
 ];
 
 export interface TranslationProgressUpdate {
-  stage: 'initializing' | 'metadata' | 'front_matter' | 'chapter' | 'end_matter' | 'cover' | 'completed' | 'error';
+  stage:
+    | 'initializing'
+    | 'metadata'
+    | 'front_matter'
+    | 'chapter'
+    | 'end_matter'
+    | 'cover'
+    | 'completed'
+    | 'error';
   currentStep: number;
   totalSteps: number;
   message: string;

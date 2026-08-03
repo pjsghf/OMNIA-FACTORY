@@ -5,7 +5,11 @@
 
 import { cleanChapterProse } from '../../rendering/cleanChapterProse';
 
-export function normalizeProse(rawContent: string, chapterNumber?: number, chapterTitle?: string): string {
+export function normalizeProse(
+  rawContent: string,
+  chapterNumber?: number,
+  chapterTitle?: string
+): string {
   if (!rawContent || typeof rawContent !== 'string') return '';
 
   let text = rawContent;

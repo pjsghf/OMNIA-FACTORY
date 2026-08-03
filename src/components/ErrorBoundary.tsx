@@ -51,8 +51,7 @@ export class ErrorBoundary extends Component<Props, State> {
         if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
           const redacted: Record<string, unknown> = {};
           for (const [field, value] of Object.entries(parsed)) {
-            redacted[field] =
-              SECRET_KEY_PATTERN.test(field) && value ? '[REDACTED]' : value;
+            redacted[field] = SECRET_KEY_PATTERN.test(field) && value ? '[REDACTED]' : value;
           }
           snapshot[storageKey] = redacted;
           continue;

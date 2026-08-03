@@ -73,7 +73,10 @@ export function buildPrintableBookHtml(options: PrintableBookOptions): string {
   // escapeHtml first leaked entity noise into the name ("d'Alma" -> "d_apos_alma").
   // The [^a-z0-9] pass is what makes this safe to inline into the onclick handler.
   const downloadSlug =
-    project.metadata.titulo.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_') || 'livro';
+    project.metadata.titulo
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '_')
+      .replace(/_+/g, '_') || 'livro';
 
   // Body classes
   const typographyClass =

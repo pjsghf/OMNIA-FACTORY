@@ -22,11 +22,7 @@ function getFrameAncestors(): string[] {
 
 function getConnectSources(): string[] {
   const extra = (process.env.EXTRA_CONNECT_SRC || '').trim();
-  const base = [
-    "'self'",
-    'https://generativelanguage.googleapis.com',
-    'https://opencode.ai',
-  ];
+  const base = ["'self'", 'https://generativelanguage.googleapis.com', 'https://opencode.ai'];
   return extra ? [...base, ...extra.split(/\s+/)] : base;
 }
 

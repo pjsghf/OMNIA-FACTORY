@@ -65,7 +65,8 @@ export async function generateChapterInBlocks({
       // Blocks used to be written blind of each other, which produced repeated
       // ideas and broken transitions inside a single chapter. Hand the writer the
       // tail of what was already written so it can pick the thread back up.
-      precedingBlockText: blockContents.length > 0 ? blockContents[blockContents.length - 1] : undefined,
+      precedingBlockText:
+        blockContents.length > 0 ? blockContents[blockContents.length - 1] : undefined,
     });
 
     let attempts = 0;

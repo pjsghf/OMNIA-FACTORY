@@ -89,8 +89,7 @@ export function checkProjectPreflight(project: BookProject | null): PreflightChe
   // A partial audit cannot vouch for the book: the score only reflects the units
   // that were actually analysed.
   const isComplete = failedUnits.length === 0;
-  const goodScore =
-    isReportFresh && isComplete && (project.editorialReport?.notaGeral || 0) >= 70;
+  const goodScore = isReportFresh && isComplete && (project.editorialReport?.notaGeral || 0) >= 70;
   items.push({
     stage: 'review',
     label: 'Auditoria e Revisão Editorial',

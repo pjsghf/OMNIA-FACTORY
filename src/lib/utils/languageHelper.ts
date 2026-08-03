@@ -118,7 +118,12 @@ export function getLanguageInfo(langInput?: string): LanguageInfo {
       displayTag: 'fr-ca',
     };
   }
-  if (lower.includes('fr-fr') || lower.includes('frança') || lower === 'fr' || lower.includes('franc')) {
+  if (
+    lower.includes('fr-fr') ||
+    lower.includes('frança') ||
+    lower === 'fr' ||
+    lower.includes('franc')
+  ) {
     return {
       code: 'fr-fr',
       bcp47: 'fr-FR',
@@ -128,7 +133,12 @@ export function getLanguageInfo(langInput?: string): LanguageInfo {
       displayTag: 'fr-fr',
     };
   }
-  if (lower.includes('de-de') || lower.includes('alemanha') || lower === 'de' || lower.includes('alem')) {
+  if (
+    lower.includes('de-de') ||
+    lower.includes('alemanha') ||
+    lower === 'de' ||
+    lower.includes('alem')
+  ) {
     return {
       code: 'de-de',
       bcp47: 'de-DE',
@@ -138,7 +148,12 @@ export function getLanguageInfo(langInput?: string): LanguageInfo {
       displayTag: 'de-de',
     };
   }
-  if (lower.includes('it-it') || lower.includes('itália') || lower === 'it' || lower.includes('ital')) {
+  if (
+    lower.includes('it-it') ||
+    lower.includes('itália') ||
+    lower === 'it' ||
+    lower.includes('ital')
+  ) {
     return {
       code: 'it-it',
       bcp47: 'it-IT',

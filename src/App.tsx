@@ -344,7 +344,9 @@ export default function App() {
       const previousSummaries = liveProject.chapters
         .slice(0, index)
         .filter((c: ChapterContent) => Boolean(c.content))
-        .map((c: ChapterContent) => `Capítulo ${c.numero} (${c.titulo}): ${c.content.slice(0, 300)}...`);
+        .map(
+          (c: ChapterContent) => `Capítulo ${c.numero} (${c.titulo}): ${c.content.slice(0, 300)}...`
+        );
 
       const res = await fetch('/api/editorial/generate-chapter', {
         method: 'POST',

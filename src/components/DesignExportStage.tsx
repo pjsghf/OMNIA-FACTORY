@@ -131,7 +131,12 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
   const [showCoverModal, setShowCoverModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
-  const [downloadNotice, setDownloadNotice] = useState<{ title: string; fileName: string; url: string; type: string } | null>(null);
+  const [downloadNotice, setDownloadNotice] = useState<{
+    title: string;
+    fileName: string;
+    url: string;
+    type: string;
+  } | null>(null);
 
   const totalWords = project.chapters.reduce((sum, c) => sum + (c.wordCount || 0), 0);
 
@@ -1146,7 +1151,9 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error?.message || errData.error || `Erro no servidor (código ${response.status}).`);
+        throw new Error(
+          errData.error?.message || errData.error || `Erro no servidor (código ${response.status}).`
+        );
       }
 
       const blob = await response.blob();
@@ -1697,10 +1704,14 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
                   <div>
                     <h4 className="font-bold text-sm text-emerald-100">{downloadNotice.title}</h4>
                     <p className="text-xs text-emerald-300/90 mt-0.5">
-                      Arquivo: <code className="font-mono bg-emerald-900/80 px-1.5 py-0.5 text-emerald-200 font-bold">{downloadNotice.fileName}</code>
+                      Arquivo:{' '}
+                      <code className="font-mono bg-emerald-900/80 px-1.5 py-0.5 text-emerald-200 font-bold">
+                        {downloadNotice.fileName}
+                      </code>
                     </p>
                     <p className="text-[11px] text-stone-300 mt-1">
-                      Se o seu navegador bloqueou o download automático, clique no botão ao lado para baixar seu arquivo diretamente.
+                      Se o seu navegador bloqueou o download automático, clique no botão ao lado
+                      para baixar seu arquivo diretamente.
                     </p>
                   </div>
                 </div>
@@ -1745,7 +1756,9 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
                     Traduzir e Localizar E-book para Outros Idiomas
                   </h3>
                   <p className="text-[12px] text-amber-200/80 leading-relaxed">
-                    Adaptação literária inteligente de expressões, tom narrativo e gírias com geração automática de uma nova capa no idioma selecionado (Inglês, Espanhol, Francês, Alemão, Japonês, etc.).
+                    Adaptação literária inteligente de expressões, tom narrativo e gírias com
+                    geração automática de uma nova capa no idioma selecionado (Inglês, Espanhol,
+                    Francês, Alemão, Japonês, etc.).
                   </p>
                 </button>
               )}
@@ -1812,7 +1825,8 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
                   Imprimir / Salvar PDF (Navegador)
                 </h3>
                 <p className="text-[11px] text-stone-300 leading-relaxed">
-                  Abre instantaneamente a janela de impressão nativa do navegador para salvar em PDF sem bloqueio de pop-up.
+                  Abre instantaneamente a janela de impressão nativa do navegador para salvar em PDF
+                  sem bloqueio de pop-up.
                 </p>
               </button>
 
@@ -1831,7 +1845,8 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
                   Abrir Diagramação em Nova Aba
                 </h3>
                 <p className="text-[11px] text-[#78716C] leading-relaxed">
-                  Visualiza o layout completo diagramado página a página em uma guia dedicada do seu navegador.
+                  Visualiza o layout completo diagramado página a página em uma guia dedicada do seu
+                  navegador.
                 </p>
               </button>
 

@@ -67,7 +67,11 @@ export function buildCanonicalBookSequence(project: BookProject): CanonicalSecti
       title: `Capítulo ${cap.numero}: ${cap.titulo}`,
       subtitle: cap.subtitulo,
       chapterNumber: cap.numero,
-      content: cleanChapterProse(cap.content || '*Capítulo pendente de redação.*', cap.numero, cap.titulo),
+      content: cleanChapterProse(
+        cap.content || '*Capítulo pendente de redação.*',
+        cap.numero,
+        cap.titulo
+      ),
     });
   });
 

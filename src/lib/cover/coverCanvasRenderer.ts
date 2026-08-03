@@ -1,8 +1,4 @@
-import {
-  CoverBrief,
-  COVER_FORMAT_SPECS,
-  calculateSpineWidthMm,
-} from './coverBrief';
+import { CoverBrief, COVER_FORMAT_SPECS, calculateSpineWidthMm } from './coverBrief';
 
 export type CoverOverlayLayer =
   'none' | 'editorial_3d' | 'selo_vidro' | 'textura_papel' | 'ribbon_gold' | 'manga_gloss';

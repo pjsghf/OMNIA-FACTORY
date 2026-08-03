@@ -15,18 +15,43 @@ export interface ToneOption {
 }
 
 // Exactly 20 languages from Americas and Europe
-export const EUROPE_AMERICAS_LANGUAGES: { code: string; displayTag: string; name: string; region: string }[] = [
+export const EUROPE_AMERICAS_LANGUAGES: {
+  code: string;
+  displayTag: string;
+  name: string;
+  region: string;
+}[] = [
   { code: 'pt-BR', displayTag: 'pt-br', name: 'pt-br — Português (Brasil)', region: 'Américas' },
   { code: 'pt-PT', displayTag: 'pt-pt', name: 'pt-pt — Português (Portugal)', region: 'Europa' },
-  { code: 'en-US', displayTag: 'en-us', name: 'en-us — Inglês (Estados Unidos)', region: 'Américas' },
+  {
+    code: 'en-US',
+    displayTag: 'en-us',
+    name: 'en-us — Inglês (Estados Unidos)',
+    region: 'Américas',
+  },
   { code: 'en-GB', displayTag: 'en-uk', name: 'en-uk — Inglês (Reino Unido)', region: 'Europa' },
-  { code: 'es-MX', displayTag: 'es-mx', name: 'es-mx — Espanhol (América Latina)', region: 'Américas' },
+  {
+    code: 'es-MX',
+    displayTag: 'es-mx',
+    name: 'es-mx — Espanhol (América Latina)',
+    region: 'Américas',
+  },
   { code: 'es-ES', displayTag: 'es-es', name: 'es-es — Espanhol (Espanha)', region: 'Europa' },
   { code: 'fr-FR', displayTag: 'fr-fr', name: 'fr-fr — Francês (França)', region: 'Europa' },
-  { code: 'fr-CA', displayTag: 'fr-ca', name: 'fr-ca — Francês (Canadá / Québec)', region: 'Américas' },
+  {
+    code: 'fr-CA',
+    displayTag: 'fr-ca',
+    name: 'fr-ca — Francês (Canadá / Québec)',
+    region: 'Américas',
+  },
   { code: 'de-DE', displayTag: 'de-de', name: 'de-de — Alemão (Alemanha)', region: 'Europa' },
   { code: 'it-IT', displayTag: 'it-it', name: 'it-it — Italiano (Itália)', region: 'Europa' },
-  { code: 'nl-NL', displayTag: 'nl-nl', name: 'nl-nl — Holandês (Países Baixos)', region: 'Europa' },
+  {
+    code: 'nl-NL',
+    displayTag: 'nl-nl',
+    name: 'nl-nl — Holandês (Países Baixos)',
+    region: 'Europa',
+  },
   { code: 'pl-PL', displayTag: 'pl-pl', name: 'pl-pl — Polonês (Polônia)', region: 'Europa' },
   { code: 'sv-SE', displayTag: 'sv-se', name: 'sv-se — Sueco (Suécia)', region: 'Europa' },
   { code: 'no-NO', displayTag: 'no-no', name: 'no-no — Norueguês (Noruega)', region: 'Europa' },

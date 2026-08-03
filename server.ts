@@ -68,7 +68,6 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-
 // Route-level parser for the large-payload endpoints (PDF export, backups).
 const largePayloadJson = express.json({ limit: '50mb' });
 
@@ -86,7 +85,11 @@ app.use((err: any, _req: express.Request, res: express.Response, next: express.N
 });
 
 // Non-destructive AST/structure-preserving prose normalizer
-export function cleanMarkdownProse(text: string, chapterNumber?: number, chapterTitle?: string): string {
+export function cleanMarkdownProse(
+  text: string,
+  chapterNumber?: number,
+  chapterTitle?: string
+): string {
   return normalizeProse(text, chapterNumber, chapterTitle);
 }
 
@@ -240,7 +243,9 @@ app.post('/api/editorial/generate-chapter', async (req, res) => {
     });
   } catch (error: any) {
     console.error('Error generating chapter:', error);
-    return res.status(500).json({ success: false, error: error.message || 'Erro ao escrever capítulo.' });
+    return res
+      .status(500)
+      .json({ success: false, error: error.message || 'Erro ao escrever capítulo.' });
   }
 });
 
@@ -328,8 +333,15 @@ app.post('/api/editorial/review', async (req, res) => {
 // API Endpoint 4B: Apply Editorial Review Improvements to Chapter
 app.post('/api/editorial/apply-review', async (req, res) => {
   try {
-    const { metadata, plan: _plan, chapterIndex, chapterTitle, chapterContent, report, aiConfig } =
-      req.body;
+    const {
+      metadata,
+      plan: _plan,
+      chapterIndex,
+      chapterTitle,
+      chapterContent,
+      report,
+      aiConfig,
+    } = req.body;
 
     if (!chapterContent) {
       return res.status(400).json({ success: false, error: 'Conteúdo do capítulo está vazio.' });
@@ -492,7 +504,9 @@ app.post('/api/editorial/translate-section', async (req, res) => {
     }
 
     if (!targetLanguage || !targetLanguage.trim()) {
-      return res.status(400).json({ success: false, error: 'Idioma de destino não foi informado.' });
+      return res
+        .status(400)
+        .json({ success: false, error: 'Idioma de destino não foi informado.' });
     }
 
     const translatedText = await executeTranslationCall(text, targetLanguage, aiConfig);
@@ -527,7 +541,9 @@ app.post('/api/editorial/translate-book', async (req, res) => {
     }
 
     const origMeta = project.metadata;
-    logger.info(`Starting full book translation for project: ${origMeta.titulo} -> ${targetLanguage}`);
+    logger.info(
+      `Starting full book translation for project: ${origMeta.titulo} -> ${targetLanguage}`
+    );
 
     // 1. Translate Metadata
     const [translatedTitulo, translatedSubtitulo, translatedResumo, translatedPublicoAlvo] =
@@ -545,8 +561,12 @@ app.post('/api/editorial/translate-book', async (req, res) => {
     // 2. Translate FrontMatter
     const origFront = project.frontMatter || {};
     const [translatedApresentacao, translatedIntroducao] = await Promise.all([
-      origFront.apresentacao ? executeTranslationCall(origFront.apresentacao, targetLanguage, aiConfig) : Promise.resolve(''),
-      origFront.introducao ? executeTranslationCall(origFront.introducao, targetLanguage, aiConfig) : Promise.resolve(''),
+      origFront.apresentacao
+        ? executeTranslationCall(origFront.apresentacao, targetLanguage, aiConfig)
+        : Promise.resolve(''),
+      origFront.introducao
+        ? executeTranslationCall(origFront.introducao, targetLanguage, aiConfig)
+        : Promise.resolve(''),
     ]);
 
     // 3. Translate Chapters
@@ -579,26 +599,50 @@ app.post('/api/editorial/translate-book', async (req, res) => {
 
     // 4. Translate EndMatter
     const origEnd = project.endMatter || {};
-    const [translatedConclusao, translatedExercicios, translatedAgradecimentos, translatedSobreAutor] =
-      await Promise.all([
-        origEnd.conclusao ? executeTranslationCall(origEnd.conclusao, targetLanguage, aiConfig) : Promise.resolve(''),
-        origEnd.exercicios ? executeTranslationCall(origEnd.exercicios, targetLanguage, aiConfig) : Promise.resolve(''),
-        origEnd.agradecimentos ? executeTranslationCall(origEnd.agradecimentos, targetLanguage, aiConfig) : Promise.resolve(''),
-        origEnd.sobreAutor ? executeTranslationCall(origEnd.sobreAutor, targetLanguage, aiConfig) : Promise.resolve(''),
-      ]);
+    const [
+      translatedConclusao,
+      translatedExercicios,
+      translatedAgradecimentos,
+      translatedSobreAutor,
+    ] = await Promise.all([
+      origEnd.conclusao
+        ? executeTranslationCall(origEnd.conclusao, targetLanguage, aiConfig)
+        : Promise.resolve(''),
+      origEnd.exercicios
+        ? executeTranslationCall(origEnd.exercicios, targetLanguage, aiConfig)
+        : Promise.resolve(''),
+      origEnd.agradecimentos
+        ? executeTranslationCall(origEnd.agradecimentos, targetLanguage, aiConfig)
+        : Promise.resolve(''),
+      origEnd.sobreAutor
+        ? executeTranslationCall(origEnd.sobreAutor, targetLanguage, aiConfig)
+        : Promise.resolve(''),
+    ]);
 
     // 5. Translate Editorial Plan if present
     let translatedPlan = project.plan;
     if (project.plan) {
-      const transConceito = await executeTranslationCall(project.plan.conceitoCentral, targetLanguage, aiConfig);
-      const transPromessa = await executeTranslationCall(project.plan.promessaPrincipal, targetLanguage, aiConfig);
+      const transConceito = await executeTranslationCall(
+        project.plan.conceitoCentral,
+        targetLanguage,
+        aiConfig
+      );
+      const transPromessa = await executeTranslationCall(
+        project.plan.promessaPrincipal,
+        targetLanguage,
+        aiConfig
+      );
 
       const transSumario = [];
       if (Array.isArray(project.plan.sumario)) {
         for (const item of project.plan.sumario) {
           const itemTitle = await executeTranslationCall(item.titulo, targetLanguage, aiConfig);
-          const itemSub = item.subtitulo ? await executeTranslationCall(item.subtitulo, targetLanguage, aiConfig) : '';
-          const itemObj = item.objetivo ? await executeTranslationCall(item.objetivo, targetLanguage, aiConfig) : '';
+          const itemSub = item.subtitulo
+            ? await executeTranslationCall(item.subtitulo, targetLanguage, aiConfig)
+            : '';
+          const itemObj = item.objetivo
+            ? await executeTranslationCall(item.objetivo, targetLanguage, aiConfig)
+            : '';
           transSumario.push({
             ...item,
             titulo: itemTitle || item.titulo,
@@ -655,14 +699,15 @@ app.post('/api/editorial/translate-book', async (req, res) => {
         newBgArtworkUrl = imgResult.imageUrl;
       }
     } catch (coverErr: any) {
-      console.warn('[Localized Cover Gen] AI image background failed, using vector compositor:', coverErr.message);
+      console.warn(
+        '[Localized Cover Gen] AI image background failed, using vector compositor:',
+        coverErr.message
+      );
     }
 
     const totalPagesEstimated = Math.max(
       100,
-      Math.round(
-        translatedChapters.reduce((sum, c) => sum + (c.wordCount || 0), 0) / 250
-      )
+      Math.round(translatedChapters.reduce((sum, c) => sum + (c.wordCount || 0), 0) / 250)
     );
 
     const svgComposite = renderCompositeCoverSvg({

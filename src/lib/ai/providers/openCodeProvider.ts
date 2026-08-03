@@ -46,7 +46,8 @@ export class OpenCodeProvider implements AiProvider {
     const baseUrl = ssrfCheck.sanitizedUrl;
     const userSelectedModel = request.aiConfig?.opencodeModel;
     const modelId =
-      userSelectedModel && validateModelForTask('opencode', userSelectedModel, request.taskType).valid
+      userSelectedModel &&
+      validateModelForTask('opencode', userSelectedModel, request.taskType).valid
         ? userSelectedModel
         : request.model || getDefaultModel('opencode', request.taskType);
 
@@ -135,7 +136,8 @@ export class OpenCodeProvider implements AiProvider {
     const baseUrl = ssrfCheck.sanitizedUrl;
     const userSelectedModel = request.aiConfig?.opencodeModel;
     const modelId =
-      userSelectedModel && validateModelForTask('opencode', userSelectedModel, request.taskType).valid
+      userSelectedModel &&
+      validateModelForTask('opencode', userSelectedModel, request.taskType).valid
         ? userSelectedModel
         : request.model || getDefaultModel('opencode', request.taskType);
 
