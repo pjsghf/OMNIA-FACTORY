@@ -15,8 +15,8 @@
 import dotenv from 'dotenv';
 import {
   GEMINI_MODEL_CATALOG,
-  OPENCODE_MODEL_CATALOG,
   OPENCODE_DEFAULT_BASE_URL,
+  OPENCODE_DEFAULT_MODEL,
 } from '../src/lib/ai/catalog';
 
 dotenv.config();
@@ -59,7 +59,7 @@ async function verifyGemini() {
   console.log('\n=== Gemini ===');
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    report(SKIP, 'GEMINI_API_KEY ausente no .env');
+    report(SKIP, 'GEMINI_API_KEY ausente — Gemini desativado por ora (esperado)');
     return;
   }
 
@@ -111,7 +111,7 @@ async function verifyOpenCode() {
   }
 
   const baseUrl = process.env.OPENCODE_BASE_URL || OPENCODE_DEFAULT_BASE_URL;
-  const model = Object.values(OPENCODE_MODEL_CATALOG).find((m) => m.isDefault)!.id;
+  const model = process.env.OPENCODE_MODEL || OPENCODE_DEFAULT_MODEL;
 
   try {
     const res = await fetch(`${baseUrl}/chat/completions`, {
@@ -148,8 +148,14 @@ async function verifyOpenCode() {
     } else if (res.status === 404) {
       report(
         FAIL,
-        `${baseUrl} devolveu 404`,
-        'a URL base provavelmente está errada — confira a documentação do OpenCode'
+        `${baseUrl} devolveu 404 para o modelo '${model}'`,
+        'a URL base ou o id do modelo está errado — confira ambos na documentação do OpenCode'
+      );
+    } else if (res.status === 400 && /model/i.test(body)) {
+      report(
+        FAIL,
+        `O modelo '${model}' foi rejeitado pelo gateway`,
+        `${redact(body.slice(0, 160))} — ajuste OPENCODE_DEFAULT_MODEL em catalog.ts`
       );
     } else {
       report(FAIL, `${baseUrl} devolveu ${res.status}`, redact(body.slice(0, 200)));
@@ -161,6 +167,7 @@ async function verifyOpenCode() {
 
 async function main() {
   console.log('Verificação de provedores de IA (chamadas reais, custo mínimo)');
+  console.log(`Modelo OpenCode alvo: ${process.env.OPENCODE_MODEL || OPENCODE_DEFAULT_MODEL}`);
   await verifyGemini();
   await verifyOpenCode();
 

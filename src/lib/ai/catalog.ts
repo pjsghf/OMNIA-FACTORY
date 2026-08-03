@@ -12,6 +12,9 @@ import { ModelCapability, AiTaskType } from './types';
  */
 export const OPENCODE_DEFAULT_BASE_URL = 'https://opencode.ai/zen/go/v1';
 
+/** Model the app runs on by default. */
+export const OPENCODE_DEFAULT_MODEL = 'deepseek-v4-flash';
+
 /**
  * NOTE ON DEFAULTS: the default is deliberately the model with the longest track
  * record, not the newest entry in this list. A default that does not exist upstream
@@ -85,6 +88,20 @@ export const GEMINI_MODEL_CATALOG: Record<string, ModelCapability> = {
 };
 
 export const OPENCODE_MODEL_CATALOG: Record<string, ModelCapability> = {
+  'deepseek-v4-flash': {
+    id: 'deepseek-v4-flash',
+    displayName: 'DeepSeek V4 Flash (OpenCode)',
+    provider: 'opencode',
+    allowedTasks: ['plan', 'writing', 'review', 'general'],
+    maxOutputTokens: 8192,
+    // Pricing is a placeholder: it feeds cost logging only, never a request. Update
+    // it from the OpenCode dashboard -- a wrong number here misreports spend, it
+    // does not break generation.
+    inputCostPer1k: 0.00027,
+    outputCostPer1k: 0.0011,
+    contextWindow: 128000,
+    isDefault: true,
+  },
   'opencode/claude-3-5-sonnet': {
     id: 'opencode/claude-3-5-sonnet',
     displayName: 'Claude 3.5 Sonnet (OpenCode)',
@@ -94,7 +111,6 @@ export const OPENCODE_MODEL_CATALOG: Record<string, ModelCapability> = {
     inputCostPer1k: 0.003,
     outputCostPer1k: 0.015,
     contextWindow: 200000,
-    isDefault: true,
   },
   'opencode/gpt-4o': {
     id: 'opencode/gpt-4o',

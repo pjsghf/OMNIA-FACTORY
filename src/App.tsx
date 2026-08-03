@@ -21,7 +21,7 @@ import { TranslationModal } from './components/TranslationModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastContainer, ToastMessage } from './components/common/Toast';
 import { createChapterVersion } from './lib/ai/review/versionManager';
-import { OPENCODE_DEFAULT_BASE_URL } from './lib/ai/catalog';
+import { OPENCODE_DEFAULT_BASE_URL, OPENCODE_DEFAULT_MODEL } from './lib/ai/catalog';
 
 const DEFAULT_METADATA: BookMetadata = {
   titulo: 'O Código da Mente Inabalável',
@@ -49,12 +49,37 @@ const DEFAULT_METADATA: BookMetadata = {
 };
 
 const DEFAULT_AI_CONFIG: AiConfig = {
-  provider: 'gemini',
+  provider: 'opencode',
   geminiModel: 'gemini-2.5-flash',
+  // Left blank on purpose: the server reads OPENCODE_API_KEY from its own .env, so
+  // the credential never has to touch localStorage or ride along on requests.
   opencodeApiKey: '',
   opencodeBaseUrl: OPENCODE_DEFAULT_BASE_URL,
-  opencodeModel: 'opencode/claude-3-5-sonnet',
+  opencodeModel: OPENCODE_DEFAULT_MODEL,
 };
+
+/**
+ * A saved aiConfig overrides the defaults above, so switching the shipped provider
+ * would otherwise leave every existing browser pinned to the old one. This moves
+ * only configs still sitting on a superseded default; anything the user chose
+ * deliberately is left alone.
+ */
+const SUPERSEDED_OPENCODE_MODELS = ['opencode/claude-3-5-sonnet'];
+
+export function migrateAiConfig(saved: Partial<AiConfig> | null | undefined): AiConfig {
+  const config: AiConfig = { ...DEFAULT_AI_CONFIG, ...(saved || {}) };
+
+  if (!config.opencodeModel || SUPERSEDED_OPENCODE_MODELS.includes(config.opencodeModel)) {
+    config.opencodeModel = OPENCODE_DEFAULT_MODEL;
+  }
+
+  // The old default pointed at a domain that does not resolve.
+  if (!config.opencodeBaseUrl || config.opencodeBaseUrl.includes('opencode.go')) {
+    config.opencodeBaseUrl = OPENCODE_DEFAULT_BASE_URL;
+  }
+
+  return config;
+}
 
 const DEFAULT_PROJECT: BookProject = {
   id: 'proj_default',
@@ -128,7 +153,7 @@ export default function App() {
     const saved = localStorage.getItem('scriptor_aiconfig_v1');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        return migrateAiConfig(JSON.parse(saved));
       } catch (e) {
         console.error('Error parsing aiConfig from localStorage', e);
       }

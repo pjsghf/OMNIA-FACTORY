@@ -11,6 +11,7 @@ import {
   calculateEstimatedCost,
   getDefaultModel,
   OPENCODE_DEFAULT_BASE_URL,
+  OPENCODE_MODEL_CATALOG,
 } from '../catalog';
 import { executeWithRetry } from '../retry';
 import { validateProviderBaseUrl, sanitizePromptInputs } from '../security';
@@ -28,13 +29,84 @@ function redactApiKey(text: string, apiKey: string): string {
   return text.split(apiKey).join('***REDACTED***');
 }
 
+/**
+ * Resolves the OpenCode credential.
+ *
+ * The client-supplied key wins for backwards compatibility, but OPENCODE_API_KEY
+ * from the server environment is now honoured as well. Previously only the browser
+ * value was read, so the documented .env entry did nothing and the key had to be
+ * typed into the UI -- which also meant it lived in localStorage and rode along on
+ * every request. Configuring it server-side keeps it off the client entirely.
+ */
+function resolveApiKey(clientKey?: string): string | undefined {
+  const fromClient = (clientKey || '').trim();
+  if (fromClient) return fromClient;
+  const fromEnv = (process.env.OPENCODE_API_KEY || '').trim();
+  return fromEnv || undefined;
+}
+
+/**
+ * Picks the model id, and refuses to substitute one silently.
+ *
+ * The old logic fell back to the catalog default whenever the requested model
+ * failed validation, so a typo or an unlisted id quietly produced a book written
+ * by a different model than the operator chose -- with no error anywhere. An
+ * explicit choice now either runs or fails loudly.
+ *
+ * OPENCODE_EXTRA_MODELS (comma-separated) extends the allowlist without a code
+ * change, which matters because the gateway's exact id strings cannot be verified
+ * from here.
+ */
+function resolveOpenCodeModel(request: TextGenerationRequest): string {
+  const explicit = (request.aiConfig?.opencodeModel || request.model || '').trim();
+
+  if (!explicit) {
+    return getDefaultModel('opencode', request.taskType);
+  }
+
+  if (isExtraAllowedModel(explicit)) {
+    return explicit;
+  }
+
+  const validation = validateModelForTask('opencode', explicit, request.taskType);
+  if (!validation.valid) {
+    throw new Error(
+      `${validation.reason} Para usar um modelo fora do catálogo, adicione-o a OPENCODE_EXTRA_MODELS no .env do servidor.`
+    );
+  }
+
+  return explicit;
+}
+
+function isExtraAllowedModel(modelId: string): boolean {
+  return (process.env.OPENCODE_EXTRA_MODELS || '')
+    .split(',')
+    .map((m) => m.trim())
+    .filter(Boolean)
+    .includes(modelId);
+}
+
+/**
+ * Capability metadata for cost/token estimation. Models allowed via
+ * OPENCODE_EXTRA_MODELS have no catalog entry, so they borrow the default's
+ * limits -- estimates only, never part of the request.
+ */
+function resolveCapability(modelId: string) {
+  return (
+    getModelCapability('opencode', modelId) ||
+    getModelCapability('opencode', getDefaultModel('opencode', 'general'))!
+  );
+}
+
 export class OpenCodeProvider implements AiProvider {
   public name = 'opencode';
 
   async generateText(request: TextGenerationRequest): Promise<TextGenerationResult> {
-    const apiKey = request.aiConfig?.opencodeApiKey;
+    const apiKey = resolveApiKey(request.aiConfig?.opencodeApiKey);
     if (!apiKey) {
-      throw new Error('Chave de API do OpenCode GO (opencodeApiKey) não fornecida.');
+      throw new Error(
+        'Chave de API do OpenCode não configurada. Defina OPENCODE_API_KEY no .env do servidor ou informe a chave nas Configurações de IA.'
+      );
     }
 
     const rawBaseUrl = request.aiConfig?.opencodeBaseUrl || OPENCODE_DEFAULT_BASE_URL;
@@ -44,20 +116,8 @@ export class OpenCodeProvider implements AiProvider {
     }
 
     const baseUrl = ssrfCheck.sanitizedUrl;
-    const userSelectedModel = request.aiConfig?.opencodeModel;
-    const modelId =
-      userSelectedModel &&
-      validateModelForTask('opencode', userSelectedModel, request.taskType).valid
-        ? userSelectedModel
-        : request.model || getDefaultModel('opencode', request.taskType);
-
-    // Validate model allowlist
-    const validation = validateModelForTask('opencode', modelId, request.taskType);
-    if (!validation.valid) {
-      throw new Error(validation.reason);
-    }
-
-    const modelCapability = getModelCapability('opencode', modelId)!;
+    const modelId = resolveOpenCodeModel(request);
+    const modelCapability = resolveCapability(modelId);
 
     const { sanitizedPrompt, injectionGuardInstruction } = sanitizePromptInputs(
       request.prompt,
@@ -122,9 +182,11 @@ export class OpenCodeProvider implements AiProvider {
   async generateStructured<T>(
     request: StructuredRequest<T>
   ): Promise<{ data: T; result: TextGenerationResult }> {
-    const apiKey = request.aiConfig?.opencodeApiKey;
+    const apiKey = resolveApiKey(request.aiConfig?.opencodeApiKey);
     if (!apiKey) {
-      throw new Error('Chave de API do OpenCode GO (opencodeApiKey) não fornecida.');
+      throw new Error(
+        'Chave de API do OpenCode não configurada. Defina OPENCODE_API_KEY no .env do servidor ou informe a chave nas Configurações de IA.'
+      );
     }
 
     const rawBaseUrl = request.aiConfig?.opencodeBaseUrl || OPENCODE_DEFAULT_BASE_URL;
@@ -134,19 +196,8 @@ export class OpenCodeProvider implements AiProvider {
     }
 
     const baseUrl = ssrfCheck.sanitizedUrl;
-    const userSelectedModel = request.aiConfig?.opencodeModel;
-    const modelId =
-      userSelectedModel &&
-      validateModelForTask('opencode', userSelectedModel, request.taskType).valid
-        ? userSelectedModel
-        : request.model || getDefaultModel('opencode', request.taskType);
-
-    const validation = validateModelForTask('opencode', modelId, request.taskType);
-    if (!validation.valid) {
-      throw new Error(validation.reason);
-    }
-
-    const modelCapability = getModelCapability('opencode', modelId)!;
+    const modelId = resolveOpenCodeModel(request);
+    const modelCapability = resolveCapability(modelId);
 
     const { sanitizedPrompt, injectionGuardInstruction } = sanitizePromptInputs(
       request.prompt,
@@ -242,8 +293,10 @@ export class OpenCodeProvider implements AiProvider {
     return {
       provider: 'opencode',
       status: 'ok',
-      details: 'Provider adapter ativo. Requer opencodeApiKey para solicitações.',
-      modelsAvailable: ['opencode/claude-3-5-sonnet', 'opencode/gpt-4o', 'opencode/deepseek-r1'],
+      details: (process.env.OPENCODE_API_KEY || '').trim()
+        ? 'Chave configurada no servidor (não verificado contra a API).'
+        : 'Adapter ativo; nenhuma chave no servidor — será exigida do cliente.',
+      modelsAvailable: Object.keys(OPENCODE_MODEL_CATALOG),
     };
   }
 }

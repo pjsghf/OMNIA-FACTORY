@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Sparkles, Key, Cpu, Check, X, ShieldCheck, Globe, Zap } from 'lucide-react';
 import { AiConfig } from '../types';
-import { OPENCODE_DEFAULT_BASE_URL } from '../lib/ai/catalog';
+import { OPENCODE_DEFAULT_BASE_URL, OPENCODE_DEFAULT_MODEL } from '../lib/ai/catalog';
 
 interface AiSettingsModalProps {
   config: AiConfig;
@@ -10,14 +10,14 @@ interface AiSettingsModalProps {
 }
 
 export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ config, onSave, onClose }) => {
-  const [provider, setProvider] = useState<'gemini' | 'opencode'>(config.provider || 'gemini');
+  const [provider, setProvider] = useState<'gemini' | 'opencode'>(config.provider || 'opencode');
   const [geminiModel, setGeminiModel] = useState<string>(config.geminiModel || 'gemini-2.5-flash');
   const [opencodeApiKey, setOpencodeApiKey] = useState<string>(config.opencodeApiKey || '');
   const [opencodeBaseUrl, setOpencodeBaseUrl] = useState<string>(
     config.opencodeBaseUrl || OPENCODE_DEFAULT_BASE_URL
   );
   const [opencodeModel, setOpencodeModel] = useState<string>(
-    config.opencodeModel || 'opencode/claude-3-5-sonnet'
+    config.opencodeModel || OPENCODE_DEFAULT_MODEL
   );
   const [customOpencodeModel, setCustomOpencodeModel] = useState<string>('');
   const [showKey, setShowKey] = useState<boolean>(false);
@@ -35,12 +35,15 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ config, onSave
     },
   ];
 
+  // deepseek-v4-flash first: it is the model the studio runs on by default.
+  // An id the gateway does not recognise now fails loudly instead of being
+  // silently swapped for another model, so a wrong pick here is visible.
   const opencodeModels = [
-    { id: 'opencode/claude-3-5-sonnet', label: 'Claude 3.5 Sonnet (Anthropic - Recomendado)' },
-    { id: 'opencode/gpt-4o', label: 'GPT-4o (OpenAI - Alta Inteligência)' },
-    { id: 'opencode/gemini-2.5-pro', label: 'Gemini 2.5 Pro (Google via OpenCode)' },
-    { id: 'opencode/deepseek-r1', label: 'DeepSeek R1 (Raciocínio Matemático e Lógico)' },
-    { id: 'opencode/llama-3.3-70b', label: 'Llama 3.3 70B (Meta Open Source)' },
+    { id: OPENCODE_DEFAULT_MODEL, label: 'DeepSeek V4 Flash (Padrão)' },
+    { id: 'opencode/claude-3-5-sonnet', label: 'Claude 3.5 Sonnet (Anthropic)' },
+    { id: 'opencode/gpt-4o', label: 'GPT-4o (OpenAI)' },
+    { id: 'opencode/deepseek-r1', label: 'DeepSeek R1' },
+    { id: 'opencode/llama-3.3-70b', label: 'Llama 3.3 70B (Meta)' },
     { id: 'custom', label: 'Outro Modelo Personalizado...' },
   ];
 
@@ -52,7 +55,7 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ config, onSave
       geminiModel,
       opencodeApiKey,
       opencodeBaseUrl,
-      opencodeModel: finalOpencodeModel || 'opencode/claude-3-5-sonnet',
+      opencodeModel: finalOpencodeModel || OPENCODE_DEFAULT_MODEL,
     });
     onClose();
   };
