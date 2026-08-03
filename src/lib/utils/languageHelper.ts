@@ -165,11 +165,13 @@ export function getLanguageInfo(langInput?: string): LanguageInfo {
   }
 
   const match = lower.match(/^([a-z]{2})[-_]([a-z]{2})$/);
-  if (match) {
-    const formatted = `${match[1]}-${match[2]}`;
+  if (match?.[1] && match[2]) {
+    const language = match[1];
+    const region = match[2];
+    const formatted = `${language}-${region}`;
     return {
       code: formatted,
-      bcp47: `${match[1].toLowerCase()}-${match[2].toUpperCase()}`,
+      bcp47: `${language.toLowerCase()}-${region.toUpperCase()}`,
       name: langInput,
       region: 'Internacional',
       countryCode: formatted,

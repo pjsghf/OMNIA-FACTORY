@@ -24,6 +24,11 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # The codebase is clean under strict as of this workflow landing; keeping it
+      # enforced stops the stricter settings from silently rotting.
+      - name: Typecheck (strict)
+        run: npm run typecheck:strict
+
       - name: Lint
         run: npm run lint
 
