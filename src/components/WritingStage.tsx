@@ -1,23 +1,17 @@
 import React, { useState } from 'react';
 import { BookMetadata, EditorialPlan, ChapterContent, FrontMatter, EndMatter } from '../types';
 import {
-  FileText,
   Wand2,
   Play,
   CheckCircle,
   Clock,
-  Sparkles,
   Edit2,
   Eye,
   Columns,
-  Maximize2,
-  Scissors,
   Zap,
   BookOpen,
   Feather,
   RefreshCw,
-  PlusCircle,
-  HelpCircle,
   Layers,
 } from 'lucide-react';
 
