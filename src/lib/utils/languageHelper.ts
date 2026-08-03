@@ -118,7 +118,12 @@ export function getLanguageInfo(langInput?: string): LanguageInfo {
       displayTag: 'fr-ca',
     };
   }
-  if (lower.includes('fr-fr') || lower.includes('frança') || lower === 'fr' || lower.includes('franc')) {
+  if (
+    lower.includes('fr-fr') ||
+    lower.includes('frança') ||
+    lower === 'fr' ||
+    lower.includes('franc')
+  ) {
     return {
       code: 'fr-fr',
       bcp47: 'fr-FR',
@@ -128,7 +133,12 @@ export function getLanguageInfo(langInput?: string): LanguageInfo {
       displayTag: 'fr-fr',
     };
   }
-  if (lower.includes('de-de') || lower.includes('alemanha') || lower === 'de' || lower.includes('alem')) {
+  if (
+    lower.includes('de-de') ||
+    lower.includes('alemanha') ||
+    lower === 'de' ||
+    lower.includes('alem')
+  ) {
     return {
       code: 'de-de',
       bcp47: 'de-DE',
@@ -138,7 +148,12 @@ export function getLanguageInfo(langInput?: string): LanguageInfo {
       displayTag: 'de-de',
     };
   }
-  if (lower.includes('it-it') || lower.includes('itália') || lower === 'it' || lower.includes('ital')) {
+  if (
+    lower.includes('it-it') ||
+    lower.includes('itália') ||
+    lower === 'it' ||
+    lower.includes('ital')
+  ) {
     return {
       code: 'it-it',
       bcp47: 'it-IT',
@@ -150,11 +165,13 @@ export function getLanguageInfo(langInput?: string): LanguageInfo {
   }
 
   const match = lower.match(/^([a-z]{2})[-_]([a-z]{2})$/);
-  if (match) {
-    const formatted = `${match[1]}-${match[2]}`;
+  if (match?.[1] && match[2]) {
+    const language = match[1];
+    const region = match[2];
+    const formatted = `${language}-${region}`;
     return {
       code: formatted,
-      bcp47: `${match[1].toLowerCase()}-${match[2].toUpperCase()}`,
+      bcp47: `${language.toLowerCase()}-${region.toUpperCase()}`,
       name: langInput,
       region: 'Internacional',
       countryCode: formatted,

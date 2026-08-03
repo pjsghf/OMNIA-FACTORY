@@ -29,6 +29,13 @@ import {
   Check,
 } from 'lucide-react';
 
+/** Parses a value to a finite number, falling back when it is absent or garbage. */
+function toNumberOr(value: unknown, fallback: number): number {
+  if (value === undefined || value === null || value === '') return fallback;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 interface ConfigStageProps {
   metadata: BookMetadata;
   onChangeMetadata: (updated: BookMetadata) => void;
@@ -73,7 +80,7 @@ export const ConfigStage: React.FC<ConfigStageProps> = ({
       // Try standard JSON parse
       try {
         parsed = JSON.parse(rawText.trim());
-      } catch (jsonErr) {
+      } catch {
         // Extract JSON from markdown code blocks or brackets
         const match = rawText.match(/\{[\s\S]*\}/);
         if (match) {
@@ -96,9 +103,12 @@ export const ConfigStage: React.FC<ConfigStageProps> = ({
           estilo: parsed.estilo || metadata.estilo,
           promptEstilo: parsed.promptEstilo || metadata.promptEstilo,
           tom: parsed.tom || metadata.tom,
-          qtdCapitulos: parsed.qtdCapitulos ? Number(parsed.qtdCapitulos) : metadata.qtdCapitulos,
-          minPalavras: parsed.minPalavras ? Number(parsed.minPalavras) : metadata.minPalavras,
-          maxPalavras: parsed.maxPalavras ? Number(parsed.maxPalavras) : metadata.maxPalavras,
+          // Number('abc') is NaN, which used to flow straight into metadata and
+          // then into Array(NaN) downstream. Keep the current value unless the
+          // imported field parses to a real number.
+          qtdCapitulos: toNumberOr(parsed.qtdCapitulos, metadata.qtdCapitulos),
+          minPalavras: toNumberOr(parsed.minPalavras, metadata.minPalavras),
+          maxPalavras: toNumberOr(parsed.maxPalavras, metadata.maxPalavras),
           materiais: parsed.materiais || metadata.materiais,
           informacoesObrigatorias:
             parsed.informacoesObrigatorias || metadata.informacoesObrigatorias,
@@ -229,7 +239,7 @@ IDEIAS E INFORMAÇÕES BRUTAS DO AUTOR SOBRE O LIVRO:
       setImportStatus('Prompt do agente copiado para a área de transferência com sucesso!');
       setTimeout(() => setCopiedPrompt(false), 3000);
       setTimeout(() => setImportStatus(null), 6000);
-    } catch (err) {
+    } catch {
       alert(
         'Não foi possível copiar automaticamente. Selecione e copie manualmente se necessário.'
       );

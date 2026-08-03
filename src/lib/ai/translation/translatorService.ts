@@ -3,10 +3,6 @@ import { BookProject, AiConfig } from '../../../types';
 export const SYSTEM_PROMPT_TRANSLATION =
   'Você é um tradutor e especialista em localização literária. Sua função é traduzir e adaptar culturalmente o e-book enviado para o idioma de destino especificado. Adapte gírias, metáforas e expressões idiomáticas de forma natural para leitores nativos. Mantenha o tom e o estilo original do autor. Retorne APENAS o texto adaptado em prosa limpa, sem saudações, introduções, notas ou explicações.';
 
-export function buildUserPromptTranslation(targetLanguage: string, originalText: string): string {
-  return `Idioma de Destino: ${targetLanguage}\n\nTexto Original:\n${originalText}`;
-}
-
 export interface TranslationLanguageOption {
   code: string;
   name: string;
@@ -31,7 +27,15 @@ export const TARGET_LANGUAGES: TranslationLanguageOption[] = [
 ];
 
 export interface TranslationProgressUpdate {
-  stage: 'initializing' | 'metadata' | 'front_matter' | 'chapter' | 'end_matter' | 'cover' | 'completed' | 'error';
+  stage:
+    | 'initializing'
+    | 'metadata'
+    | 'front_matter'
+    | 'chapter'
+    | 'end_matter'
+    | 'cover'
+    | 'completed'
+    | 'error';
   currentStep: number;
   totalSteps: number;
   message: string;

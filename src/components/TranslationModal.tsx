@@ -23,7 +23,10 @@ interface TranslationModalProps {
   onClose: () => void;
   project: BookProject;
   aiConfig: AiConfig;
-  onTranslationComplete: (translatedProject: BookProject, saveMode: 'new_project' | 'replace_current') => void;
+  onTranslationComplete: (
+    translatedProject: BookProject,
+    saveMode: 'new_project' | 'replace_current'
+  ) => void;
 }
 
 export const TranslationModal: React.FC<TranslationModalProps> = ({
@@ -151,7 +154,8 @@ export const TranslationModal: React.FC<TranslationModalProps> = ({
                 <div>
                   <h4 className="font-semibold text-sm">Localização Cultural Concluída!</h4>
                   <p className="text-xs text-emerald-700">
-                    Sua nova edição em <strong className="underline">{translatedResult.metadata.idioma}</strong> foi
+                    Sua nova edição em{' '}
+                    <strong className="underline">{translatedResult.metadata.idioma}</strong> foi
                     criada e uma capa oficial no idioma foi gerada com sucesso.
                   </p>
                 </div>
@@ -229,7 +233,9 @@ export const TranslationModal: React.FC<TranslationModalProps> = ({
                   className="flex items-center space-x-2 px-5 py-2.5 text-xs font-bold text-white bg-[#1C1917] hover:bg-[#44403C] rounded-sm shadow-md transition uppercase tracking-widest"
                 >
                   <span>
-                    {saveMode === 'new_project' ? 'Abrir Novo E-book Traduzido' : 'Aplicar Alterações'}
+                    {saveMode === 'new_project'
+                      ? 'Abrir Novo E-book Traduzido'
+                      : 'Aplicar Alterações'}
                   </span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
@@ -349,7 +355,8 @@ export const TranslationModal: React.FC<TranslationModalProps> = ({
                         Criar Nova Edição Localizada (Recomendado)
                       </p>
                       <p className="text-[11px] text-[#78716C]">
-                        Gera um novo e-book na sua biblioteca preservando o livro original em Português.
+                        Gera um novo e-book na sua biblioteca preservando o livro original em
+                        Português.
                       </p>
                     </div>
                   </label>
@@ -385,8 +392,9 @@ export const TranslationModal: React.FC<TranslationModalProps> = ({
                     gírias e tom para leitores nativos de <em>{targetLangName}</em>.
                   </li>
                   <li>
-                    <strong>Escopo Completo:</strong> Metadados, Capítulos ({project.chapters.length}),
-                    Prefácio, Introdução e Pós-fácio (~{totalWords.toLocaleString('pt-BR')} palavras).
+                    <strong>Escopo Completo:</strong> Metadados, Capítulos (
+                    {project.chapters.length}), Prefácio, Introdução e Pós-fácio (~
+                    {totalWords.toLocaleString('pt-BR')} palavras).
                   </li>
                   <li>
                     <strong>Nova Capa Exclusiva:</strong> Redesenho da capa com título e conceito em{' '}

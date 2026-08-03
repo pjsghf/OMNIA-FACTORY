@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   BookProject,
   EditorialPlan,
@@ -21,6 +21,7 @@ import { TranslationModal } from './components/TranslationModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastContainer, ToastMessage } from './components/common/Toast';
 import { createChapterVersion } from './lib/ai/review/versionManager';
+import { OPENCODE_DEFAULT_BASE_URL, OPENCODE_DEFAULT_MODEL } from './lib/ai/catalog';
 
 const DEFAULT_METADATA: BookMetadata = {
   titulo: 'O Código da Mente Inabalável',
@@ -48,12 +49,37 @@ const DEFAULT_METADATA: BookMetadata = {
 };
 
 const DEFAULT_AI_CONFIG: AiConfig = {
-  provider: 'gemini',
-  geminiModel: 'gemini-3.6-flash',
+  provider: 'opencode',
+  geminiModel: 'gemini-2.5-flash',
+  // Left blank on purpose: the server reads OPENCODE_API_KEY from its own .env, so
+  // the credential never has to touch localStorage or ride along on requests.
   opencodeApiKey: '',
-  opencodeBaseUrl: 'https://opencode.go/api/v1',
-  opencodeModel: 'opencode/claude-3-5-sonnet',
+  opencodeBaseUrl: OPENCODE_DEFAULT_BASE_URL,
+  opencodeModel: OPENCODE_DEFAULT_MODEL,
 };
+
+/**
+ * A saved aiConfig overrides the defaults above, so switching the shipped provider
+ * would otherwise leave every existing browser pinned to the old one. This moves
+ * only configs still sitting on a superseded default; anything the user chose
+ * deliberately is left alone.
+ */
+const SUPERSEDED_OPENCODE_MODELS = ['opencode/claude-3-5-sonnet'];
+
+export function migrateAiConfig(saved: Partial<AiConfig> | null | undefined): AiConfig {
+  const config: AiConfig = { ...DEFAULT_AI_CONFIG, ...(saved || {}) };
+
+  if (!config.opencodeModel || SUPERSEDED_OPENCODE_MODELS.includes(config.opencodeModel)) {
+    config.opencodeModel = OPENCODE_DEFAULT_MODEL;
+  }
+
+  // The old default pointed at a domain that does not resolve.
+  if (!config.opencodeBaseUrl || config.opencodeBaseUrl.includes('opencode.go')) {
+    config.opencodeBaseUrl = OPENCODE_DEFAULT_BASE_URL;
+  }
+
+  return config;
+}
 
 const DEFAULT_PROJECT: BookProject = {
   id: 'proj_default',
@@ -70,7 +96,7 @@ const DEFAULT_PROJECT: BookProject = {
 
 export default function App() {
   // Saved Projects
-  const [projects, setProjects] = useState<BookProject[]>(() => {
+  const [projects, setProjectsState] = useState<BookProject[]>(() => {
     const saved = localStorage.getItem('scriptor_projects_v2');
     if (saved) {
       try {
@@ -94,20 +120,49 @@ export default function App() {
     return [initialProject];
   });
 
-  const [currentProjectId, setCurrentProjectId] = useState<string>(projects[0]?.id || '');
+  const [currentProjectId, setCurrentProjectIdState] = useState<string>(projects[0]?.id || '');
+
+  // Long-running batch handlers (chapter generation, review application) await between
+  // iterations, so the `projects` / `currentProjectId` values captured by their closure
+  // go stale the moment the first update lands. These refs mirror the state so those
+  // handlers can always read the freshest project instead of the render-time snapshot.
+  const projectsRef = useRef<BookProject[]>(projects);
+  const currentProjectIdRef = useRef<string>(currentProjectId);
+
+  const setProjects = (action: BookProject[] | ((prev: BookProject[]) => BookProject[])) => {
+    setProjectsState((prev) => {
+      const next = typeof action === 'function' ? action(prev) : action;
+      projectsRef.current = next;
+      return next;
+    });
+  };
+
+  const setCurrentProjectId = (id: string) => {
+    currentProjectIdRef.current = id;
+    setCurrentProjectIdState(id);
+  };
+
+  // Reads the active project from the refs, so it stays correct across awaits.
+  const getLiveProject = (): BookProject =>
+    projectsRef.current.find((p) => p.id === currentProjectIdRef.current) ||
+    projectsRef.current[0] ||
+    DEFAULT_PROJECT;
 
   // AI Configuration State
   const [aiConfig, setAiConfig] = useState<AiConfig>(() => {
     const saved = localStorage.getItem('scriptor_aiconfig_v1');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        return migrateAiConfig(JSON.parse(saved));
       } catch (e) {
         console.error('Error parsing aiConfig from localStorage', e);
       }
     }
     return DEFAULT_AI_CONFIG;
   });
+
+  // Persistence failure banner (quota exhausted, private-mode restrictions, ...)
+  const [storageWarning, setStorageWarning] = useState<string | null>(null);
 
   // Toasts
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -162,9 +217,8 @@ export default function App() {
         `Nova versão em ${translatedProject.metadata.idioma} com capa gerada adicionada à biblioteca.`
       );
     } else {
-      setProjects((prev) =>
-        prev.map((p) => (p.id === activeProject.id ? translatedProject : p))
-      );
+      const targetId = getLiveProject().id;
+      setProjects((prev) => prev.map((p) => (p.id === targetId ? translatedProject : p)));
       addToast(
         'success',
         'E-book Atualizado!',
@@ -173,23 +227,66 @@ export default function App() {
     }
   };
 
-  // Auto-save projects to localStorage
+  // Auto-save projects to localStorage.
+  //
+  // Debounced because WritingStage calls onUpdateChapter on every keystroke: this
+  // effect used to re-serialize every project (full manuscript plus base64 covers,
+  // easily megabytes) once per character typed.
+  //
+  // Guarded because a book with cover art approaches the ~5MB origin quota, and an
+  // unhandled QuotaExceededError here propagates out of the effect and takes down
+  // the whole app -- losing the very work it was trying to save.
   useEffect(() => {
-    localStorage.setItem('scriptor_projects_v2', JSON.stringify(projects));
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem('scriptor_projects_v2', JSON.stringify(projects));
+        setStorageWarning(null);
+      } catch (err) {
+        console.error('Falha ao salvar projetos no localStorage', err);
+        const isQuota =
+          err instanceof DOMException &&
+          (err.name === 'QuotaExceededError' || err.name === 'NS_ERROR_DOM_QUOTA_REACHED');
+        setStorageWarning(
+          isQuota
+            ? 'Armazenamento local cheio: suas últimas alterações NÃO foram salvas. Exporte um backup e remova projetos antigos da biblioteca.'
+            : 'Não foi possível salvar automaticamente no navegador. Exporte um backup para não perder o trabalho.'
+        );
+      }
+    }, 800);
+
+    return () => clearTimeout(timer);
   }, [projects]);
+
+  // Flush pending work on unload, since the debounce may still be in flight.
+  useEffect(() => {
+    const flush = () => {
+      try {
+        localStorage.setItem('scriptor_projects_v2', JSON.stringify(projectsRef.current));
+      } catch {
+        // Nothing useful to do while the page is going away.
+      }
+    };
+    window.addEventListener('beforeunload', flush);
+    return () => window.removeEventListener('beforeunload', flush);
+  }, []);
 
   // Auto-save aiConfig
   useEffect(() => {
-    localStorage.setItem('scriptor_aiconfig_v1', JSON.stringify(aiConfig));
+    try {
+      localStorage.setItem('scriptor_aiconfig_v1', JSON.stringify(aiConfig));
+    } catch (err) {
+      console.error('Falha ao salvar configuração de IA no localStorage', err);
+    }
   }, [aiConfig]);
 
   const activeProject =
     projects.find((p) => p.id === currentProjectId) || projects[0] || DEFAULT_PROJECT;
 
   const updateActiveProject = (updater: (prev: BookProject) => BookProject) => {
+    const targetId = getLiveProject().id;
     setProjects((prev) =>
       prev.map((p) => {
-        if (p.id === activeProject.id) {
+        if (p.id === targetId) {
           const updated = updater(p);
           // Flag report as obsolete if chapter content was edited
           if (updated.chapters !== p.chapters && updated.editorialReport) {
@@ -262,23 +359,28 @@ export default function App() {
 
   // 2. Generate Single Chapter
   const handleGenerateChapter = async (index: number): Promise<boolean> => {
-    if (!activeProject.plan) return false;
+    // Read from the refs: in batch mode this runs once per chapter across awaits,
+    // and every iteration needs the memory/chapters produced by the previous one.
+    const liveProject = getLiveProject();
+    if (!liveProject.plan) return false;
     setGeneratingIndex(index);
 
     try {
-      const previousSummaries = activeProject.chapters
+      const previousSummaries = liveProject.chapters
         .slice(0, index)
         .filter((c: ChapterContent) => Boolean(c.content))
-        .map((c: ChapterContent) => `Capítulo ${c.numero} (${c.titulo}): ${c.content.slice(0, 300)}...`);
+        .map(
+          (c: ChapterContent) => `Capítulo ${c.numero} (${c.titulo}): ${c.content.slice(0, 300)}...`
+        );
 
       const res = await fetch('/api/editorial/generate-chapter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          metadata: activeProject.metadata,
-          plan: activeProject.plan,
+          metadata: liveProject.metadata,
+          plan: liveProject.plan,
           chapterIndex: index,
-          memory: activeProject.bookBibleMemory,
+          memory: liveProject.bookBibleMemory,
           previousSummaries,
           aiConfig,
         }),
@@ -301,15 +403,16 @@ export default function App() {
           chapters[index] = updatedCap;
 
           // Save Version Item
+          const currentVersions = p.chapterVersions || {};
+          const capVersions = currentVersions[updatedCap.numero] || [];
+
           const versionItem = createChapterVersion({
             chapterNumber: updatedCap.numero,
             content: newContent,
+            existingVersions: capVersions,
             author: 'ia',
             label: 'Draft Inicial Gerado por IA',
           });
-
-          const currentVersions = p.chapterVersions || {};
-          const capVersions = currentVersions[updatedCap.numero] || [];
 
           return {
             ...p,
@@ -346,15 +449,13 @@ export default function App() {
 
   // 3. Batch Generate All Chapters sequentially
   const handleGenerateBatchChapters = async () => {
-    if (!activeProject.plan) return;
+    if (!getLiveProject().plan) return;
     setIsGeneratingBatch(true);
 
-    const totalCaps = activeProject.plan.sumario.length;
+    const totalCaps = getLiveProject().plan!.sumario.length;
     for (let i = 0; i < totalCaps; i++) {
-      if (
-        activeProject.chapters[i]?.status === 'completed' &&
-        activeProject.chapters[i]?.content?.trim()
-      ) {
+      const chaptersNow = getLiveProject().chapters;
+      if (chaptersNow[i]?.status === 'completed' && chaptersNow[i]?.content?.trim()) {
         continue;
       }
 
@@ -377,13 +478,24 @@ export default function App() {
       'apresentacao' | 'introducao' | 'conclusao' | 'agradecimentos' | 'sobreAutor' | 'exercicios'
   ): Promise<boolean> => {
     try {
+      const liveProject = getLiveProject();
+
+      // The conclusion / exercises / author sections are written *about* the book, so
+      // the backend prompt needs the actual prose. It was never being sent, leaving
+      // buildMatterPrompt with its "Livro fundamentado na obra do autor." placeholder.
+      const fullBookContent = liveProject.chapters
+        .filter((c: ChapterContent) => Boolean(c.content?.trim()))
+        .map((c: ChapterContent) => `Capítulo ${c.numero} — ${c.titulo}\n${c.content}`)
+        .join('\n\n');
+
       const res = await fetch('/api/editorial/generate-section', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          metadata: activeProject.metadata,
-          plan: activeProject.plan,
+          metadata: liveProject.metadata,
+          plan: liveProject.plan,
           sectionType: type,
+          fullBookContent,
           aiConfig,
         }),
       });
@@ -467,7 +579,7 @@ export default function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          project: activeProject,
+          project: getLiveProject(),
           aiConfig,
         }),
       });
@@ -493,7 +605,7 @@ export default function App() {
 
   // 5B. Apply Editorial Review Improvements to Chapters
   const handleApplyReviewImprovements = async (chapterIndex?: number) => {
-    if (!activeProject.editorialReport) {
+    if (!getLiveProject().editorialReport) {
       addToast('error', 'Sem Relatório', 'Execute a auditoria editorial primeiro.');
       return;
     }
@@ -502,7 +614,8 @@ export default function App() {
 
     try {
       if (typeof chapterIndex === 'number') {
-        const targetCap = activeProject.chapters[chapterIndex];
+        const liveProject = getLiveProject();
+        const targetCap = liveProject.chapters[chapterIndex];
         if (!targetCap || !targetCap.content?.trim()) {
           addToast('error', 'Capítulo Vazio', `Capítulo ${chapterIndex + 1} não possui texto.`);
           return;
@@ -514,12 +627,12 @@ export default function App() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            metadata: activeProject.metadata,
-            plan: activeProject.plan,
+            metadata: liveProject.metadata,
+            plan: liveProject.plan,
             chapterIndex,
             chapterTitle: targetCap.titulo,
             chapterContent: targetCap.content,
-            report: activeProject.editorialReport,
+            report: liveProject.editorialReport,
             aiConfig,
           }),
         });
@@ -540,15 +653,16 @@ export default function App() {
             };
             chapters[chapterIndex] = updatedCap;
 
+            const currentVersions = p.chapterVersions || {};
+            const capVersions = currentVersions[updatedCap.numero] || [];
+
             const versionItem = createChapterVersion({
               chapterNumber: updatedCap.numero,
               content: newContent,
+              existingVersions: capVersions,
               author: 'review_patch',
               label: 'Revisão Editorial Aplicada (IA)',
             });
-
-            const currentVersions = p.chapterVersions || {};
-            const capVersions = currentVersions[updatedCap.numero] || [];
 
             return {
               ...p,
@@ -568,11 +682,12 @@ export default function App() {
           addToast('error', 'Falha ao Aprimorar', data.error || 'Erro desconhecido');
         }
       } else {
-        const total = activeProject.chapters.length;
+        const total = getLiveProject().chapters.length;
         let appliedCount = 0;
 
         for (let i = 0; i < total; i++) {
-          const cap = activeProject.chapters[i];
+          const liveProject = getLiveProject();
+          const cap = liveProject.chapters[i];
           if (!cap || !cap.content?.trim()) continue;
 
           setGeneratingIndex(i);
@@ -582,12 +697,12 @@ export default function App() {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                metadata: activeProject.metadata,
-                plan: activeProject.plan,
+                metadata: liveProject.metadata,
+                plan: liveProject.plan,
                 chapterIndex: i,
                 chapterTitle: cap.titulo,
                 chapterContent: cap.content,
-                report: activeProject.editorialReport,
+                report: liveProject.editorialReport,
                 aiConfig,
               }),
             });
@@ -609,15 +724,16 @@ export default function App() {
                 };
                 chapters[i] = updatedCap;
 
+                const currentVersions = p.chapterVersions || {};
+                const capVersions = currentVersions[updatedCap.numero] || [];
+
                 const versionItem = createChapterVersion({
                   chapterNumber: updatedCap.numero,
                   content: newContent,
+                  existingVersions: capVersions,
                   author: 'review_patch',
                   label: 'Revisão Editorial Aplicada (IA)',
                 });
-
-                const currentVersions = p.chapterVersions || {};
-                const capVersions = currentVersions[updatedCap.numero] || [];
 
                 return {
                   ...p,
@@ -715,7 +831,16 @@ export default function App() {
   };
 
   const handleDeleteProject = (id: string) => {
-    if (projects.length <= 1) return;
+    // Used to return silently, so the confirmation dialog just closed and the
+    // project stayed put with no explanation.
+    if (projects.length <= 1) {
+      addToast(
+        'error',
+        'Exclusão Bloqueada',
+        'A biblioteca precisa manter ao menos um projeto. Crie um novo projeto antes de excluir este.'
+      );
+      return;
+    }
     const filtered = projects.filter((p) => p.id !== id);
     setProjects(filtered);
     if (currentProjectId === id && filtered[0]) {
@@ -750,6 +875,26 @@ export default function App() {
     <ErrorBoundary>
       <div className="min-h-screen bg-[#FDFCFB] text-[#1C1917] font-sans antialiased flex flex-col">
         <ToastContainer toasts={toasts} onDismiss={removeToast} />
+
+        {/* Persistence failure banner — must be impossible to miss: work is at risk. */}
+        {storageWarning && (
+          <div
+            role="alert"
+            className="bg-rose-950 text-rose-50 px-4 py-3 text-sm border-b border-rose-700 flex items-start justify-between gap-4"
+          >
+            <span>
+              <strong className="font-bold">Falha ao salvar automaticamente.</strong>{' '}
+              {storageWarning}
+            </span>
+            <button
+              onClick={() => setStorageWarning(null)}
+              className="shrink-0 text-rose-200 hover:text-white font-bold"
+              aria-label="Fechar aviso de armazenamento"
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         {/* Navigation Header */}
         <Header

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Sparkles, Key, Cpu, Check, X, ShieldCheck, Globe, Zap } from 'lucide-react';
 import { AiConfig } from '../types';
+import { OPENCODE_DEFAULT_BASE_URL, OPENCODE_DEFAULT_MODEL } from '../lib/ai/catalog';
 
 interface AiSettingsModalProps {
   config: AiConfig;
@@ -9,34 +10,40 @@ interface AiSettingsModalProps {
 }
 
 export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ config, onSave, onClose }) => {
-  const [provider, setProvider] = useState<'gemini' | 'opencode'>(config.provider || 'gemini');
-  const [geminiModel, setGeminiModel] = useState<string>(config.geminiModel || 'gemini-3.6-flash');
+  const [provider, setProvider] = useState<'gemini' | 'opencode'>(config.provider || 'opencode');
+  const [geminiModel, setGeminiModel] = useState<string>(config.geminiModel || 'gemini-2.5-flash');
   const [opencodeApiKey, setOpencodeApiKey] = useState<string>(config.opencodeApiKey || '');
   const [opencodeBaseUrl, setOpencodeBaseUrl] = useState<string>(
-    config.opencodeBaseUrl || 'https://opencode.go/api/v1'
+    config.opencodeBaseUrl || OPENCODE_DEFAULT_BASE_URL
   );
   const [opencodeModel, setOpencodeModel] = useState<string>(
-    config.opencodeModel || 'opencode/claude-3-5-sonnet'
+    config.opencodeModel || OPENCODE_DEFAULT_MODEL
   );
   const [customOpencodeModel, setCustomOpencodeModel] = useState<string>('');
   const [showKey, setShowKey] = useState<boolean>(false);
 
+  // Stable, long-standing ids first: these are the ones known to exist upstream.
+  // The newer entries are kept selectable but flagged, because an id that the API
+  // does not recognise fails every generation in the app.
   const geminiModels = [
-    { id: 'gemini-3.6-flash', label: 'Gemini 3.6 Flash (Padrão - Ultra Rápido & Alto Volume)' },
+    { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Padrão — Rápido e Estável)' },
+    { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (Análise Avançada)' },
+    { id: 'gemini-3.6-flash', label: 'Gemini 3.6 Flash (verifique disponibilidade na sua conta)' },
     {
       id: 'gemini-3.1-pro-preview',
-      label: 'Gemini 3.1 Pro (Alta Precisão & Raciocínio Editorial)',
+      label: 'Gemini 3.1 Pro (verifique disponibilidade na sua conta)',
     },
-    { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Rápido e Estável)' },
-    { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (Análise Avançada)' },
   ];
 
+  // deepseek-v4-flash first: it is the model the studio runs on by default.
+  // An id the gateway does not recognise now fails loudly instead of being
+  // silently swapped for another model, so a wrong pick here is visible.
   const opencodeModels = [
-    { id: 'opencode/claude-3-5-sonnet', label: 'Claude 3.5 Sonnet (Anthropic - Recomendado)' },
-    { id: 'opencode/gpt-4o', label: 'GPT-4o (OpenAI - Alta Inteligência)' },
-    { id: 'opencode/gemini-2.5-pro', label: 'Gemini 2.5 Pro (Google via OpenCode)' },
-    { id: 'opencode/deepseek-r1', label: 'DeepSeek R1 (Raciocínio Matemático e Lógico)' },
-    { id: 'opencode/llama-3.3-70b', label: 'Llama 3.3 70B (Meta Open Source)' },
+    { id: OPENCODE_DEFAULT_MODEL, label: 'DeepSeek V4 Flash (Padrão)' },
+    { id: 'opencode/claude-3-5-sonnet', label: 'Claude 3.5 Sonnet (Anthropic)' },
+    { id: 'opencode/gpt-4o', label: 'GPT-4o (OpenAI)' },
+    { id: 'opencode/deepseek-r1', label: 'DeepSeek R1' },
+    { id: 'opencode/llama-3.3-70b', label: 'Llama 3.3 70B (Meta)' },
     { id: 'custom', label: 'Outro Modelo Personalizado...' },
   ];
 
@@ -48,7 +55,7 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ config, onSave
       geminiModel,
       opencodeApiKey,
       opencodeBaseUrl,
-      opencodeModel: finalOpencodeModel || 'opencode/claude-3-5-sonnet',
+      opencodeModel: finalOpencodeModel || OPENCODE_DEFAULT_MODEL,
     });
     onClose();
   };
@@ -191,7 +198,7 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ config, onSave
                 type="text"
                 value={opencodeBaseUrl}
                 onChange={(e) => setOpencodeBaseUrl(e.target.value)}
-                placeholder="https://opencode.go/api/v1 ou https://openrouter.ai/api/v1"
+                placeholder={`${OPENCODE_DEFAULT_BASE_URL} ou https://openrouter.ai/api/v1`}
                 className="w-full bg-white border border-[#E7E5E4] p-2.5 text-xs text-[#1C1917] font-mono"
               />
             </div>

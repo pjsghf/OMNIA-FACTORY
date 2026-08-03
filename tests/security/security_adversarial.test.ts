@@ -37,10 +37,21 @@ describe('Security & Adversarial Testing (Security Suite)', () => {
     });
 
     it('SEC-004: Blocks IPv6 loopback (::1, fe80::1, fc00::1) and IPv4-mapped IPv6', () => {
-      expect(validateProviderBaseUrl('http://[::1]/').safe).toBe(false);
-      expect(validateProviderBaseUrl('http://[fe80::1]/').safe).toBe(false);
-      expect(validateProviderBaseUrl('http://[fc00::1]/').safe).toBe(false);
-      expect(validateProviderBaseUrl('http://[::ffff:127.0.0.1]/').safe).toBe(false);
+      // These MUST use https://. With http:// they are rejected by the protocol
+      // check before the host is ever classified, so the assertions passed while
+      // the IPv6 handling was in fact completely broken.
+      expect(validateProviderBaseUrl('https://[::1]/').safe).toBe(false);
+      expect(validateProviderBaseUrl('https://[fe80::1]/').safe).toBe(false);
+      expect(validateProviderBaseUrl('https://[fc00::1]/').safe).toBe(false);
+      expect(validateProviderBaseUrl('https://[fd00::1]/').safe).toBe(false);
+      expect(validateProviderBaseUrl('https://[::]/').safe).toBe(false);
+      expect(validateProviderBaseUrl('https://[::ffff:127.0.0.1]/').safe).toBe(false);
+      expect(validateProviderBaseUrl('https://[::ffff:10.0.0.5]/').safe).toBe(false);
+      expect(validateProviderBaseUrl('https://[fe80::1%25eth0]/').safe).toBe(false);
+    });
+
+    it('SEC-004b: Still allows a legitimate public IPv6 provider endpoint', () => {
+      expect(validateProviderBaseUrl('https://[2606:4700:4700::1111]/v1').safe).toBe(true);
     });
 
     it('SEC-005: Allows valid official OpenCode and Gemini HTTPS URLs', () => {

@@ -10,10 +10,13 @@ export interface ContentValidationResult {
 
 export function countWords(text: string): number {
   if (!text || typeof text !== 'string') return 0;
-  // Clean markdown formatting characters before counting words
+  // Clean markdown formatting characters before counting words.
+  // Hyphens and underscores are kept when they sit *inside* a word, so
+  // "bem-estar" and "snake_case" count as one word rather than two.
   const cleaned = text
     .replace(/```[\s\S]*?```/g, '')
-    .replace(/[#\*\-_=~`]/g, ' ')
+    .replace(/[#*=~`]/g, ' ')
+    .replace(/(^|\s)[-_]+|[-_]+(?=\s|$)/g, '$1')
     .trim();
 
   if (!cleaned) return 0;

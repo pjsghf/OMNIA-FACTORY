@@ -44,9 +44,9 @@ export function buildChapterSectionPlan(
   const sections: ChapterSectionPlan[] = [];
 
   for (let b = 1; b <= blockCount; b++) {
-    let tituloBloco = '';
-    let proposito = '';
-    let blockTopics: string[] = [];
+    let tituloBloco: string;
+    let proposito: string;
+    let blockTopics: string[];
 
     if (b === 1) {
       tituloBloco = `Introdução e Fundamentos de ${chapter.titulo}`;

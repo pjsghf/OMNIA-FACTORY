@@ -312,12 +312,18 @@ export const PlanningStage: React.FC<PlanningStageProps> = ({
                         <input
                           type="number"
                           value={editCapForm.estimativaPalavras || 1500}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            // Clearing a number input yields '', and parseInt('')
+                            // is NaN. That NaN reached the plan and then the
+                            // writer prompt as "~NaN palavras".
+                            const parsed = parseInt(e.target.value, 10);
                             setEditCapForm({
                               ...editCapForm,
-                              estimativaPalavras: parseInt(e.target.value, 10),
-                            })
-                          }
+                              estimativaPalavras: Number.isFinite(parsed)
+                                ? parsed
+                                : editCapForm.estimativaPalavras,
+                            });
+                          }}
                           className="w-full bg-white border border-[#D6D3D1] p-2 text-[#1C1917] font-mono focus:outline-none"
                         />
                       </div>

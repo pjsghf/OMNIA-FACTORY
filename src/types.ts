@@ -153,6 +153,8 @@ export interface EditorialReport {
   sugestoesGlobais: string[];
   coberturaTotalUnidadesPercent: number;
   obsoleto?: boolean;
+  /** Units whose AI analysis failed. A non-empty list means the score is partial. */
+  unidadesComFalha?: string[];
 }
 
 export type EditorialStage = 'config' | 'planning' | 'writing' | 'review' | 'design_export';

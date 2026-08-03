@@ -94,6 +94,7 @@ export async function runHierarchicalEditorialReview({
 
   const unitFindings: ReviewFinding[] = [];
   const unitSummaries: Array<{ id: string; title: string; summary: string }> = [];
+  const failedUnits: string[] = [];
 
   // MAP STAGE: Review each unit
   for (let i = 0; i < totalUnits; i++) {
@@ -186,7 +187,18 @@ Analise rigorosamente e retorne o JSON de auditoria.`;
       });
     } catch (err) {
       console.warn(`Aviso: falha na revisão unitária de ${unit.title}`, err);
+      failedUnits.push(unit.title);
     }
+  }
+
+  // A review where nothing could actually be audited must not come back looking
+  // like a clean bill of health. Previously every unit could fail, the reduce step
+  // could fail too, and the fallback still returned notaGeral 80 with no findings
+  // -- which sails past preflightGate's >= 70 gate and clears the book to publish.
+  if (failedUnits.length === totalUnits) {
+    throw new Error(
+      `A auditoria editorial não pôde ser realizada: todas as ${totalUnits} unidades falharam na análise da IA. Verifique a configuração do provedor e tente novamente.`
+    );
   }
 
   // REDUCE STAGE: Synthesize overall report
@@ -228,7 +240,7 @@ ${unitFindings.map((f) => `- [${f.unitTitle} - ${f.tipo} - ${f.severidade}]: ${f
 
 Gere a síntese global da auditoria em JSON.`;
 
-  let finalReduceData: any = {};
+  let finalReduceData: any;
   try {
     const { data } = await aiOrchestrator.generateStructured({
       systemInstruction: reduceSystemInstruction,
@@ -253,9 +265,13 @@ Gere a síntese global da auditoria em JSON.`;
     (project.frontMatter?.introducao ? 1 : 0) +
     (project.endMatter?.conclusao ? 1 : 0) +
     (project.endMatter?.exercicios ? 1 : 0);
+
+  // Count only units the AI actually analysed: a unit that threw was never audited,
+  // so including it inflated coverage to 100% on a partially failed run.
+  const reviewedUnits = totalUnits - failedUnits.length;
   const coveragePercent = Math.min(
     100,
-    Math.round((unitsToReview.length / Math.max(1, totalPossibleUnits)) * 100)
+    Math.round((reviewedUnits / Math.max(1, totalPossibleUnits)) * 100)
   );
 
   const report = sanitizeEditorialReport(
@@ -265,6 +281,11 @@ Gere a síntese global da auditoria em JSON.`;
       coberturaTotalUnidadesPercent: coveragePercent,
       projectVersionHash: versionHash,
       obsoleto: false,
+      unidadesComFalha: failedUnits,
+      resumoAvaliatorio:
+        failedUnits.length > 0
+          ? `[AUDITORIA PARCIAL — ${failedUnits.length} de ${totalUnits} unidades não puderam ser analisadas: ${failedUnits.join(', ')}] ${finalReduceData?.resumoAvaliatorio || ''}`.trim()
+          : finalReduceData?.resumoAvaliatorio,
     },
     versionHash
   );

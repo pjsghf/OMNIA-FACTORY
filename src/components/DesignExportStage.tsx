@@ -92,7 +92,7 @@ function convertMarkdownToHTML(markdown: string): string {
     } else if (trimmed.startsWith('* ') || trimmed.startsWith('- ')) {
       const listItems = trimmed
         .split('\n')
-        .map((l) => `<li>${formatInlineHTML(l.replace(/^[\*\-]\s*/, ''))}</li>`);
+        .map((l) => `<li>${formatInlineHTML(l.replace(/^[*-]\s*/, ''))}</li>`);
       html += `<ul class="print-ul">\n${listItems.join('\n')}\n</ul>\n`;
       isFirstP = true;
     } else if (trimmed.match(/^\d+\.\s/)) {
@@ -131,7 +131,12 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
   const [showCoverModal, setShowCoverModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
-  const [downloadNotice, setDownloadNotice] = useState<{ title: string; fileName: string; url: string; type: string } | null>(null);
+  const [downloadNotice, setDownloadNotice] = useState<{
+    title: string;
+    fileName: string;
+    url: string;
+    type: string;
+  } | null>(null);
 
   const totalWords = project.chapters.reduce((sum, c) => sum + (c.wordCount || 0), 0);
 
@@ -870,11 +875,14 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
         coverDiv.className = 'cover-view';
 
         let coverImgHtml = '';
-        if (bookData.coverImageUrl) {
-          coverImgHtml = '<div class="cover-img-wrapper"><img src="' + bookData.coverImageUrl + '" alt="Capa" /></div>';
+        // Only data:/http(s) images, and always escaped: coverImageUrl can carry a
+        // quote and break out of the src attribute when it arrives from an imported
+        // backup file rather than from our own generator.
+        if (bookData.coverImageUrl && isSafeImageUrl(bookData.coverImageUrl)) {
+          coverImgHtml = '<div class="cover-img-wrapper"><img src="' + escapeHtml(bookData.coverImageUrl) + '" alt="Capa" /></div>';
         }
 
-        coverDiv.innerHTML = 
+        coverDiv.innerHTML =
           coverImgHtml +
           '<h1 class="cover-title">' + escapeHtml(bookData.titulo) + '</h1>' +
           (bookData.subtitulo ? '<h2 class="cover-subtitle">' + escapeHtml(bookData.subtitulo) + '</h2>' : '') +
@@ -954,7 +962,11 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
 
     function escapeHtml(str) {
       if (!str) return '';
-      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function isSafeImageUrl(url) {
+      return typeof url === 'string' && /^(data:image\\/|https?:\\/\\/)/i.test(url);
     }
 
     // Event Listeners
@@ -1139,7 +1151,9 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error?.message || errData.error || `Erro no servidor (código ${response.status}).`);
+        throw new Error(
+          errData.error?.message || errData.error || `Erro no servidor (código ${response.status}).`
+        );
       }
 
       const blob = await response.blob();
@@ -1686,14 +1700,18 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
             {downloadNotice && (
               <div className="bg-emerald-950 border border-emerald-500 p-4 shadow-xl text-emerald-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-fadeIn">
                 <div className="flex items-start space-x-3">
-                  <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
                   <div>
                     <h4 className="font-bold text-sm text-emerald-100">{downloadNotice.title}</h4>
                     <p className="text-xs text-emerald-300/90 mt-0.5">
-                      Arquivo: <code className="font-mono bg-emerald-900/80 px-1.5 py-0.5 text-emerald-200 font-bold">{downloadNotice.fileName}</code>
+                      Arquivo:{' '}
+                      <code className="font-mono bg-emerald-900/80 px-1.5 py-0.5 text-emerald-200 font-bold">
+                        {downloadNotice.fileName}
+                      </code>
                     </p>
                     <p className="text-[11px] text-stone-300 mt-1">
-                      Se o seu navegador bloqueou o download automático, clique no botão ao lado para baixar seu arquivo diretamente.
+                      Se o seu navegador bloqueou o download automático, clique no botão ao lado
+                      para baixar seu arquivo diretamente.
                     </p>
                   </div>
                 </div>
@@ -1738,7 +1756,9 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
                     Traduzir e Localizar E-book para Outros Idiomas
                   </h3>
                   <p className="text-[12px] text-amber-200/80 leading-relaxed">
-                    Adaptação literária inteligente de expressões, tom narrativo e gírias com geração automática de uma nova capa no idioma selecionado (Inglês, Espanhol, Francês, Alemão, Japonês, etc.).
+                    Adaptação literária inteligente de expressões, tom narrativo e gírias com
+                    geração automática de uma nova capa no idioma selecionado (Inglês, Espanhol,
+                    Francês, Alemão, Japonês, etc.).
                   </p>
                 </button>
               )}
@@ -1805,7 +1825,8 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
                   Imprimir / Salvar PDF (Navegador)
                 </h3>
                 <p className="text-[11px] text-stone-300 leading-relaxed">
-                  Abre instantaneamente a janela de impressão nativa do navegador para salvar em PDF sem bloqueio de pop-up.
+                  Abre instantaneamente a janela de impressão nativa do navegador para salvar em PDF
+                  sem bloqueio de pop-up.
                 </p>
               </button>
 
@@ -1824,7 +1845,8 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
                   Abrir Diagramação em Nova Aba
                 </h3>
                 <p className="text-[11px] text-[#78716C] leading-relaxed">
-                  Visualiza o layout completo diagramado página a página em uma guia dedicada do seu navegador.
+                  Visualiza o layout completo diagramado página a página em uma guia dedicada do seu
+                  navegador.
                 </p>
               </button>
 

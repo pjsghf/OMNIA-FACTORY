@@ -26,6 +26,7 @@ import { CoverBrief, calculateSpineWidthMm } from './src/lib/cover/coverBrief';
 import { validateAndLoadEnv } from './src/lib/config/envValidator';
 import { createSecurityHeadersMiddleware } from './src/lib/security/headersMiddleware';
 import { globalApiRateLimiter, editorialAiRateLimiter } from './src/lib/security/rateLimiter';
+import { createApiAuthMiddleware } from './src/lib/security/apiKeyAuth';
 import { logger } from './src/lib/observability/logger';
 import { CURRENT_PRIVACY_POLICY } from './src/lib/security/privacyPolicy';
 
@@ -42,6 +43,11 @@ app.use(createSecurityHeadersMiddleware());
 // 10.4 Rate Limiting & Cost Budget Protection
 app.use('/api/', globalApiRateLimiter);
 app.use('/api/editorial/', editorialAiRateLimiter);
+
+// Optional shared-secret gate. No-op unless API_ACCESS_TOKEN is set, so local and
+// existing deployments are unchanged; set it before exposing the server publicly,
+// since every endpoint spends the server's own AI credits.
+app.use('/api/', createApiAuthMiddleware());
 
 // 10.5 Request Tracing Middleware
 app.use((req, res, next) => {
@@ -68,8 +74,8 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Route-specific parser alias for larger payloads
-const json10mb = express.json({ limit: '50mb' });
+// Route-level parser for the large-payload endpoints (PDF export, backups).
+const largePayloadJson = express.json({ limit: '50mb' });
 
 // Express error handler for payload limits
 app.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -84,21 +90,12 @@ app.use((err: any, _req: express.Request, res: express.Response, next: express.N
   return next(err);
 });
 
-// Clean JSON string from markdown code blocks e.g. ```json ... ```
-export function cleanJsonString(str: string): string {
-  if (!str) return '{}';
-  let cleaned = str.trim();
-  if (cleaned.startsWith('```')) {
-    cleaned = cleaned
-      .replace(/^```(?:json)?\n?/, '')
-      .replace(/\n?```$/, '')
-      .trim();
-  }
-  return cleaned;
-}
-
 // Non-destructive AST/structure-preserving prose normalizer
-export function cleanMarkdownProse(text: string, chapterNumber?: number, chapterTitle?: string): string {
+export function cleanMarkdownProse(
+  text: string,
+  chapterNumber?: number,
+  chapterTitle?: string
+): string {
   return normalizeProse(text, chapterNumber, chapterTitle);
 }
 
@@ -151,215 +148,6 @@ async function callAiCompletion({
   }
 }
 
-// High-quality artistic vector SVG book cover generator with multi-theme bestseller layout
-export function generateSvgCoverUrl(
-  titulo: string,
-  autor: string,
-  subtitulo?: string,
-  estilo?: string,
-  editora?: string
-): string {
-  const safeTitle = (titulo || 'Sem Título').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const safeAuthor = (autor || 'Autor Exemplo').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const safeSubtitle = (subtitulo || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const safeEditora = (editora || 'OMNIA').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-  // Pick visual theme palette based on book style
-  let theme = {
-    bgFrom: '#1C1917',
-    bgVia: '#292524',
-    bgTo: '#0C0A09',
-    accent1: '#D97706',
-    accent2: '#F59E0B',
-    accent3: '#B45309',
-    border: '#44403C',
-    titleColor: '#F5F5F4',
-    subColor: '#D6D3D1',
-    category: '★ BEST-SELLER INTERNACIONAL ★',
-  };
-
-  const styleLower = (estilo || '').toLowerCase();
-
-  if (
-    styleLower.includes('ficcao') ||
-    styleLower.includes('misterio') ||
-    styleLower.includes('fantasia')
-  ) {
-    theme = {
-      bgFrom: '#022C22',
-      bgVia: '#064E3B',
-      bgTo: '#021D17',
-      accent1: '#34D399',
-      accent2: '#10B981',
-      accent3: '#059669',
-      border: '#065F46',
-      titleColor: '#ECFDF5',
-      subColor: '#A7F3D0',
-      category: '★ FICÇÃO EDITORIAL OMNIA ★',
-    };
-  } else if (
-    styleLower.includes('negocios') ||
-    styleLower.includes('tecnico') ||
-    styleLower.includes('financas')
-  ) {
-    theme = {
-      bgFrom: '#0F172A',
-      bgVia: '#1E293B',
-      bgTo: '#020617',
-      accent1: '#38BDF8',
-      accent2: '#0284C7',
-      accent3: '#0369A1',
-      border: '#334155',
-      titleColor: '#F0F9FF',
-      subColor: '#BAE6FD',
-      category: '★ EDIÇÃO EXECUTIVA OMNIA ★',
-    };
-  } else if (
-    styleLower.includes('desenvolvimento') ||
-    styleLower.includes('autoajuda') ||
-    styleLower.includes('saude')
-  ) {
-    theme = {
-      bgFrom: '#451A03',
-      bgVia: '#78350F',
-      bgTo: '#290E02',
-      accent1: '#FBBF24',
-      accent2: '#F59E0B',
-      accent3: '#D97706',
-      border: '#92400E',
-      titleColor: '#FFFBEB',
-      subColor: '#FDE68A',
-      category: '★ DESENVOLVIMENTO PESSOAL ★',
-    };
-  } else if (
-    styleLower.includes('poesia') ||
-    styleLower.includes('biografia') ||
-    styleLower.includes('filosofia')
-  ) {
-    theme = {
-      bgFrom: '#2E1065',
-      bgVia: '#4C1D95',
-      bgTo: '#1E0A3C',
-      accent1: '#C084FC',
-      accent2: '#A855F7',
-      accent3: '#9333EA',
-      border: '#6B21A8',
-      titleColor: '#FAF5FF',
-      subColor: '#E9D5FF',
-      category: '★ OBRAS DE ARTE LITERÁRIA ★',
-    };
-  }
-
-  // Split title if long for balanced layout
-  const words = safeTitle.split(' ');
-  let titleLine1 = safeTitle;
-  let titleLine2 = '';
-
-  if (words.length > 3 && safeTitle.length > 20) {
-    const mid = Math.ceil(words.length / 2);
-    titleLine1 = words.slice(0, mid).join(' ');
-    titleLine2 = words.slice(mid).join(' ');
-  }
-
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" width="600" height="800">
-    <defs>
-      <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="${theme.bgFrom}" />
-        <stop offset="50%" stop-color="${theme.bgVia}" />
-        <stop offset="100%" stop-color="${theme.bgTo}" />
-      </linearGradient>
-
-      <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stop-color="${theme.accent1}" />
-        <stop offset="50%" stop-color="${theme.accent2}" />
-        <stop offset="100%" stop-color="${theme.accent3}" />
-      </linearGradient>
-
-      <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-        <feGaussianBlur stdDeviation="8" result="blur" />
-        <feComposite in="SourceGraphic" in2="blur" operator="over" />
-      </filter>
-
-      <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
-        <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.6"/>
-      </filter>
-    </defs>
-
-    <!-- Canvas Background -->
-    <rect width="600" height="800" fill="url(#bgGrad)" />
-
-    <!-- Book Spine Fold Visual Detail -->
-    <rect x="0" y="0" width="22" height="800" fill="#000" opacity="0.35" />
-    <line x1="22" y1="0" x2="22" y2="800" stroke="${theme.border}" stroke-width="1.5" opacity="0.5" />
-
-    <!-- Geometric Outer & Inner Frame Lines -->
-    <rect x="35" y="35" width="530" height="730" fill="none" stroke="${theme.border}" stroke-width="1.5" opacity="0.8" />
-    <rect x="45" y="45" width="510" height="710" fill="none" stroke="url(#accentGrad)" stroke-width="1" opacity="0.7" />
-
-    <!-- Top Bestseller Badge Line -->
-    <line x1="100" y1="110" x2="500" y2="110" stroke="url(#accentGrad)" stroke-width="1.5" opacity="0.8" />
-    <text x="300" y="92" text-anchor="middle" font-family="'Georgia', serif" font-size="11" font-weight="bold" fill="${theme.accent1}" letter-spacing="4" filter="url(#shadow)">
-      ${theme.category}
-    </text>
-
-    <!-- Main Title Block -->
-    <g filter="url(#shadow)">
-      ${
-        titleLine2
-          ? `
-        <text x="300" y="235" text-anchor="middle" font-family="'Georgia', 'Times New Roman', serif" font-size="32" font-weight="bold" font-style="italic" fill="${theme.titleColor}">
-          ${titleLine1}
-        </text>
-        <text x="300" y="280" text-anchor="middle" font-family="'Georgia', 'Times New Roman', serif" font-size="32" font-weight="bold" font-style="italic" fill="${theme.titleColor}">
-          ${titleLine2}
-        </text>
-      `
-          : `
-        <text x="300" y="255" text-anchor="middle" font-family="'Georgia', 'Times New Roman', serif" font-size="34" font-weight="bold" font-style="italic" fill="${theme.titleColor}">
-          ${safeTitle}
-        </text>
-      `
-      }
-
-      ${
-        safeSubtitle
-          ? `
-        <text x="300" y="335" text-anchor="middle" font-family="'Georgia', serif" font-size="13" fill="${theme.subColor}" opacity="0.9" letter-spacing="1">
-          ${safeSubtitle.length > 55 ? safeSubtitle.slice(0, 52) + '...' : safeSubtitle}
-        </text>
-      `
-          : ''
-      }
-    </g>
-
-    <!-- Central Artistic Geometric Emblem -->
-    <g transform="translate(300, 475)" filter="url(#glow)">
-      <!-- Outer Ring -->
-      <circle cx="0" cy="0" r="54" fill="none" stroke="url(#accentGrad)" stroke-width="2" opacity="0.8" />
-      <circle cx="0" cy="0" r="46" fill="none" stroke="${theme.border}" stroke-width="1" />
-      <circle cx="0" cy="0" r="38" fill="none" stroke="url(#accentGrad)" stroke-dasharray="4,4" stroke-width="1.5" />
-
-      <!-- Center Star Emblem -->
-      <polygon points="0,-28 7,-8 28,0 7,8 0,28 -7,8 -28,0 -7,-8" fill="url(#accentGrad)" />
-      <circle cx="0" cy="0" r="5" fill="${theme.titleColor}" />
-    </g>
-
-    <!-- Bottom Divider & Author Name Block -->
-    <line x1="120" y1="610" x2="480" y2="610" stroke="url(#accentGrad)" stroke-width="1" opacity="0.6" />
-
-    <text x="300" y="655" text-anchor="middle" font-family="'Georgia', serif" font-size="16" font-weight="bold" fill="${theme.titleColor}" letter-spacing="3" filter="url(#shadow)">
-      ${safeAuthor.toUpperCase()}
-    </text>
-
-    <!-- Bottom Publisher Seal (Editora) -->
-    <text x="300" y="710" text-anchor="middle" font-family="'Georgia', serif" font-size="10" font-weight="bold" fill="${theme.accent1}" opacity="0.9" letter-spacing="3">
-      ✦ ${safeEditora.toUpperCase()} ✦
-    </text>
-  </svg>`;
-
-  return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
-}
-
 // API Endpoint 1: Generate Editorial Plan (Phase 5 Pipeline)
 app.post('/api/editorial/plan', async (req, res) => {
   try {
@@ -402,15 +190,27 @@ app.post('/api/editorial/plan', async (req, res) => {
 // API Endpoint 2: Generate Chapter Content (Phase 5 Block Generation Pipeline)
 app.post('/api/editorial/generate-chapter', async (req, res) => {
   try {
-    const { metadata: rawMeta, plan, chapterIndex, memory: inputMemory, aiConfig } = req.body;
+    const {
+      metadata: rawMeta,
+      plan,
+      chapterIndex,
+      memory: inputMemory,
+      previousSummaries,
+      aiConfig,
+    } = req.body;
 
     const configValidation = validateBookConfig(rawMeta || {});
     const metadata = configValidation.sanitizedMetadata;
 
-    if (!metadata) {
-      return res
-        .status(400)
-        .json({ success: false, error: 'Dados de metadados do livro inválidos.' });
+    // This endpoint used to read sanitizedMetadata while ignoring `valid`, so an
+    // invalid config (no title, 500 chapters, ...) silently generated against
+    // defaulted values instead of being rejected the way /plan rejects it.
+    if (!configValidation.valid || !metadata) {
+      return res.status(400).json({
+        success: false,
+        error: 'Dados de metadados do livro inválidos.',
+        details: configValidation.errors,
+      });
     }
 
     const currentCap = plan?.sumario?.[chapterIndex];
@@ -425,6 +225,9 @@ app.post('/api/editorial/generate-chapter', async (req, res) => {
       plan,
       chapterPlan: currentCap,
       memory,
+      previousSummaries: Array.isArray(previousSummaries)
+        ? previousSummaries.map(String)
+        : undefined,
       aiConfig,
     });
 
@@ -446,7 +249,9 @@ app.post('/api/editorial/generate-chapter', async (req, res) => {
     });
   } catch (error: any) {
     console.error('Error generating chapter:', error);
-    return res.status(500).json({ success: false, error: error.message || 'Erro ao escrever capítulo.' });
+    return res
+      .status(500)
+      .json({ success: false, error: error.message || 'Erro ao escrever capítulo.' });
   }
 });
 
@@ -458,10 +263,12 @@ app.post('/api/editorial/generate-section', async (req, res) => {
     const configValidation = validateBookConfig(rawMeta || {});
     const metadata = configValidation.sanitizedMetadata;
 
-    if (!metadata) {
-      return res
-        .status(400)
-        .json({ success: false, error: 'Dados de metadados do livro inválidos.' });
+    if (!configValidation.valid || !metadata) {
+      return res.status(400).json({
+        success: false,
+        error: 'Dados de metadados do livro inválidos.',
+        details: configValidation.errors,
+      });
     }
 
     const typeMap: Record<string, 'introducao' | 'conclusao' | 'exercicios' | 'sobreAutor'> = {
@@ -532,8 +339,15 @@ app.post('/api/editorial/review', async (req, res) => {
 // API Endpoint 4B: Apply Editorial Review Improvements to Chapter
 app.post('/api/editorial/apply-review', async (req, res) => {
   try {
-    const { metadata, plan: _plan, chapterIndex, chapterTitle, chapterContent, report, aiConfig } =
-      req.body;
+    const {
+      metadata,
+      plan: _plan,
+      chapterIndex,
+      chapterTitle,
+      chapterContent,
+      report,
+      aiConfig,
+    } = req.body;
 
     if (!chapterContent) {
       return res.status(400).json({ success: false, error: 'Conteúdo do capítulo está vazio.' });
@@ -696,7 +510,9 @@ app.post('/api/editorial/translate-section', async (req, res) => {
     }
 
     if (!targetLanguage || !targetLanguage.trim()) {
-      return res.status(400).json({ success: false, error: 'Idioma de destino não foi informado.' });
+      return res
+        .status(400)
+        .json({ success: false, error: 'Idioma de destino não foi informado.' });
     }
 
     const translatedText = await executeTranslationCall(text, targetLanguage, aiConfig);
@@ -731,7 +547,9 @@ app.post('/api/editorial/translate-book', async (req, res) => {
     }
 
     const origMeta = project.metadata;
-    logger.info(`Starting full book translation for project: ${origMeta.titulo} -> ${targetLanguage}`);
+    logger.info(
+      `Starting full book translation for project: ${origMeta.titulo} -> ${targetLanguage}`
+    );
 
     // 1. Translate Metadata
     const [translatedTitulo, translatedSubtitulo, translatedResumo, translatedPublicoAlvo] =
@@ -749,8 +567,12 @@ app.post('/api/editorial/translate-book', async (req, res) => {
     // 2. Translate FrontMatter
     const origFront = project.frontMatter || {};
     const [translatedApresentacao, translatedIntroducao] = await Promise.all([
-      origFront.apresentacao ? executeTranslationCall(origFront.apresentacao, targetLanguage, aiConfig) : Promise.resolve(''),
-      origFront.introducao ? executeTranslationCall(origFront.introducao, targetLanguage, aiConfig) : Promise.resolve(''),
+      origFront.apresentacao
+        ? executeTranslationCall(origFront.apresentacao, targetLanguage, aiConfig)
+        : Promise.resolve(''),
+      origFront.introducao
+        ? executeTranslationCall(origFront.introducao, targetLanguage, aiConfig)
+        : Promise.resolve(''),
     ]);
 
     // 3. Translate Chapters
@@ -783,26 +605,50 @@ app.post('/api/editorial/translate-book', async (req, res) => {
 
     // 4. Translate EndMatter
     const origEnd = project.endMatter || {};
-    const [translatedConclusao, translatedExercicios, translatedAgradecimentos, translatedSobreAutor] =
-      await Promise.all([
-        origEnd.conclusao ? executeTranslationCall(origEnd.conclusao, targetLanguage, aiConfig) : Promise.resolve(''),
-        origEnd.exercicios ? executeTranslationCall(origEnd.exercicios, targetLanguage, aiConfig) : Promise.resolve(''),
-        origEnd.agradecimentos ? executeTranslationCall(origEnd.agradecimentos, targetLanguage, aiConfig) : Promise.resolve(''),
-        origEnd.sobreAutor ? executeTranslationCall(origEnd.sobreAutor, targetLanguage, aiConfig) : Promise.resolve(''),
-      ]);
+    const [
+      translatedConclusao,
+      translatedExercicios,
+      translatedAgradecimentos,
+      translatedSobreAutor,
+    ] = await Promise.all([
+      origEnd.conclusao
+        ? executeTranslationCall(origEnd.conclusao, targetLanguage, aiConfig)
+        : Promise.resolve(''),
+      origEnd.exercicios
+        ? executeTranslationCall(origEnd.exercicios, targetLanguage, aiConfig)
+        : Promise.resolve(''),
+      origEnd.agradecimentos
+        ? executeTranslationCall(origEnd.agradecimentos, targetLanguage, aiConfig)
+        : Promise.resolve(''),
+      origEnd.sobreAutor
+        ? executeTranslationCall(origEnd.sobreAutor, targetLanguage, aiConfig)
+        : Promise.resolve(''),
+    ]);
 
     // 5. Translate Editorial Plan if present
     let translatedPlan = project.plan;
     if (project.plan) {
-      const transConceito = await executeTranslationCall(project.plan.conceitoCentral, targetLanguage, aiConfig);
-      const transPromessa = await executeTranslationCall(project.plan.promessaPrincipal, targetLanguage, aiConfig);
+      const transConceito = await executeTranslationCall(
+        project.plan.conceitoCentral,
+        targetLanguage,
+        aiConfig
+      );
+      const transPromessa = await executeTranslationCall(
+        project.plan.promessaPrincipal,
+        targetLanguage,
+        aiConfig
+      );
 
       const transSumario = [];
       if (Array.isArray(project.plan.sumario)) {
         for (const item of project.plan.sumario) {
           const itemTitle = await executeTranslationCall(item.titulo, targetLanguage, aiConfig);
-          const itemSub = item.subtitulo ? await executeTranslationCall(item.subtitulo, targetLanguage, aiConfig) : '';
-          const itemObj = item.objetivo ? await executeTranslationCall(item.objetivo, targetLanguage, aiConfig) : '';
+          const itemSub = item.subtitulo
+            ? await executeTranslationCall(item.subtitulo, targetLanguage, aiConfig)
+            : '';
+          const itemObj = item.objetivo
+            ? await executeTranslationCall(item.objetivo, targetLanguage, aiConfig)
+            : '';
           transSumario.push({
             ...item,
             titulo: itemTitle || item.titulo,
@@ -859,14 +705,15 @@ app.post('/api/editorial/translate-book', async (req, res) => {
         newBgArtworkUrl = imgResult.imageUrl;
       }
     } catch (coverErr: any) {
-      console.warn('[Localized Cover Gen] AI image background failed, using vector compositor:', coverErr.message);
+      console.warn(
+        '[Localized Cover Gen] AI image background failed, using vector compositor:',
+        coverErr.message
+      );
     }
 
     const totalPagesEstimated = Math.max(
       100,
-      Math.round(
-        translatedChapters.reduce((sum, c) => sum + (c.wordCount || 0), 0) / 250
-      )
+      Math.round(translatedChapters.reduce((sum, c) => sum + (c.wordCount || 0), 0) / 250)
     );
 
     const svgComposite = renderCompositeCoverSvg({
@@ -1089,6 +936,13 @@ app.post('/api/editorial/generate-cover', async (req, res) => {
   }
 });
 
+// PDF export launches a full Chromium per request and accepts bodies up to 50MB.
+// Without a ceiling, a handful of concurrent exports exhausts memory and takes the
+// whole server down -- the global 300-req/15min limiter does not help, because the
+// cost here is measured in simultaneous browsers, not request rate.
+const MAX_CONCURRENT_PDF_EXPORTS = Number(process.env.MAX_CONCURRENT_PDF_EXPORTS) || 2;
+let activePdfExports = 0;
+
 // SSRF validation helper for image URLs
 function validateImageSource(urlStr?: string): string | undefined {
   if (!urlStr || typeof urlStr !== 'string') return undefined;
@@ -1119,8 +973,20 @@ function validateImageSource(urlStr?: string): string | undefined {
 }
 
 // API Endpoint 7: Server-side PDF Export via Puppeteer
-app.post('/api/export/pdf', json10mb, async (req, res) => {
+app.post('/api/export/pdf', largePayloadJson, async (req, res) => {
   let browser: any = null;
+
+  if (activePdfExports >= MAX_CONCURRENT_PDF_EXPORTS) {
+    return res.status(503).json({
+      error: {
+        code: 'PDF_EXPORT_BUSY',
+        message:
+          'O servidor está gerando outros PDFs no momento. Aguarde alguns instantes e tente novamente.',
+      },
+    });
+  }
+
+  activePdfExports++;
   try {
     const { project, settings } = req.body;
 
@@ -1246,6 +1112,7 @@ app.post('/api/export/pdf', json10mb, async (req, res) => {
       },
     });
   } finally {
+    activePdfExports--;
     if (browser) {
       await browser.close().catch(() => undefined);
     }
@@ -1253,7 +1120,7 @@ app.post('/api/export/pdf', json10mb, async (req, res) => {
 });
 
 // API Endpoint 8: Dedicated Asset Upload (Separated from JSON payload)
-app.post('/api/assets/upload', json10mb, (req, res) => {
+app.post('/api/assets/upload', largePayloadJson, (req, res) => {
   try {
     const { assetType, dataUrl, filename } = req.body;
     if (!dataUrl || typeof dataUrl !== 'string') {
@@ -1291,7 +1158,7 @@ app.post('/api/assets/upload', json10mb, (req, res) => {
 });
 
 // API Endpoint 9: Create Versioned Backup Package
-app.post('/api/projects/backup', json10mb, (req, res) => {
+app.post('/api/projects/backup', largePayloadJson, (req, res) => {
   try {
     const { projects } = req.body;
     if (!Array.isArray(projects)) {
@@ -1316,7 +1183,7 @@ app.post('/api/projects/backup', json10mb, (req, res) => {
 });
 
 // API Endpoint 10: Validate and Restore Backup Package
-app.post('/api/projects/restore', json10mb, (req, res) => {
+app.post('/api/projects/restore', largePayloadJson, (req, res) => {
   try {
     const backupPkg = req.body;
     const result = validateAndRestoreBackup(backupPkg);
@@ -1373,6 +1240,44 @@ app.post('/api/editorial/projects/:id/delete-data', (req, res) => {
     projectId: id,
     message: `Dados do projeto ${id} marcados para remoção e limpos dos buffers da sessão.`,
     deletedAt: new Date().toISOString(),
+  });
+});
+
+// Unknown API routes must not fall through to the SPA catch-all below: in
+// production that returned index.html with status 200, so a typo'd endpoint gave
+// the client HTML where it expected JSON and blew up inside res.json().
+app.use('/api', (_req, res) => {
+  res.status(404).json({
+    error: { code: 'NOT_FOUND', message: 'Endpoint de API não encontrado.' },
+  });
+});
+
+// Final error handler. The 413 guard near the top only catches body-parser errors
+// raised by middleware registered before it; anything thrown later (including by
+// the per-route largePayloadJson parser) previously fell through to Express's default
+// handler, which replies with an HTML stack trace.
+// Express identifies an error handler by its arity, so the 4th parameter must
+// exist even though this handler is terminal and never delegates.
+app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  const requestId = (req as any).requestId;
+  logger.error(`Unhandled error on ${req.method} ${req.originalUrl}`, {
+    requestId,
+    error: err?.message,
+    stack: envConfig.nodeEnv === 'production' ? undefined : err?.stack,
+  });
+
+  if (res.headersSent) return;
+
+  const status = err?.status || err?.statusCode || 500;
+  res.status(status).json({
+    error: {
+      code: err?.type === 'entity.too.large' ? 'PAYLOAD_TOO_LARGE' : 'INTERNAL_ERROR',
+      message:
+        status === 413
+          ? 'O tamanho da requisição excede o limite permitido (413 Payload Too Large).'
+          : 'Erro interno no servidor.',
+      requestId,
+    },
   });
 });
 

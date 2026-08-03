@@ -26,7 +26,7 @@ export function cleanChapterProse(
     const lines = text.split(/\r?\n/);
     if (lines.length === 0) break;
 
-    const firstLine = lines[0].trim();
+    const firstLine = (lines[0] ?? '').trim();
     if (!firstLine) {
       lines.shift();
       text = lines.join('\n').trim();

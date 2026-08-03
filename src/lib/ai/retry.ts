@@ -78,7 +78,10 @@ export async function executeWithRetry<T>({
   providerName,
   operation,
   maxAttempts = 3,
-  timeoutMs = 30000,
+  // A chapter block is generated with up to 8192 output tokens; 30s was not a
+  // realistic budget for that and turned normal long completions into timeouts
+  // (which then burned two more retries before surfacing).
+  timeoutMs = 90000,
 }: {
   providerName: string;
   operation: (signal: AbortSignal) => Promise<T>;

@@ -68,7 +68,29 @@ npm run build
 
 # Start production server
 npm run start
+
+# Verify the AI providers against their live APIs (see below)
+npm run verify:providers
 ```
+
+### Verifying the AI providers
+
+The automated suite never calls a real provider, so a wrong model id or a wrong
+base URL passes CI and only fails in front of a user. `npm run verify:providers`
+closes that gap: it lists the account's real Gemini models and checks every id in
+`catalog.ts` against them, then makes one minimal OpenCode completion.
+
+Run it after changing `catalog.ts` or a provider URL. Exit codes:
+
+| Code | Meaning |
+| --- | --- |
+| `0` | Everything configured was reached and works |
+| `1` | Something is genuinely broken — read the output |
+| `2` | Inconclusive: nothing ran (missing key, or egress blocked by a proxy) |
+
+Exit `2` is not a pass. A restrictive network answers `403` to the `CONNECT`,
+which looks identical to a provider rejecting the key — the script tells the two
+apart so a network policy is never mistaken for a bad credential.
 
 ---
 

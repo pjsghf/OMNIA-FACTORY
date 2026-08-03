@@ -1,5 +1,27 @@
 import { ModelCapability, AiTaskType } from './types';
 
+/**
+ * Canonical OpenCode GO endpoint.
+ *
+ * The client defaults (App.tsx, AiSettingsModal) used to say
+ * "https://opencode.go/api/v1" -- a domain that does not exist -- while the
+ * provider fell back to the real one. Since the client always sends aiConfig,
+ * the bogus value won and the OpenCode provider could never connect in its
+ * default configuration. Kept here (a browser-safe module) so the UI and the
+ * server-side provider cannot drift apart again.
+ */
+export const OPENCODE_DEFAULT_BASE_URL = 'https://opencode.ai/zen/go/v1';
+
+/** Model the app runs on by default. */
+export const OPENCODE_DEFAULT_MODEL = 'deepseek-v4-flash';
+
+/**
+ * NOTE ON DEFAULTS: the default is deliberately the model with the longest track
+ * record, not the newest entry in this list. A default that does not exist upstream
+ * fails *every* text generation in the app, so the blast radius of guessing wrong
+ * here is total. The newer ids remain selectable; verify them against
+ * `GET /v1beta/models` (see scripts/verifyProviders.ts) before promoting one.
+ */
 export const GEMINI_MODEL_CATALOG: Record<string, ModelCapability> = {
   'gemini-3.6-flash': {
     id: 'gemini-3.6-flash',
@@ -10,7 +32,6 @@ export const GEMINI_MODEL_CATALOG: Record<string, ModelCapability> = {
     inputCostPer1k: 0.000075,
     outputCostPer1k: 0.0003,
     contextWindow: 1000000,
-    isDefault: true,
   },
   'gemini-3.1-pro-preview': {
     id: 'gemini-3.1-pro-preview',
@@ -31,6 +52,7 @@ export const GEMINI_MODEL_CATALOG: Record<string, ModelCapability> = {
     inputCostPer1k: 0.000075,
     outputCostPer1k: 0.0003,
     contextWindow: 1000000,
+    isDefault: true,
   },
   'gemini-2.5-pro': {
     id: 'gemini-2.5-pro',
@@ -66,6 +88,20 @@ export const GEMINI_MODEL_CATALOG: Record<string, ModelCapability> = {
 };
 
 export const OPENCODE_MODEL_CATALOG: Record<string, ModelCapability> = {
+  'deepseek-v4-flash': {
+    id: 'deepseek-v4-flash',
+    displayName: 'DeepSeek V4 Flash (OpenCode)',
+    provider: 'opencode',
+    allowedTasks: ['plan', 'writing', 'review', 'general'],
+    maxOutputTokens: 8192,
+    // Pricing is a placeholder: it feeds cost logging only, never a request. Update
+    // it from the OpenCode dashboard -- a wrong number here misreports spend, it
+    // does not break generation.
+    inputCostPer1k: 0.00027,
+    outputCostPer1k: 0.0011,
+    contextWindow: 128000,
+    isDefault: true,
+  },
   'opencode/claude-3-5-sonnet': {
     id: 'opencode/claude-3-5-sonnet',
     displayName: 'Claude 3.5 Sonnet (OpenCode)',
@@ -75,7 +111,6 @@ export const OPENCODE_MODEL_CATALOG: Record<string, ModelCapability> = {
     inputCostPer1k: 0.003,
     outputCostPer1k: 0.015,
     contextWindow: 200000,
-    isDefault: true,
   },
   'opencode/gpt-4o': {
     id: 'opencode/gpt-4o',
@@ -161,7 +196,7 @@ export function getDefaultModel(provider: 'gemini' | 'opencode', task: AiTaskTyp
   return anyMatch
     ? anyMatch.id
     : provider === 'gemini'
-      ? 'gemini-3.6-flash'
+      ? 'gemini-2.5-flash'
       : 'opencode/claude-3-5-sonnet';
 }
 
