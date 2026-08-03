@@ -21,6 +21,7 @@ export async function generateChapterInBlocks({
   plan,
   chapterPlan,
   memory,
+  previousSummaries,
   aiConfig,
   onProgress,
 }: {
@@ -28,6 +29,7 @@ export async function generateChapterInBlocks({
   plan?: EditorialPlan | null;
   chapterPlan: ChapterPlan;
   memory: BookBibleMemory;
+  previousSummaries?: string[];
   aiConfig?: any;
   onProgress?: GenerationProgressCallback;
 }): Promise<{
@@ -38,8 +40,6 @@ export async function generateChapterInBlocks({
 }> {
   const detailedPlan: DetailedChapterPlan = buildChapterSectionPlan(chapterPlan, metadata);
   const blockContents: string[] = [];
-
-  let currentMemory = memory;
 
   for (let b = 0; b < detailedPlan.sections.length; b++) {
     const blockPlan = detailedPlan.sections[b];
@@ -60,7 +60,12 @@ export async function generateChapterInBlocks({
       plan,
       chapterPlan,
       sectionBlock: blockPlan,
-      memory: currentMemory,
+      memory,
+      previousSummaries,
+      // Blocks used to be written blind of each other, which produced repeated
+      // ideas and broken transitions inside a single chapter. Hand the writer the
+      // tail of what was already written so it can pick the thread back up.
+      precedingBlockText: blockContents.length > 0 ? blockContents[blockContents.length - 1] : undefined,
     });
 
     let attempts = 0;

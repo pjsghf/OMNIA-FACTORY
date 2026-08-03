@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   BookProject,
   EditorialPlan,
@@ -70,7 +70,7 @@ const DEFAULT_PROJECT: BookProject = {
 
 export default function App() {
   // Saved Projects
-  const [projects, setProjects] = useState<BookProject[]>(() => {
+  const [projects, setProjectsState] = useState<BookProject[]>(() => {
     const saved = localStorage.getItem('scriptor_projects_v2');
     if (saved) {
       try {
@@ -94,7 +94,33 @@ export default function App() {
     return [initialProject];
   });
 
-  const [currentProjectId, setCurrentProjectId] = useState<string>(projects[0]?.id || '');
+  const [currentProjectId, setCurrentProjectIdState] = useState<string>(projects[0]?.id || '');
+
+  // Long-running batch handlers (chapter generation, review application) await between
+  // iterations, so the `projects` / `currentProjectId` values captured by their closure
+  // go stale the moment the first update lands. These refs mirror the state so those
+  // handlers can always read the freshest project instead of the render-time snapshot.
+  const projectsRef = useRef<BookProject[]>(projects);
+  const currentProjectIdRef = useRef<string>(currentProjectId);
+
+  const setProjects = (action: BookProject[] | ((prev: BookProject[]) => BookProject[])) => {
+    setProjectsState((prev) => {
+      const next = typeof action === 'function' ? action(prev) : action;
+      projectsRef.current = next;
+      return next;
+    });
+  };
+
+  const setCurrentProjectId = (id: string) => {
+    currentProjectIdRef.current = id;
+    setCurrentProjectIdState(id);
+  };
+
+  // Reads the active project from the refs, so it stays correct across awaits.
+  const getLiveProject = (): BookProject =>
+    projectsRef.current.find((p) => p.id === currentProjectIdRef.current) ||
+    projectsRef.current[0] ||
+    DEFAULT_PROJECT;
 
   // AI Configuration State
   const [aiConfig, setAiConfig] = useState<AiConfig>(() => {
@@ -162,9 +188,8 @@ export default function App() {
         `Nova versão em ${translatedProject.metadata.idioma} com capa gerada adicionada à biblioteca.`
       );
     } else {
-      setProjects((prev) =>
-        prev.map((p) => (p.id === activeProject.id ? translatedProject : p))
-      );
+      const targetId = getLiveProject().id;
+      setProjects((prev) => prev.map((p) => (p.id === targetId ? translatedProject : p)));
       addToast(
         'success',
         'E-book Atualizado!',
@@ -187,9 +212,10 @@ export default function App() {
     projects.find((p) => p.id === currentProjectId) || projects[0] || DEFAULT_PROJECT;
 
   const updateActiveProject = (updater: (prev: BookProject) => BookProject) => {
+    const targetId = getLiveProject().id;
     setProjects((prev) =>
       prev.map((p) => {
-        if (p.id === activeProject.id) {
+        if (p.id === targetId) {
           const updated = updater(p);
           // Flag report as obsolete if chapter content was edited
           if (updated.chapters !== p.chapters && updated.editorialReport) {
@@ -262,11 +288,14 @@ export default function App() {
 
   // 2. Generate Single Chapter
   const handleGenerateChapter = async (index: number): Promise<boolean> => {
-    if (!activeProject.plan) return false;
+    // Read from the refs: in batch mode this runs once per chapter across awaits,
+    // and every iteration needs the memory/chapters produced by the previous one.
+    const liveProject = getLiveProject();
+    if (!liveProject.plan) return false;
     setGeneratingIndex(index);
 
     try {
-      const previousSummaries = activeProject.chapters
+      const previousSummaries = liveProject.chapters
         .slice(0, index)
         .filter((c: ChapterContent) => Boolean(c.content))
         .map((c: ChapterContent) => `Capítulo ${c.numero} (${c.titulo}): ${c.content.slice(0, 300)}...`);
@@ -275,10 +304,10 @@ export default function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          metadata: activeProject.metadata,
-          plan: activeProject.plan,
+          metadata: liveProject.metadata,
+          plan: liveProject.plan,
           chapterIndex: index,
-          memory: activeProject.bookBibleMemory,
+          memory: liveProject.bookBibleMemory,
           previousSummaries,
           aiConfig,
         }),
@@ -346,15 +375,13 @@ export default function App() {
 
   // 3. Batch Generate All Chapters sequentially
   const handleGenerateBatchChapters = async () => {
-    if (!activeProject.plan) return;
+    if (!getLiveProject().plan) return;
     setIsGeneratingBatch(true);
 
-    const totalCaps = activeProject.plan.sumario.length;
+    const totalCaps = getLiveProject().plan!.sumario.length;
     for (let i = 0; i < totalCaps; i++) {
-      if (
-        activeProject.chapters[i]?.status === 'completed' &&
-        activeProject.chapters[i]?.content?.trim()
-      ) {
+      const chaptersNow = getLiveProject().chapters;
+      if (chaptersNow[i]?.status === 'completed' && chaptersNow[i]?.content?.trim()) {
         continue;
       }
 
@@ -377,13 +404,24 @@ export default function App() {
       'apresentacao' | 'introducao' | 'conclusao' | 'agradecimentos' | 'sobreAutor' | 'exercicios'
   ): Promise<boolean> => {
     try {
+      const liveProject = getLiveProject();
+
+      // The conclusion / exercises / author sections are written *about* the book, so
+      // the backend prompt needs the actual prose. It was never being sent, leaving
+      // buildMatterPrompt with its "Livro fundamentado na obra do autor." placeholder.
+      const fullBookContent = liveProject.chapters
+        .filter((c: ChapterContent) => Boolean(c.content?.trim()))
+        .map((c: ChapterContent) => `Capítulo ${c.numero} — ${c.titulo}\n${c.content}`)
+        .join('\n\n');
+
       const res = await fetch('/api/editorial/generate-section', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          metadata: activeProject.metadata,
-          plan: activeProject.plan,
+          metadata: liveProject.metadata,
+          plan: liveProject.plan,
           sectionType: type,
+          fullBookContent,
           aiConfig,
         }),
       });
@@ -467,7 +505,7 @@ export default function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          project: activeProject,
+          project: getLiveProject(),
           aiConfig,
         }),
       });
@@ -493,7 +531,7 @@ export default function App() {
 
   // 5B. Apply Editorial Review Improvements to Chapters
   const handleApplyReviewImprovements = async (chapterIndex?: number) => {
-    if (!activeProject.editorialReport) {
+    if (!getLiveProject().editorialReport) {
       addToast('error', 'Sem Relatório', 'Execute a auditoria editorial primeiro.');
       return;
     }
@@ -502,7 +540,8 @@ export default function App() {
 
     try {
       if (typeof chapterIndex === 'number') {
-        const targetCap = activeProject.chapters[chapterIndex];
+        const liveProject = getLiveProject();
+        const targetCap = liveProject.chapters[chapterIndex];
         if (!targetCap || !targetCap.content?.trim()) {
           addToast('error', 'Capítulo Vazio', `Capítulo ${chapterIndex + 1} não possui texto.`);
           return;
@@ -514,12 +553,12 @@ export default function App() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            metadata: activeProject.metadata,
-            plan: activeProject.plan,
+            metadata: liveProject.metadata,
+            plan: liveProject.plan,
             chapterIndex,
             chapterTitle: targetCap.titulo,
             chapterContent: targetCap.content,
-            report: activeProject.editorialReport,
+            report: liveProject.editorialReport,
             aiConfig,
           }),
         });
@@ -568,11 +607,12 @@ export default function App() {
           addToast('error', 'Falha ao Aprimorar', data.error || 'Erro desconhecido');
         }
       } else {
-        const total = activeProject.chapters.length;
+        const total = getLiveProject().chapters.length;
         let appliedCount = 0;
 
         for (let i = 0; i < total; i++) {
-          const cap = activeProject.chapters[i];
+          const liveProject = getLiveProject();
+          const cap = liveProject.chapters[i];
           if (!cap || !cap.content?.trim()) continue;
 
           setGeneratingIndex(i);
@@ -582,12 +622,12 @@ export default function App() {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                metadata: activeProject.metadata,
-                plan: activeProject.plan,
+                metadata: liveProject.metadata,
+                plan: liveProject.plan,
                 chapterIndex: i,
                 chapterTitle: cap.titulo,
                 chapterContent: cap.content,
-                report: activeProject.editorialReport,
+                report: liveProject.editorialReport,
                 aiConfig,
               }),
             });

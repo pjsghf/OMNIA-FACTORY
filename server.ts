@@ -402,7 +402,14 @@ app.post('/api/editorial/plan', async (req, res) => {
 // API Endpoint 2: Generate Chapter Content (Phase 5 Block Generation Pipeline)
 app.post('/api/editorial/generate-chapter', async (req, res) => {
   try {
-    const { metadata: rawMeta, plan, chapterIndex, memory: inputMemory, aiConfig } = req.body;
+    const {
+      metadata: rawMeta,
+      plan,
+      chapterIndex,
+      memory: inputMemory,
+      previousSummaries,
+      aiConfig,
+    } = req.body;
 
     const configValidation = validateBookConfig(rawMeta || {});
     const metadata = configValidation.sanitizedMetadata;
@@ -425,6 +432,9 @@ app.post('/api/editorial/generate-chapter', async (req, res) => {
       plan,
       chapterPlan: currentCap,
       memory,
+      previousSummaries: Array.isArray(previousSummaries)
+        ? previousSummaries.map(String)
+        : undefined,
       aiConfig,
     });
 

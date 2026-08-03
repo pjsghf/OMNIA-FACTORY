@@ -79,21 +79,39 @@ Gere a estrutura em JSON exato:
   };
 }
 
+const PRECEDING_BLOCK_TAIL_CHARS = 1200;
+
 export function buildWriterSectionBlockPrompt({
   metadata,
   plan,
   chapterPlan,
   sectionBlock,
   memory,
+  previousSummaries,
+  precedingBlockText,
 }: {
   metadata: BookMetadata;
   plan?: EditorialPlan | null;
   chapterPlan: ChapterPlan;
   sectionBlock: ChapterSectionPlan;
   memory: BookBibleMemory;
+  previousSummaries?: string[];
+  precedingBlockText?: string;
 }): PromptPackage {
   const nichePolicy = detectSensitiveNiche(metadata);
   const memoryText = formatMemoryForPrompt(memory);
+
+  // Falls back to the client-supplied chapter digests when the BookBible memory is
+  // still empty (e.g. a project restored from a backup that predates the memory).
+  const previousChaptersText =
+    memory.resumosCapitulos.length === 0 && previousSummaries && previousSummaries.length > 0
+      ? `\n\nRESUMO DOS CAPÍTULOS ANTERIORES:\n${previousSummaries.map((s) => `- ${s}`).join('\n')}`
+      : '';
+
+  const precedingBlockTail = (precedingBlockText || '').trim();
+  const continuityText = precedingBlockTail
+    ? `\n\nTRECHO FINAL DO BLOCO IMEDIATAMENTE ANTERIOR DESTE MESMO CAPÍTULO (continue a partir daqui, sem repetir o que já foi dito):\n"""\n...${precedingBlockTail.slice(-PRECEDING_BLOCK_TAIL_CHARS)}\n"""`
+    : '';
 
   const systemInstruction = `Você é um Escritor Editorial Sênior especialista na redação de obras completas em ${metadata.idioma || 'Português'}.
 Sua missão é escrever o BLOCO DE CONTEÚDO ${sectionBlock.numeroBloco}: "${sectionBlock.tituloBloco}" para o CAPÍTULO ${chapterPlan.numero}: "${chapterPlan.titulo}".
@@ -116,7 +134,7 @@ REGRAS DE OURO DE ESCRITA:
 - Público-Alvo: ${metadata.publicoAlvo}
 - Conceito Central: ${plan?.conceitoCentral || metadata.resumo}
 
-${memoryText}
+${memoryText}${previousChaptersText}${continuityText}
 
 INSTRUÇÕES DO BLOCO DE TRABALHO ATUAL:
 - Capítulo ${chapterPlan.numero}: ${chapterPlan.titulo}
