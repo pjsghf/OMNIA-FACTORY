@@ -136,6 +136,9 @@ export default function App() {
     return DEFAULT_AI_CONFIG;
   });
 
+  // Persistence failure banner (quota exhausted, private-mode restrictions, ...)
+  const [storageWarning, setStorageWarning] = useState<string | null>(null);
+
   // Toasts
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
@@ -199,14 +202,56 @@ export default function App() {
     }
   };
 
-  // Auto-save projects to localStorage
+  // Auto-save projects to localStorage.
+  //
+  // Debounced because WritingStage calls onUpdateChapter on every keystroke: this
+  // effect used to re-serialize every project (full manuscript plus base64 covers,
+  // easily megabytes) once per character typed.
+  //
+  // Guarded because a book with cover art approaches the ~5MB origin quota, and an
+  // unhandled QuotaExceededError here propagates out of the effect and takes down
+  // the whole app -- losing the very work it was trying to save.
   useEffect(() => {
-    localStorage.setItem('scriptor_projects_v2', JSON.stringify(projects));
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem('scriptor_projects_v2', JSON.stringify(projects));
+        setStorageWarning(null);
+      } catch (err) {
+        console.error('Falha ao salvar projetos no localStorage', err);
+        const isQuota =
+          err instanceof DOMException &&
+          (err.name === 'QuotaExceededError' || err.name === 'NS_ERROR_DOM_QUOTA_REACHED');
+        setStorageWarning(
+          isQuota
+            ? 'Armazenamento local cheio: suas últimas alterações NÃO foram salvas. Exporte um backup e remova projetos antigos da biblioteca.'
+            : 'Não foi possível salvar automaticamente no navegador. Exporte um backup para não perder o trabalho.'
+        );
+      }
+    }, 800);
+
+    return () => clearTimeout(timer);
   }, [projects]);
+
+  // Flush pending work on unload, since the debounce may still be in flight.
+  useEffect(() => {
+    const flush = () => {
+      try {
+        localStorage.setItem('scriptor_projects_v2', JSON.stringify(projectsRef.current));
+      } catch {
+        // Nothing useful to do while the page is going away.
+      }
+    };
+    window.addEventListener('beforeunload', flush);
+    return () => window.removeEventListener('beforeunload', flush);
+  }, []);
 
   // Auto-save aiConfig
   useEffect(() => {
-    localStorage.setItem('scriptor_aiconfig_v1', JSON.stringify(aiConfig));
+    try {
+      localStorage.setItem('scriptor_aiconfig_v1', JSON.stringify(aiConfig));
+    } catch (err) {
+      console.error('Falha ao salvar configuração de IA no localStorage', err);
+    }
   }, [aiConfig]);
 
   const activeProject =
@@ -791,6 +836,26 @@ export default function App() {
     <ErrorBoundary>
       <div className="min-h-screen bg-[#FDFCFB] text-[#1C1917] font-sans antialiased flex flex-col">
         <ToastContainer toasts={toasts} onDismiss={removeToast} />
+
+        {/* Persistence failure banner — must be impossible to miss: work is at risk. */}
+        {storageWarning && (
+          <div
+            role="alert"
+            className="bg-rose-950 text-rose-50 px-4 py-3 text-sm border-b border-rose-700 flex items-start justify-between gap-4"
+          >
+            <span>
+              <strong className="font-bold">Falha ao salvar automaticamente.</strong>{' '}
+              {storageWarning}
+            </span>
+            <button
+              onClick={() => setStorageWarning(null)}
+              className="shrink-0 text-rose-200 hover:text-white font-bold"
+              aria-label="Fechar aviso de armazenamento"
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         {/* Navigation Header */}
         <Header
