@@ -150,7 +150,7 @@ export function parseMarkdownToAST(markdown: string): EditorialAST {
     else if (trimmed.startsWith('* ') || trimmed.startsWith('- ')) {
       const items = trimmed
         .split('\n')
-        .map((l) => l.replace(/^[\*\-]\s*/, '').trim())
+        .map((l) => l.replace(/^[*-]\s*/, '').trim())
         .filter(Boolean);
       ast.push({
         type: 'list',
@@ -203,6 +203,11 @@ export function escapeXML(str: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;');
+}
+
+/** Schemes that are safe and meaningful inside an exported book. */
+export function isRenderableImageSrc(src: string): boolean {
+  return /^(data:image\/|https?:\/\/)/i.test(src.trim());
 }
 
 export function renderSpansToHTML(spans?: ASTInlineSpan[]): string {
@@ -261,8 +266,14 @@ export function renderASTToHTML(ast: EditorialAST): string {
         break;
       }
       case 'image': {
-        if (node.src) {
+        // Only data: and http(s) sources are emitted. An AI-authored markdown image
+        // can carry any scheme, and javascript:/file: in a src has no legitimate use
+        // in an exported book. Unsupported sources degrade to the alt text rather
+        // than shipping a broken <img> into the EPUB.
+        if (node.src && isRenderableImageSrc(node.src)) {
           html += `<figure class="editorial-image"><img src="${escapeXML(node.src)}" alt="${escapeXML(node.alt || '')}" />${node.caption ? `<figcaption>${escapeXML(node.caption)}</figcaption>` : ''}</figure>\n`;
+        } else if (node.alt) {
+          html += `<p class="editorial-image-fallback">${escapeXML(node.alt)}</p>\n`;
         }
         isFirstP = true;
         break;

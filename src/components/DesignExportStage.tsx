@@ -92,7 +92,7 @@ function convertMarkdownToHTML(markdown: string): string {
     } else if (trimmed.startsWith('* ') || trimmed.startsWith('- ')) {
       const listItems = trimmed
         .split('\n')
-        .map((l) => `<li>${formatInlineHTML(l.replace(/^[\*\-]\s*/, ''))}</li>`);
+        .map((l) => `<li>${formatInlineHTML(l.replace(/^[*-]\s*/, ''))}</li>`);
       html += `<ul class="print-ul">\n${listItems.join('\n')}\n</ul>\n`;
       isFirstP = true;
     } else if (trimmed.match(/^\d+\.\s/)) {

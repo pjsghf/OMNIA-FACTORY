@@ -47,7 +47,7 @@ export function normalizeProse(
     mathExpressions.push(match);
     return `___MATH_BLOCK_${mathExpressions.length - 1}___`;
   });
-  text = text.replace(/\$[^\$\n]+\$/g, (match) => {
+  text = text.replace(/\$[^$\n]+\$/g, (match) => {
     mathExpressions.push(match);
     return `___MATH_INLINE_${mathExpressions.length - 1}___`;
   });

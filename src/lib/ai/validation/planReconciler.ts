@@ -35,7 +35,7 @@ export function reconcileEditorialPlan(
       : ['Respostas práticas e fundamentadas'],
   };
 
-  let rawChapters: any[] = Array.isArray(rawPlan?.sumario) ? rawPlan.sumario : [];
+  const rawChapters: any[] = Array.isArray(rawPlan?.sumario) ? rawPlan.sumario : [];
 
   // If chapter count does not match target, adjust deterministically
   if (rawChapters.length !== targetCount) {
@@ -54,7 +54,7 @@ export function reconcileEditorialPlan(
 
     const titulo =
       typeof rawCap.titulo === 'string' && rawCap.titulo.trim().length > 0
-        ? rawCap.titulo.replace(/^[#\*\d\.\s]+/g, '').trim()
+        ? rawCap.titulo.replace(/^[#*\d.\s]+/g, '').trim()
         : `Capítulo ${numero}: ${metadata.titulo} - Parte ${numero}`;
 
     const subtitulo = typeof rawCap.subtitulo === 'string' ? rawCap.subtitulo.trim() : '';

@@ -130,7 +130,7 @@ export function validateProviderBaseUrl(rawUrl: string): SsrfCheckResult {
     // Sanitize URL (strip credentials or unexpected paths)
     const sanitizedUrl = `${parsed.protocol}//${parsed.host}${parsed.pathname}`.replace(/\/$/, '');
     return { safe: true, sanitizedUrl };
-  } catch (err) {
+  } catch {
     return { safe: false, reason: 'Formato de URL malformado ou inválido.' };
   }
 }

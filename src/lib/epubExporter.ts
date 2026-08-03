@@ -185,7 +185,7 @@ li {
   if (project.metadata.coverImageUrl) {
     const rawUrl = project.metadata.coverImageUrl;
     if (rawUrl.startsWith('data:image/')) {
-      const match = rawUrl.match(/^data:(image\/[a-zA-Z0-9+\-]+);base64,(.+)$/);
+      const match = rawUrl.match(/^data:(image\/[a-zA-Z0-9+-]+);base64,(.+)$/);
       if (match && match[1] && match[2]) {
         coverImageMime = match[1];
         coverImageExt = coverImageMime.includes('png')

@@ -160,7 +160,6 @@ Escreva a prosa do bloco agora:`;
 
 export function buildMatterPrompt({
   metadata,
-  plan: _plan,
   fullBookContent,
   type,
 }: {

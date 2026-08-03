@@ -108,7 +108,7 @@ export const ProjectListModal: React.FC<ProjectListModalProps> = ({
               (restored.error || 'estrutura não reconhecida.')
           );
         }
-      } catch (err) {
+      } catch {
         alert('Erro ao ler e validar o arquivo JSON.');
       }
     };

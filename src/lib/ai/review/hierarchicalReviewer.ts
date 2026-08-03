@@ -240,7 +240,7 @@ ${unitFindings.map((f) => `- [${f.unitTitle} - ${f.tipo} - ${f.severidade}]: ${f
 
 Gere a síntese global da auditoria em JSON.`;
 
-  let finalReduceData: any = {};
+  let finalReduceData: any;
   try {
     const { data } = await aiOrchestrator.generateStructured({
       systemInstruction: reduceSystemInstruction,

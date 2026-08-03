@@ -1250,6 +1250,8 @@ app.use('/api', (_req, res) => {
 // raised by middleware registered before it; anything thrown later (including by
 // the per-route largePayloadJson parser) previously fell through to Express's default
 // handler, which replies with an HTML stack trace.
+// Express identifies an error handler by its arity, so the 4th parameter must
+// exist even though this handler is terminal and never delegates.
 app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   const requestId = (req as any).requestId;
   logger.error(`Unhandled error on ${req.method} ${req.originalUrl}`, {
