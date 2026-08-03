@@ -224,6 +224,45 @@ Este parágrafo não deve receber uma nova capitular p-first.
       const mimetypeContent = await zip.file('mimetype')?.async('text');
       expect(mimetypeContent?.trim()).toBe('application/epub+zip');
     });
+
+    it('EXP-008b: Includes Agradecimentos, which the EPUB used to drop silently', async () => {
+      const withThanks = {
+        ...mockProject,
+        endMatter: { ...mockProject.endMatter, agradecimentos: 'Obrigado a todos.' },
+      };
+
+      const zip = await JSZip.loadAsync(
+        Buffer.from(await (await generateEpubBlob(withThanks)).arrayBuffer())
+      );
+
+      expect(zip.file('OEBPS/agradecimentos.xhtml')).not.toBeNull();
+      expect(await zip.file('OEBPS/agradecimentos.xhtml')?.async('text')).toContain(
+        'Obrigado a todos.'
+      );
+
+      const opf = await zip.file('OEBPS/content.opf')?.async('text');
+      expect(opf).toContain('agradecimentos.xhtml');
+      expect(opf).toContain('idref="agradecimentos"');
+    });
+
+    it('EXP-008c: Points the bodymatter landmark at a file that exists', async () => {
+      // Previously hardcoded to chapter_1.xhtml, so a book whose chapters do not
+      // start at 1 (or has none) shipped a dangling landmark that fails epubcheck.
+      const oddNumbering = {
+        ...mockProject,
+        chapters: mockProject.chapters.map((c) => ({ ...c, numero: 7 })),
+      };
+
+      const zip = await JSZip.loadAsync(
+        Buffer.from(await (await generateEpubBlob(oddNumbering)).arrayBuffer())
+      );
+
+      const nav = (await zip.file('OEBPS/nav.xhtml')?.async('text')) || '';
+      const landmarkHref = nav.match(/epub:type="bodymatter" href="([^"]+)"/)?.[1];
+
+      expect(landmarkHref).toBeDefined();
+      expect(zip.file(`OEBPS/${landmarkHref}`)).not.toBeNull();
+    });
   });
 
   describe('Puppeteer PDF Generation Pipeline', () => {

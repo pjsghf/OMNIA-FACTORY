@@ -369,6 +369,17 @@ li {
       content: wrapXHtmlSection('Exercícios e Práticas', renderASTToXHTML(ast), lang),
     });
   }
+  // Agradecimentos was the one section the PDF and HTML exports included but the
+  // EPUB silently dropped, so the ebook edition lost content the others carried.
+  if (project.endMatter.agradecimentos) {
+    const ast = parseMarkdownToAST(project.endMatter.agradecimentos);
+    items.push({
+      id: 'agradecimentos',
+      href: 'agradecimentos.xhtml',
+      title: 'Agradecimentos',
+      content: wrapXHtmlSection('Agradecimentos', renderASTToXHTML(ast), lang),
+    });
+  }
   if (project.endMatter.sobreAutor) {
     const ast = parseMarkdownToAST(project.endMatter.sobreAutor);
     items.push({
@@ -383,6 +394,11 @@ li {
   items.forEach((item) => {
     zip.file(`OEBPS/${item.href}`, item.content);
   });
+
+  // The bodymatter landmark used to hardcode chapter_1.xhtml, which is a dangling
+  // reference (and an epubcheck failure) whenever the book has no chapters or its
+  // numbering does not start at 1. Point at the first real bodymatter item instead.
+  const firstBodyItem = items.find((i) => i.epubType === 'bodymatter') || items[0];
 
   // Navigation TOC (nav.xhtml)
   const navXHTML = `<?xml version="1.0" encoding="UTF-8"?>
@@ -405,7 +421,7 @@ li {
     <ol>
       ${hasCoverImage ? '<li><a epub:type="cover" href="cover.xhtml">Capa</a></li>' : ''}
       <li><a epub:type="toc" href="nav.xhtml">Sumário</a></li>
-      <li><a epub:type="bodymatter" href="chapter_1.xhtml">Início do Conteúdo</a></li>
+      ${firstBodyItem ? `<li><a epub:type="bodymatter" href="${firstBodyItem.href}">Início do Conteúdo</a></li>` : ''}
     </ol>
   </nav>
 </body>
