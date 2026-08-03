@@ -25,13 +25,55 @@ export class ErrorBoundary extends Component<Props, State> {
     console.error('Uncaught Error Boundary:', error, errorInfo);
   }
 
+  /**
+   * Builds a shareable snapshot of localStorage.
+   *
+   * This file is written to be sent to support, so it must never carry secrets.
+   * `scriptor_aiconfig_v1` holds the user's OpenCode API key in plain text, and
+   * the project blobs hold the full manuscript plus base64 covers -- dumping
+   * `{ ...localStorage }` handed all of that to whoever received the file.
+   */
+  private buildSafeStorageSnapshot(): Record<string, unknown> {
+    const SECRET_KEY_PATTERN = /(apikey|api_key|token|secret|password|authorization)/i;
+    const snapshot: Record<string, unknown> = {};
+
+    for (const storageKey of Object.keys(localStorage)) {
+      const rawValue = localStorage.getItem(storageKey) ?? '';
+
+      // Manuscripts and cover images are huge and private: record shape, not content.
+      if (storageKey.startsWith('scriptor_projects')) {
+        snapshot[storageKey] = `[omitido: ${rawValue.length} bytes de conteúdo do projeto]`;
+        continue;
+      }
+
+      try {
+        const parsed = JSON.parse(rawValue);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          const redacted: Record<string, unknown> = {};
+          for (const [field, value] of Object.entries(parsed)) {
+            redacted[field] =
+              SECRET_KEY_PATTERN.test(field) && value ? '[REDACTED]' : value;
+          }
+          snapshot[storageKey] = redacted;
+          continue;
+        }
+      } catch {
+        // Not JSON — fall through to the scalar handling below.
+      }
+
+      snapshot[storageKey] = SECRET_KEY_PATTERN.test(storageKey) ? '[REDACTED]' : rawValue;
+    }
+
+    return snapshot;
+  }
+
   private handleDownloadDiagnostics = () => {
     const data = {
       timestamp: new Date().toISOString(),
       errorName: this.state.error?.name,
       errorMessage: this.state.error?.message,
       stack: this.state.error?.stack,
-      localStorage: { ...localStorage },
+      localStorage: this.buildSafeStorageSnapshot(),
     };
 
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -39,8 +81,11 @@ export class ErrorBoundary extends Component<Props, State> {
     const a = document.createElement('a');
     a.href = url;
     a.download = `omnia-diagnostics-${Date.now()}.json`;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    // Revoking synchronously can cancel the download in Firefox/Safari.
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
   };
 
   private handleReload = () => {

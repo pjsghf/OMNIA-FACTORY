@@ -19,8 +19,55 @@ const BLOCKED_HOSTNAMES = [
 const BLOCKED_SUFFIXES = ['.local', '.internal', '.localhost', '.lan', '.home'];
 
 /**
+ * `URL.hostname` keeps the brackets around an IPv6 literal ("[::1]"), so a plain
+ * lookup in BLOCKED_HOSTNAMES (which stores "::1") never matched and every IPv6
+ * loopback / private address sailed through. Normalize before any comparison.
+ */
+function normalizeHostname(rawHostname: string): { hostname: string; isIpv6Literal: boolean } {
+  const lower = rawHostname.toLowerCase();
+  if (lower.startsWith('[') && lower.endsWith(']')) {
+    return { hostname: lower.slice(1, -1), isIpv6Literal: true };
+  }
+  // A bare IPv6 address still contains ':' even without brackets.
+  return { hostname: lower, isIpv6Literal: lower.includes(':') };
+}
+
+/**
+ * Blocks IPv6 loopback, unspecified, unique-local (fc00::/7), link-local
+ * (fe80::/10) and IPv4-mapped addresses such as ::ffff:127.0.0.1.
+ */
+function isPrivateIPv6(ip: string): boolean {
+  // Strip a zone index ("fe80::1%eth0") before classifying.
+  const addr = ip.split('%')[0] || '';
+  if (addr === '::1' || addr === '::') return true;
+
+  // IPv4-mapped / IPv4-compatible: defer to the IPv4 classifier.
+  const mapped = addr.match(/^::(?:ffff:)?(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/);
+  if (mapped && mapped[1]) return isPrivateIPv4(mapped[1]);
+
+  // Expand the leading group enough to test the well-known private prefixes.
+  const firstGroup = addr.split(':')[0] || '';
+  if (!firstGroup) return true; // leading "::" — unspecified or loopback-ish
+
+  const groupValue = parseInt(firstGroup, 16);
+  if (Number.isNaN(groupValue)) return false;
+
+  // fc00::/7 (unique local) => first 7 bits are 1111110
+  if ((groupValue & 0xfe00) === 0xfc00) return true;
+  // fe80::/10 (link local) => first 10 bits are 1111111010
+  if ((groupValue & 0xffc0) === 0xfe80) return true;
+
+  return false;
+}
+
+/**
  * Validates external provider URLs against SSRF (Server Side Request Forgery) attacks.
- * Blocks private IP ranges, loopback, cloud metadata endpoints and non-HTTPS schemes.
+ * Blocks private IPv4/IPv6 ranges, loopback, cloud metadata endpoints and non-HTTPS schemes.
+ *
+ * Residual risk: this inspects the URL only. A public hostname that *resolves* to a
+ * private address (DNS rebinding) still passes, because the name looks legitimate here.
+ * Closing that requires resolving the host and validating the IP at connect time
+ * (a pinned lookup + custom agent), which belongs at the socket layer, not here.
  */
 export function validateProviderBaseUrl(rawUrl: string): SsrfCheckResult {
   if (!rawUrl || typeof rawUrl !== 'string') {
@@ -45,7 +92,7 @@ export function validateProviderBaseUrl(rawUrl: string): SsrfCheckResult {
       };
     }
 
-    const hostname = parsed.hostname.toLowerCase();
+    const { hostname, isIpv6Literal } = normalizeHostname(parsed.hostname);
 
     // Check blocked explicit hostnames
     if (BLOCKED_HOSTNAMES.includes(hostname)) {
@@ -60,6 +107,14 @@ export function validateProviderBaseUrl(rawUrl: string): SsrfCheckResult {
       return {
         safe: false,
         reason: `Host '${hostname}' pertence a um domínio de rede privada proibido.`,
+      };
+    }
+
+    // Check private IPv6 addresses (::1, ::, fc00::/7, fe80::/10, ::ffff:10.0.0.1)
+    if (isIpv6Literal && isPrivateIPv6(hostname)) {
+      return {
+        safe: false,
+        reason: `O endereço IPv6 '${hostname}' pertence a um intervalo de loopback/rede privada proibido.`,
       };
     }
 
