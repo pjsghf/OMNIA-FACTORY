@@ -41,6 +41,9 @@ export async function generateChapterInBlocks({
 
   for (let b = 0; b < detailedPlan.sections.length; b++) {
     const blockPlan = detailedPlan.sections[b];
+    if (!blockPlan) {
+      throw new Error(`Plano do bloco ${b + 1} não foi encontrado.`);
+    }
 
     if (onProgress) {
       onProgress({
