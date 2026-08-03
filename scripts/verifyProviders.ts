@@ -104,11 +104,14 @@ async function verifyGemini() {
 
 async function verifyOpenCode() {
   console.log('\n=== OpenCode GO ===');
-  const apiKey = process.env.OPENCODE_API_KEY;
-  if (!apiKey) {
+  const rawKey = process.env.OPENCODE_API_KEY;
+  if (!rawKey) {
     report(SKIP, 'OPENCODE_API_KEY ausente no .env');
     return;
   }
+
+  const keys = rawKey.split(/[\s,;]+/).map(k => k.trim()).filter(Boolean);
+  const apiKey = keys[0];
 
   const baseUrl = process.env.OPENCODE_BASE_URL || OPENCODE_DEFAULT_BASE_URL;
   const model = process.env.OPENCODE_MODEL || OPENCODE_DEFAULT_MODEL;
@@ -129,11 +132,8 @@ async function verifyOpenCode() {
 
     if (res.ok) {
       const content = JSON.parse(body)?.choices?.[0]?.message?.content;
-      report(PASS, `${baseUrl} respondeu`, `modelo ${model}, resposta: ${JSON.stringify(content)}`);
+      report(PASS, `${baseUrl} respondeu`, `modelo ${model} (${keys.length} chave(s) configurada(s)), resposta: ${JSON.stringify(content)}`);
     } else if (isEgressBlock(res.status, body)) {
-      // Must be checked before the 401/403 branch: a proxy that denies CONNECT
-      // answers 403 too, and reading that as "your key was rejected" sends you
-      // hunting for a credential problem that does not exist.
       report(
         SKIP,
         'Bloqueado pela rede, não pelo provedor',

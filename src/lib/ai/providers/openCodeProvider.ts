@@ -30,20 +30,21 @@ function redactApiKey(text: string, apiKey: string): string {
 }
 
 /**
- * Resolves the OpenCode credential.
- *
- * The client-supplied key wins for backwards compatibility, but OPENCODE_API_KEY
- * from the server environment is now honoured as well. Previously only the browser
- * value was read, so the documented .env entry did nothing and the key had to be
- * typed into the UI -- which also meant it lived in localStorage and rode along on
- * every request. Configuring it server-side keeps it off the client entirely.
+ * Resolves the OpenCode credentials.
+ * Supports comma, semicolon, space, or newline-separated API keys for rotation/failover.
  */
-function resolveApiKey(clientKey?: string): string | undefined {
+function resolveApiKeys(clientKey?: string): string[] {
   const fromClient = (clientKey || '').trim();
-  if (fromClient) return fromClient;
-  const fromEnv = (process.env.OPENCODE_API_KEY || '').trim();
-  return fromEnv || undefined;
+  const raw = fromClient || (process.env.OPENCODE_API_KEY || '').trim();
+  if (!raw) return [];
+  return raw
+    .split(/[\s,;]+/)
+    .map((k) => k.trim())
+    .filter(Boolean);
 }
+
+let globalKeyIndex = 0;
+
 
 /**
  * Picks the model id, and refuses to substitute one silently.
@@ -102,8 +103,8 @@ export class OpenCodeProvider implements AiProvider {
   public name = 'opencode';
 
   async generateText(request: TextGenerationRequest): Promise<TextGenerationResult> {
-    const apiKey = resolveApiKey(request.aiConfig?.opencodeApiKey);
-    if (!apiKey) {
+    const apiKeys = resolveApiKeys(request.aiConfig?.opencodeApiKey);
+    if (apiKeys.length === 0) {
       throw new Error(
         'Chave de API do OpenCode não configurada. Defina OPENCODE_API_KEY no .env do servidor ou informe a chave nas Configurações de IA.'
       );
@@ -141,7 +142,11 @@ export class OpenCodeProvider implements AiProvider {
 
     const responseContent = await executeWithRetry({
       providerName: 'opencode',
+      maxAttempts: Math.max(3, apiKeys.length),
       operation: async (signal) => {
+        const apiKey = apiKeys[globalKeyIndex % apiKeys.length];
+        globalKeyIndex = (globalKeyIndex + 1) % apiKeys.length;
+
         const res = await fetch(`${baseUrl}/chat/completions`, {
           method: 'POST',
           headers: {
@@ -182,8 +187,8 @@ export class OpenCodeProvider implements AiProvider {
   async generateStructured<T>(
     request: StructuredRequest<T>
   ): Promise<{ data: T; result: TextGenerationResult }> {
-    const apiKey = resolveApiKey(request.aiConfig?.opencodeApiKey);
-    if (!apiKey) {
+    const apiKeys = resolveApiKeys(request.aiConfig?.opencodeApiKey);
+    if (apiKeys.length === 0) {
       throw new Error(
         'Chave de API do OpenCode não configurada. Defina OPENCODE_API_KEY no .env do servidor ou informe a chave nas Configurações de IA.'
       );
@@ -225,7 +230,11 @@ export class OpenCodeProvider implements AiProvider {
 
     const responseContent = await executeWithRetry({
       providerName: 'opencode',
+      maxAttempts: Math.max(3, apiKeys.length),
       operation: async (signal) => {
+        const apiKey = apiKeys[globalKeyIndex % apiKeys.length];
+        globalKeyIndex = (globalKeyIndex + 1) % apiKeys.length;
+
         const res = await fetch(`${baseUrl}/chat/completions`, {
           method: 'POST',
           headers: {
