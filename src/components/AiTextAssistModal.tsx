@@ -17,7 +17,7 @@ export const AiTextAssistModal: React.FC<AiTextAssistModalProps> = ({
   language = 'Português',
 }) => {
   const [action, setAction] = useState<string>(initialAction || 'expand');
-  const [tone, setTone] = useState<string>('didático e envolvente');
+  const tone = 'didático e envolvente';
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [resultText, setResultText] = useState<string>('');
 
