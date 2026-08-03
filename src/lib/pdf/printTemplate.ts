@@ -69,6 +69,12 @@ export function buildPrintableBookHtml(options: PrintableBookOptions): string {
     overlayMode: settings.coverOverlayMode,
   });
 
+  // Slug for the "Salvar HTML do Livro" download. Sanitize the *raw* title: running
+  // escapeHtml first leaked entity noise into the name ("d'Alma" -> "d_apos_alma").
+  // The [^a-z0-9] pass is what makes this safe to inline into the onclick handler.
+  const downloadSlug =
+    project.metadata.titulo.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_') || 'livro';
+
   // Body classes
   const typographyClass =
     settings.typographyMode === 'literary' ? 'pdf-mode-literary' : 'pdf-mode-nonfiction';
@@ -95,7 +101,7 @@ export function buildPrintableBookHtml(options: PrintableBookOptions): string {
     </div>
     <div class="toolbar-actions">
       <button id="print-button" class="btn-action" onclick="window.print()">🖨️ Abrir Janela de Salvar PDF</button>
-      <button class="btn-action" style="background:#27272a;color:#fafafa;" onclick="const blob=new Blob([document.documentElement.outerHTML],{type:'text/html'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='${escapeHtml(project.metadata.titulo).toLowerCase().replace(/[^a-z0-9]/g,'_')}_livro.html';a.click();">💾 Salvar HTML do Livro</button>
+      <button class="btn-action" style="background:#27272a;color:#fafafa;" onclick="const blob=new Blob([document.documentElement.outerHTML],{type:'text/html'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='${downloadSlug}_livro.html';a.click();">💾 Salvar HTML do Livro</button>
       <button class="btn-close" onclick="window.close()">✕ Fechar</button>
     </div>
   </div>

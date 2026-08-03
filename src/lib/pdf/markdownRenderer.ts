@@ -52,6 +52,18 @@ mdParser.renderer.rules.link_open = (tokens, idx, options, env, self) => {
   return defaultLinkRule(tokens, idx, options, env, self);
 };
 
+/**
+ * Last-resort fallback for when no DOM (and therefore no DOMPurify) is available.
+ * Drops every tag and escapes the remainder, so the worst case is losing formatting
+ * rather than emitting unsanitized markup into a PDF or exported page.
+ */
+function stripAllTags(html: string): string {
+  const withoutRisky = html
+    .replace(/<(script|style|iframe|object|embed)\b[\s\S]*?<\/\1>/gi, '')
+    .replace(/<[^>]*>/g, '');
+  return withoutRisky.replace(/&(?!(?:amp|lt|gt|quot|#\d+|#x[0-9a-f]+);)/gi, '&amp;');
+}
+
 export function renderMarkdownForPrint(markdown: string): string {
   if (!markdown || !markdown.trim()) {
     return '';
@@ -85,7 +97,10 @@ export function renderMarkdownForPrint(markdown: string): string {
     }
 
     if (!root) {
-      return renderedHtml;
+      // No DOM available means no DOMPurify. markdown-it runs with html:true, so
+      // returning renderedHtml here would emit unsanitized author/AI markup. Fail
+      // closed instead: strip tags rather than trusting them.
+      return stripAllTags(renderedHtml);
     }
 
     // Identify direct children to apply p-first strictly to the FIRST top-level narrative paragraph
@@ -134,9 +149,10 @@ export function renderMarkdownForPrint(markdown: string): string {
       });
     }
 
-    return root.innerHTML;
+    return stripAllTags(root.innerHTML);
   } catch (err) {
     console.warn('Erro ao renderizar markdown para impressão, aplicando fallback:', err);
-    return mdParser.render(markdown.trim());
+    // Same reasoning as above: the fallback must not be a sanitizer bypass.
+    return stripAllTags(mdParser.render(markdown.trim()));
   }
 }

@@ -870,11 +870,14 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
         coverDiv.className = 'cover-view';
 
         let coverImgHtml = '';
-        if (bookData.coverImageUrl) {
-          coverImgHtml = '<div class="cover-img-wrapper"><img src="' + bookData.coverImageUrl + '" alt="Capa" /></div>';
+        // Only data:/http(s) images, and always escaped: coverImageUrl can carry a
+        // quote and break out of the src attribute when it arrives from an imported
+        // backup file rather than from our own generator.
+        if (bookData.coverImageUrl && isSafeImageUrl(bookData.coverImageUrl)) {
+          coverImgHtml = '<div class="cover-img-wrapper"><img src="' + escapeHtml(bookData.coverImageUrl) + '" alt="Capa" /></div>';
         }
 
-        coverDiv.innerHTML = 
+        coverDiv.innerHTML =
           coverImgHtml +
           '<h1 class="cover-title">' + escapeHtml(bookData.titulo) + '</h1>' +
           (bookData.subtitulo ? '<h2 class="cover-subtitle">' + escapeHtml(bookData.subtitulo) + '</h2>' : '') +
@@ -954,7 +957,11 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
 
     function escapeHtml(str) {
       if (!str) return '';
-      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function isSafeImageUrl(url) {
+      return typeof url === 'string' && /^(data:image\\/|https?:\\/\\/)/i.test(url);
     }
 
     // Event Listeners
