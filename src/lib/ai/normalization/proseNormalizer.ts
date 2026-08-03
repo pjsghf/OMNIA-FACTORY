@@ -51,20 +51,25 @@ export function normalizeProse(rawContent: string, chapterNumber?: number, chapt
   // 5. Clean excessive empty lines (more than 2 consecutive newlines)
   text = text.replace(/\n{3,}/g, '\n\n');
 
+  // NOTE: every restore below passes a *function* as the replacement. With a string
+  // replacement, `$` is a metacharacter ($$, $&, $', $1...), which silently mangled
+  // exactly the content these placeholders exist to protect: `$$E = mc^2$$` came back
+  // as `$E = mc^2$`. A function replacement is inserted verbatim.
+
   // 6. Restore Math Expressions
   mathExpressions.forEach((math, idx) => {
-    text = text.replace(`___MATH_INLINE_${idx}___`, math);
-    text = text.replace(`___MATH_BLOCK_${idx}___`, math);
+    text = text.replace(`___MATH_INLINE_${idx}___`, () => math);
+    text = text.replace(`___MATH_BLOCK_${idx}___`, () => math);
   });
 
   // 7. Restore Inline Code
   inlineCodes.forEach((code, idx) => {
-    text = text.replace(`___INLINE_CODE_${idx}___`, code);
+    text = text.replace(`___INLINE_CODE_${idx}___`, () => code);
   });
 
   // 8. Restore Code Blocks
   codeBlocks.forEach((code, idx) => {
-    text = text.replace(`___CODE_BLOCK_${idx}___`, code);
+    text = text.replace(`___CODE_BLOCK_${idx}___`, () => code);
   });
 
   return text.trim();

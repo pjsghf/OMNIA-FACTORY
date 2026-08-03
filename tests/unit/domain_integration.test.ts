@@ -178,4 +178,18 @@ Era uma noite chuvosa e fria quando as luzes se apagaram...`;
     const cleanedInline = cleanChapterProse(rawWithInline, 1, 'O Peso de Dizer Está Tudo Bem');
     expect(cleanedInline).toBe('Era uma noite chuvosa e fria quando as luzes se apagaram...');
   });
+
+  it('DOM-010: Restores protected math and code verbatim, without eating "$" sequences', () => {
+    // `$` is a metacharacter in a String.replace replacement, so restoring the
+    // placeholders with a plain string turned `$$...$$` into `$...$`.
+    const raw = 'Abertura.\n\n$$E = mc^2$$\n\nO campo `custo$$total` e o token `$&` seguem.';
+    const normalized = normalizeProse(raw);
+
+    expect(normalized).toContain('$$E = mc^2$$');
+    expect(normalized).toContain('`custo$$total`');
+    expect(normalized).toContain('`$&`');
+
+    const fenced = 'Texto.\n\n```js\nconst price = `$${total}`;\n```\n\nFim.';
+    expect(normalizeProse(fenced)).toContain('const price = `$${total}`;');
+  });
 });
