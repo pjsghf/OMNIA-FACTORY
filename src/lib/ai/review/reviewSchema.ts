@@ -5,14 +5,6 @@ export function sanitizeReviewFinding(
   defaultUnitId = 'obra',
   defaultVersionId = 'v1'
 ): ReviewFinding {
-  const validTypes = [
-    'estrutural',
-    'linguistica',
-    'continuidade',
-    'factual',
-    'sensibilidade',
-    'conformidade',
-  ] as const;
   const rawTipo = String(raw?.tipo || '').toLowerCase();
 
   let tipo: ReviewFinding['tipo'] = 'linguistica';
@@ -26,7 +18,6 @@ export function sanitizeReviewFinding(
   else if (rawTipo.includes('conform') || rawTipo.includes('estilo') || rawTipo.includes('tom'))
     tipo = 'conformidade';
 
-  const validSeverities = ['Alta', 'Média', 'Baixa'] as const;
   let severidade: ReviewFinding['severidade'] = 'Baixa';
   const rawSev = String(raw?.severidade || '').toLowerCase();
   if (rawSev.includes('alt') || rawSev.includes('high')) severidade = 'Alta';

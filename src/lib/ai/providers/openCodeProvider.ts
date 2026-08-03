@@ -30,10 +30,11 @@ export class OpenCodeProvider implements AiProvider {
     }
 
     const baseUrl = ssrfCheck.sanitizedUrl;
+    const userSelectedModel = request.aiConfig?.opencodeModel;
     const modelId =
-      request.model ||
-      request.aiConfig?.opencodeModel ||
-      getDefaultModel('opencode', request.taskType);
+      userSelectedModel && validateModelForTask('opencode', userSelectedModel, request.taskType).valid
+        ? userSelectedModel
+        : request.model || getDefaultModel('opencode', request.taskType);
 
     // Validate model allowlist
     const validation = validateModelForTask('opencode', modelId, request.taskType);
@@ -119,10 +120,11 @@ export class OpenCodeProvider implements AiProvider {
     }
 
     const baseUrl = ssrfCheck.sanitizedUrl;
+    const userSelectedModel = request.aiConfig?.opencodeModel;
     const modelId =
-      request.model ||
-      request.aiConfig?.opencodeModel ||
-      getDefaultModel('opencode', request.taskType);
+      userSelectedModel && validateModelForTask('opencode', userSelectedModel, request.taskType).valid
+        ? userSelectedModel
+        : request.model || getDefaultModel('opencode', request.taskType);
 
     const validation = validateModelForTask('opencode', modelId, request.taskType);
     if (!validation.valid) {

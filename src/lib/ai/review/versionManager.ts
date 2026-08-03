@@ -23,8 +23,11 @@ export function computeWordDiff(oldText: string, newText: string): WordDiffChunk
   let j = 0;
 
   while (i < oldWords.length && j < newWords.length) {
-    if (oldWords[i] === newWords[j]) {
-      result.push({ type: 'unchanged', value: oldWords[i] });
+    const oldW = oldWords[i];
+    const newW = newWords[j];
+
+    if (oldW !== undefined && newW !== undefined && oldW === newW) {
+      result.push({ type: 'unchanged', value: oldW });
       i++;
       j++;
     } else {
@@ -33,14 +36,14 @@ export function computeWordDiff(oldText: string, newText: string): WordDiffChunk
       let matchIdxOld = -1;
 
       for (let k = j + 1; k < Math.min(j + 10, newWords.length); k++) {
-        if (newWords[k] === oldWords[i]) {
+        if (newWords[k] === oldW) {
           matchIdxNew = k;
           break;
         }
       }
 
       for (let k = i + 1; k < Math.min(i + 10, oldWords.length); k++) {
-        if (oldWords[k] === newWords[j]) {
+        if (oldWords[k] === newW) {
           matchIdxOld = k;
           break;
         }
@@ -48,17 +51,21 @@ export function computeWordDiff(oldText: string, newText: string): WordDiffChunk
 
       if (matchIdxNew !== -1) {
         while (j < matchIdxNew) {
-          result.push({ type: 'added', value: newWords[j] });
+          if (newWords[j] !== undefined) {
+            result.push({ type: 'added', value: newWords[j]! });
+          }
           j++;
         }
       } else if (matchIdxOld !== -1) {
         while (i < matchIdxOld) {
-          result.push({ type: 'removed', value: oldWords[i] });
+          if (oldWords[i] !== undefined) {
+            result.push({ type: 'removed', value: oldWords[i]! });
+          }
           i++;
         }
       } else {
-        result.push({ type: 'removed', value: oldWords[i] });
-        result.push({ type: 'added', value: newWords[j] });
+        if (oldW !== undefined) result.push({ type: 'removed', value: oldW });
+        if (newW !== undefined) result.push({ type: 'added', value: newW });
         i++;
         j++;
       }
@@ -66,12 +73,18 @@ export function computeWordDiff(oldText: string, newText: string): WordDiffChunk
   }
 
   while (i < oldWords.length) {
-    result.push({ type: 'removed', value: oldWords[i] });
+    const oldW = oldWords[i];
+    if (oldW !== undefined) {
+      result.push({ type: 'removed', value: oldW });
+    }
     i++;
   }
 
   while (j < newWords.length) {
-    result.push({ type: 'added', value: newWords[j] });
+    const newW = newWords[j];
+    if (newW !== undefined) {
+      result.push({ type: 'added', value: newW });
+    }
     j++;
   }
 

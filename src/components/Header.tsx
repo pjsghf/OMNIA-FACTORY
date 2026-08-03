@@ -2,13 +2,13 @@ import React from 'react';
 import {
   BookOpen,
   FileText,
-  Sparkles,
   CheckCircle2,
   Download,
   Plus,
   Library,
   Layers,
   Cpu,
+  Globe,
 } from 'lucide-react';
 import { BookProject, EditorialStage } from '../types';
 
@@ -19,6 +19,7 @@ interface HeaderProps {
   onNewProject: () => void;
   onOpenProjectList: () => void;
   onOpenAiSettings: () => void;
+  onOpenTranslation?: () => void;
   totalWordCount: number;
 }
 
@@ -29,6 +30,7 @@ export const Header: React.FC<HeaderProps> = ({
   onNewProject,
   onOpenProjectList,
   onOpenAiSettings,
+  onOpenTranslation,
   totalWordCount,
 }) => {
   const stages: { id: EditorialStage; label: string; icon: React.ReactNode }[] = [
@@ -105,6 +107,17 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Project & AI Settings Controls */}
           <div className="flex items-center space-x-2">
+            {onOpenTranslation && (
+              <button
+                onClick={onOpenTranslation}
+                className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-[#1C1917] bg-amber-50 hover:bg-amber-100 border border-amber-300 transition rounded-sm"
+                title="Tradutor e Localizador Cultural de E-books"
+              >
+                <Globe className="w-3.5 h-3.5 text-amber-600" />
+                <span className="hidden sm:inline">Traduzir E-book</span>
+              </button>
+            )}
+
             <button
               onClick={onOpenAiSettings}
               className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-[#1C1917] bg-[#F5F5F4] hover:bg-[#E7E5E4] border border-[#D6D3D1] transition rounded-sm"

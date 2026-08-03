@@ -107,7 +107,8 @@ ${nichePolicy.type !== 'none' ? `POLÍTICA PARA NICHO SENSÍVEL (${nichePolicy.t
 REGRAS DE OURO DE ESCRITA:
 1. Escreva em prosa contínua e rica de livro impresso.
 2. Escreva EXATAMENTE em torno de ${sectionBlock.estimativaPalavras} palavras.
-3. NÃO inclua saudações, introduções de IA ou observações meta-textuais. Escreva diretamente o texto do livro.`;
+3. NÃO inclua saudações, introduções de IA ou observações meta-textuais. Escreva diretamente o texto do livro.
+4. NÃO inclua o título do livro, cabeçalhos "Capítulo X" nem repita o título do capítulo no início do texto (o layout de diagramação insere a abertura do capítulo automaticamente).`;
 
   const userPrompt = `DADOS DO LIVRO E CONTEXTO:
 - Título: ${metadata.titulo} (${metadata.subtitulo || ''})
@@ -141,7 +142,7 @@ Escreva a prosa do bloco agora:`;
 
 export function buildMatterPrompt({
   metadata,
-  plan,
+  plan: _plan,
   fullBookContent,
   type,
 }: {

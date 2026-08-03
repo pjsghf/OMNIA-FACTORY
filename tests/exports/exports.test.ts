@@ -8,8 +8,6 @@ import { generateEpubBlob } from '../../src/lib/epubExporter';
 import { BookProject } from '../../src/types';
 import puppeteer from 'puppeteer';
 import JSZip from 'jszip';
-import fs from 'fs';
-import path from 'path';
 
 describe('Exports Engine & Layout AST (Exports Suite)', () => {
   beforeAll(async () => {

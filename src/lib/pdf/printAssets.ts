@@ -8,39 +8,52 @@ export function buildPrintAssetsScript(): string {
       if (statusText) statusText.textContent = 'Preparando imagens e fontes...';
 
       async function waitForAssets() {
-        const images = Array.from(document.images);
-
-        await Promise.all(
-          images.map(async (image) => {
-            try {
-              if (!image.complete) {
-                await new Promise((resolve) => {
-                  image.addEventListener('load', resolve, { once: true });
-                  image.addEventListener('error', resolve, { once: true });
-                });
+        const timeoutPromise = new Promise(function(resolve) { setTimeout(resolve, 2500); });
+        
+        const assetsPromise = (async function() {
+          const images = Array.from(document.images);
+          await Promise.all(
+            images.map(async (image) => {
+              try {
+                if (!image.complete) {
+                  await new Promise((resolve) => {
+                    image.addEventListener('load', resolve, { once: true });
+                    image.addEventListener('error', resolve, { once: true });
+                    setTimeout(resolve, 1500);
+                  });
+                }
+                if (typeof image.decode === 'function') {
+                  await image.decode().catch(() => undefined);
+                }
+              } catch (err) {
+                console.warn('Erro ao carregar imagem para impressão:', err);
               }
-              if (typeof image.decode === 'function') {
-                await image.decode().catch(() => undefined);
-              }
-            } catch (err) {
-              console.warn('Erro ao carregar imagem para impressão:', err);
-            }
-          })
-        );
+            })
+          );
 
-        if (document.fonts && document.fonts.ready) {
-          await document.fonts.ready;
-        }
+          if (document.fonts && document.fonts.ready) {
+            await document.fonts.ready.catch(() => undefined);
+          }
 
-        await new Promise((resolve) =>
-          requestAnimationFrame(() => requestAnimationFrame(resolve))
-        );
+          await new Promise((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(resolve))
+          );
+        })();
+
+        await Promise.race([assetsPromise, timeoutPromise]);
       }
 
       await waitForAssets();
 
       if (printBtn) printBtn.disabled = false;
       if (statusText) statusText.textContent = 'Documento pronto para exportação.';
+
+      if (window.location.search.includes('autoprint=true') || window.__AUTO_PRINT__) {
+        setTimeout(function() {
+          window.print();
+        }, 400);
+      }
     });
   `;
 }
+

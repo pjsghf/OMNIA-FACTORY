@@ -39,8 +39,11 @@ export async function generateChapterInBlocks({
   const detailedPlan: DetailedChapterPlan = buildChapterSectionPlan(chapterPlan, metadata);
   const blockContents: string[] = [];
 
+  let currentMemory = memory;
+
   for (let b = 0; b < detailedPlan.sections.length; b++) {
     const blockPlan = detailedPlan.sections[b];
+    if (!blockPlan) continue;
 
     if (onProgress) {
       onProgress({
@@ -57,7 +60,7 @@ export async function generateChapterInBlocks({
       plan,
       chapterPlan,
       sectionBlock: blockPlan,
-      memory,
+      memory: currentMemory,
     });
 
     let attempts = 0;
@@ -76,7 +79,7 @@ export async function generateChapterInBlocks({
       });
 
       const rawText = result.text || '';
-      const normalized = normalizeProse(rawText);
+      const normalized = normalizeProse(rawText, chapterPlan.numero, chapterPlan.titulo);
 
       const validation = validateChapterContent(
         normalized,

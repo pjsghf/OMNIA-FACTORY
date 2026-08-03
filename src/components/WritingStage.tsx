@@ -1,23 +1,17 @@
 import React, { useState } from 'react';
 import { BookMetadata, EditorialPlan, ChapterContent, FrontMatter, EndMatter } from '../types';
 import {
-  FileText,
   Wand2,
   Play,
   CheckCircle,
   Clock,
-  Sparkles,
   Edit2,
   Eye,
   Columns,
-  Maximize2,
-  Scissors,
   Zap,
   BookOpen,
   Feather,
   RefreshCw,
-  PlusCircle,
-  HelpCircle,
   Layers,
 } from 'lucide-react';
 
@@ -39,7 +33,7 @@ interface WritingStageProps {
   onGenerateBatchChapters: () => Promise<void>;
   onGenerateFrontOrEndMatter: (type: MatterType) => Promise<boolean>;
   onGenerateBatchFrontAndEndMatter: () => Promise<void>;
-  onOpenAiAssist: (text: string, actionName: string) => void;
+  onOpenAiAssist: (text: string, actionName: string, chapterIndex?: number) => void;
   isGeneratingBatch: boolean;
   isGeneratingFrontEndBatch: boolean;
   generatingIndex: number | null;
@@ -545,19 +539,37 @@ export const WritingStage: React.FC<WritingStageProps> = ({
               </div>
               <div className="flex items-center space-x-1.5 flex-shrink-0">
                 <button
-                  onClick={() => onOpenAiAssist(selectedText, 'expand')}
+                  onClick={() =>
+                    onOpenAiAssist(
+                      selectedText,
+                      'expand',
+                      selectedItem.kind === 'chapter' ? selectedItem.index : undefined
+                    )
+                  }
                   className="px-2 py-1 bg-stone-800 hover:bg-stone-700 text-white font-medium uppercase tracking-wider text-[10px]"
                 >
                   Expandir
                 </button>
                 <button
-                  onClick={() => onOpenAiAssist(selectedText, 'polish')}
+                  onClick={() =>
+                    onOpenAiAssist(
+                      selectedText,
+                      'polish',
+                      selectedItem.kind === 'chapter' ? selectedItem.index : undefined
+                    )
+                  }
                   className="px-2 py-1 bg-stone-800 hover:bg-stone-700 text-white font-medium uppercase tracking-wider text-[10px]"
                 >
                   Polir
                 </button>
                 <button
-                  onClick={() => onOpenAiAssist(selectedText, 'fixGrammar')}
+                  onClick={() =>
+                    onOpenAiAssist(
+                      selectedText,
+                      'fixGrammar',
+                      selectedItem.kind === 'chapter' ? selectedItem.index : undefined
+                    )
+                  }
                   className="px-2 py-1 bg-stone-800 hover:bg-stone-700 text-white font-medium uppercase tracking-wider text-[10px]"
                 >
                   Corrigir

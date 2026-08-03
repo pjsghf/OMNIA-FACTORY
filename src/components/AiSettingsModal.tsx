@@ -20,7 +20,6 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ config, onSave
   );
   const [customOpencodeModel, setCustomOpencodeModel] = useState<string>('');
   const [showKey, setShowKey] = useState<boolean>(false);
-  const [testStatus, setTestStatus] = useState<string | null>(null);
 
   const geminiModels = [
     { id: 'gemini-3.6-flash', label: 'Gemini 3.6 Flash (Padrão - Ultra Rápido & Alto Volume)' },

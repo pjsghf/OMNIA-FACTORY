@@ -15,27 +15,27 @@ export interface ToneOption {
 }
 
 // Exactly 20 languages from Americas and Europe
-export const EUROPE_AMERICAS_LANGUAGES: { code: string; name: string; region: string }[] = [
-  { code: 'pt-BR', name: 'Português (Brasil)', region: 'Américas' },
-  { code: 'pt-PT', name: 'Português (Portugal)', region: 'Europa' },
-  { code: 'en-US', name: 'Inglês (Estados Unidos)', region: 'Américas' },
-  { code: 'en-GB', name: 'Inglês (Reino Unido)', region: 'Europa' },
-  { code: 'es-MX', name: 'Espanhol (América Latina)', region: 'Américas' },
-  { code: 'es-ES', name: 'Espanhol (Espanha)', region: 'Europa' },
-  { code: 'fr-FR', name: 'Francês (França)', region: 'Europa' },
-  { code: 'fr-CA', name: 'Francês (Canadá / Québec)', region: 'Américas' },
-  { code: 'de-DE', name: 'Alemão (Alemanha / Áustria / Suíça)', region: 'Europa' },
-  { code: 'it-IT', name: 'Italiano (Itália)', region: 'Europa' },
-  { code: 'nl-NL', name: 'Holandês (Países Baixos)', region: 'Europa' },
-  { code: 'pl-PL', name: 'Polonês (Polônia)', region: 'Europa' },
-  { code: 'sv-SE', name: 'Sueco (Suécia)', region: 'Europa' },
-  { code: 'no-NO', name: 'Norueguês (Noruega)', region: 'Europa' },
-  { code: 'da-DK', name: 'Dinamarquês (Dinamarca)', region: 'Europa' },
-  { code: 'fi-FI', name: 'Finlandês (Finlândia)', region: 'Europa' },
-  { code: 'ru-RU', name: 'Russo (Europa Oriental)', region: 'Europa' },
-  { code: 'uk-UA', name: 'Ucraniano (Ucrânia)', region: 'Europa' },
-  { code: 'el-GR', name: 'Grego (Grécia)', region: 'Europa' },
-  { code: 'ro-RO', name: 'Romeno (Romênia)', region: 'Europa' },
+export const EUROPE_AMERICAS_LANGUAGES: { code: string; displayTag: string; name: string; region: string }[] = [
+  { code: 'pt-BR', displayTag: 'pt-br', name: 'pt-br — Português (Brasil)', region: 'Américas' },
+  { code: 'pt-PT', displayTag: 'pt-pt', name: 'pt-pt — Português (Portugal)', region: 'Europa' },
+  { code: 'en-US', displayTag: 'en-us', name: 'en-us — Inglês (Estados Unidos)', region: 'Américas' },
+  { code: 'en-GB', displayTag: 'en-uk', name: 'en-uk — Inglês (Reino Unido)', region: 'Europa' },
+  { code: 'es-MX', displayTag: 'es-mx', name: 'es-mx — Espanhol (América Latina)', region: 'Américas' },
+  { code: 'es-ES', displayTag: 'es-es', name: 'es-es — Espanhol (Espanha)', region: 'Europa' },
+  { code: 'fr-FR', displayTag: 'fr-fr', name: 'fr-fr — Francês (França)', region: 'Europa' },
+  { code: 'fr-CA', displayTag: 'fr-ca', name: 'fr-ca — Francês (Canadá / Québec)', region: 'Américas' },
+  { code: 'de-DE', displayTag: 'de-de', name: 'de-de — Alemão (Alemanha)', region: 'Europa' },
+  { code: 'it-IT', displayTag: 'it-it', name: 'it-it — Italiano (Itália)', region: 'Europa' },
+  { code: 'nl-NL', displayTag: 'nl-nl', name: 'nl-nl — Holandês (Países Baixos)', region: 'Europa' },
+  { code: 'pl-PL', displayTag: 'pl-pl', name: 'pl-pl — Polonês (Polônia)', region: 'Europa' },
+  { code: 'sv-SE', displayTag: 'sv-se', name: 'sv-se — Sueco (Suécia)', region: 'Europa' },
+  { code: 'no-NO', displayTag: 'no-no', name: 'no-no — Norueguês (Noruega)', region: 'Europa' },
+  { code: 'da-DK', displayTag: 'da-dk', name: 'da-dk — Dinamarquês (Dinamarca)', region: 'Europa' },
+  { code: 'fi-FI', displayTag: 'fi-fi', name: 'fi-fi — Finlandês (Finlândia)', region: 'Europa' },
+  { code: 'ru-RU', displayTag: 'ru-ru', name: 'ru-ru — Russo (Europa Oriental)', region: 'Europa' },
+  { code: 'uk-UA', displayTag: 'uk-ua', name: 'uk-ua — Ucraniano (Ucrânia)', region: 'Europa' },
+  { code: 'el-GR', displayTag: 'el-gr', name: 'el-gr — Grego (Grécia)', region: 'Europa' },
+  { code: 'ro-RO', displayTag: 'ro-ro', name: 'ro-ro — Romeno (Romênia)', region: 'Europa' },
 ];
 
 export const BOOK_STYLES_OPTIONS: StyleOption[] = [

@@ -1,4 +1,5 @@
 import { BookProject } from '../../types';
+import { cleanChapterProse } from './cleanChapterProse';
 
 export interface CanonicalSection {
   id: string;
@@ -66,7 +67,7 @@ export function buildCanonicalBookSequence(project: BookProject): CanonicalSecti
       title: `Capítulo ${cap.numero}: ${cap.titulo}`,
       subtitle: cap.subtitulo,
       chapterNumber: cap.numero,
-      content: cap.content || '*Capítulo pendente de redação.*',
+      content: cleanChapterProse(cap.content || '*Capítulo pendente de redação.*', cap.numero, cap.titulo),
     });
   });
 

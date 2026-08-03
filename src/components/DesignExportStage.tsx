@@ -17,23 +17,22 @@ import {
   FileText,
   Code2,
   Wand2,
-  Eye,
   Maximize2,
   X,
-  RefreshCw,
   Palette,
-  Layers,
   Upload,
   UploadCloud,
   CheckCircle2,
-  FileCheck,
   Sliders,
   AlertCircle,
   ShieldCheck,
+  Globe,
+  ExternalLink,
 } from 'lucide-react';
 import { checkProjectPreflight } from '../lib/validation/preflightGate';
+import { getLanguageInfo } from '../lib/utils/languageHelper';
+import { cleanChapterProse } from '../lib/rendering/cleanChapterProse';
 import { downloadBlobWithCleanup, sanitizeFilename } from '../lib/utils/downloadHelper';
-import { validateExportPreflight } from '../lib/validation/exportPreflight';
 import { validateUploadedImageBuffer } from '../lib/cover/coverBrief';
 
 interface DesignExportStageProps {
@@ -42,6 +41,7 @@ interface DesignExportStageProps {
   onOpenReader: () => void;
   onGenerateCover: (prompt?: string) => Promise<void>;
   isGeneratingCover: boolean;
+  onOpenTranslation?: () => void;
 }
 
 function escapeHtml(str: string): string {
@@ -118,6 +118,7 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
   onOpenReader,
   onGenerateCover,
   isGeneratingCover,
+  onOpenTranslation,
 }) => {
   const [customCoverPrompt, setCustomCoverPrompt] = useState('');
   const [isExportingEpub, setIsExportingEpub] = useState(false);
@@ -130,6 +131,7 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
   const [showCoverModal, setShowCoverModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [downloadNotice, setDownloadNotice] = useState<{ title: string; fileName: string; url: string; type: string } | null>(null);
 
   const totalWords = project.chapters.reduce((sum, c) => sum + (c.wordCount || 0), 0);
 
@@ -191,13 +193,21 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
     },
   ];
 
-  // Handle EPUB Export with safe blob cleanup
+  // Handle EPUB Export with safe blob cleanup and direct download link
   const handleDownloadEpub = async () => {
     try {
       setIsExportingEpub(true);
+      setDownloadNotice(null);
       const blob = await generateEpubBlob(project);
       const fileName = `${sanitizeFilename(project.metadata.titulo)}.epub`;
-      downloadBlobWithCleanup(blob, fileName);
+      const url = downloadBlobWithCleanup(blob, fileName);
+
+      setDownloadNotice({
+        title: 'E-book EPUB 3.0 Gerado com Sucesso!',
+        fileName,
+        url,
+        type: 'epub',
+      });
     } catch (error) {
       console.error('Erro ao exportar EPUB:', error);
       alert('Houve um erro ao gerar o arquivo EPUB.');
@@ -208,6 +218,7 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
 
   // Handle Markdown Download with safe blob cleanup & unicode filename sanitizer
   const handleDownloadMarkdown = () => {
+    setDownloadNotice(null);
     let md = `# ${project.metadata.titulo}\n\n`;
     if (project.metadata.subtitulo) md += `## ${project.metadata.subtitulo}\n\n`;
     md += `**Autor:** ${project.metadata.autor}\n\n`;
@@ -221,7 +232,7 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
     }
 
     project.chapters.forEach((cap) => {
-      md += `# Capítulo ${cap.numero}: ${cap.titulo}\n\n${cap.content}\n\n---\n\n`;
+      md += `# Capítulo ${cap.numero}: ${cap.titulo}\n\n${cleanChapterProse(cap.content, cap.numero, cap.titulo)}\n\n---\n\n`;
     });
 
     if (project.endMatter.conclusao) {
@@ -239,7 +250,13 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
 
     const blob = new Blob([md], { type: 'text/markdown;charset=utf-8;' });
     const fileName = `${sanitizeFilename(project.metadata.titulo)}.md`;
-    downloadBlobWithCleanup(blob, fileName);
+    const url = downloadBlobWithCleanup(blob, fileName);
+    setDownloadNotice({
+      title: 'Arquivo Markdown (.md) Gerado com Sucesso!',
+      fileName,
+      url,
+      type: 'md',
+    });
   };
 
   // Handle HTML Download with Full Interactive E-Reader (Leitor Imersivo)
@@ -285,12 +302,13 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
 
     // 3. Chapters
     project.chapters.forEach((cap) => {
+      const cleaned = cleanChapterProse(cap.content, cap.numero, cap.titulo);
       sections.push({
         id: `cap-${cap.numero}`,
         type: `Capítulo ${cap.numero}`,
         title: cap.titulo,
-        content: convertMarkdownToHTML(cap.content),
-        wordCount: cap.wordCount || cap.content.split(/\s+/).length,
+        content: convertMarkdownToHTML(cleaned),
+        wordCount: cap.wordCount || cleaned.split(/\s+/).length,
       });
     });
 
@@ -333,6 +351,7 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
     }
 
     const jsonSections = JSON.stringify(sections).replace(/</g, '\\u003c');
+    const langInfo = getLanguageInfo(project.metadata.idioma);
     const bookMetaData = JSON.stringify({
       titulo: project.metadata.titulo,
       subtitulo: project.metadata.subtitulo || '',
@@ -340,11 +359,11 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
       coverImageUrl: project.metadata.coverImageUrl || '',
       editora: project.metadata.editora || 'OMNIA Factory',
       ano: (project.metadata as any).anoPublicacao || new Date().getFullYear().toString(),
-      idioma: project.metadata.idioma || 'pt-BR',
+      idioma: langInfo.code,
     }).replace(/</g, '\\u003c');
 
     const htmlContent = `<!DOCTYPE html>
-<html lang="${escapeHtml(project.metadata.idioma || 'pt')}">
+<html lang="${escapeHtml(langInfo.code)}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -716,7 +735,7 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
         ☰ <span class="hide-mobile">Sumário</span>
       </button>
       <div>
-        <span class="book-tag">LEITOR IMERSIVO</span>
+        <span class="book-tag">LEITOR IMERSIVO • ${escapeHtml(langInfo.code)}</span>
         <span class="header-book-name" id="hdr-book-title"></span>
       </div>
     </div>
@@ -766,8 +785,9 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
         <!-- Rendered dynamically -->
       </div>
 
-      <div id="paper-footer" style="margin-top: 36px; padding-top: 14px; border-top: 1px solid rgba(120, 113, 108, 0.25); text-align: center; font-size: 12px; font-family: 'Georgia', serif; font-style: italic; opacity: 0.6; word-break: break-word;">
-        ${escapeHtml(project.metadata.titulo)}
+      <div id="paper-footer" style="margin-top: 36px; padding-top: 14px; border-top: 1px solid rgba(120, 113, 108, 0.25); display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-family: 'Georgia', serif; opacity: 0.6; word-break: break-word;">
+        <span style="font-style: italic;">${escapeHtml(project.metadata.titulo)}</span>
+        <span id="paper-page-corner" style="font-weight: 600; font-family: monospace;">Pág. 1</span>
       </div>
     </div>
   </main>
@@ -898,6 +918,10 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
       const pct = Math.round(((currentIndex + 1) / sections.length) * 100);
       progressBar.style.width = pct + '%';
       footerStatus.textContent = (currentIndex + 1) + ' / ' + sections.length + ' (' + pct + '%)';
+      const pageCornerEl = document.getElementById('paper-page-corner');
+      if (pageCornerEl) {
+        pageCornerEl.textContent = 'Pág. ' + (currentIndex + 1);
+      }
 
       // Update active TOC item highlight
       Array.from(tocList.children).forEach((child, i) => {
@@ -990,40 +1014,115 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
 
     const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
     const fileName = `${sanitizeFilename(project.metadata.titulo)}.html`;
-    downloadBlobWithCleanup(blob, fileName);
+    const url = downloadBlobWithCleanup(blob, fileName);
+    setDownloadNotice({
+      title: 'Livro HTML Standalone Gerado!',
+      fileName,
+      url,
+      type: 'html',
+    });
   };
 
-  // Handle Printable PDF View with Full Modular Diagramming
-  const handlePrintPDF = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      alert('Por favor, permita pop-ups neste navegador para abrir a janela de impressão/PDF.');
-      return;
+  // Handle Direct In-Page Printing (Triggers Browser Native "Save as PDF" Dialog directly over current page)
+  const handleDirectIframePrint = () => {
+    try {
+      const settings: PdfExportSettings = {
+        paperSize: pdfPaperSize,
+        typographyMode: pdfTypographyMode,
+        coverOverlayMode: overlayMode,
+        useDropCap: pdfUseDropCap,
+        includeCatalogPage: includeCatalogPage,
+      };
+
+      const htmlContent = buildPrintableBookHtml({
+        project,
+        settings,
+      });
+
+      // Remove any previous print iframe
+      const oldIframe = document.getElementById('omnia-direct-print-iframe');
+      if (oldIframe) {
+        oldIframe.remove();
+      }
+
+      // Create hidden iframe in main document body
+      const iframe = document.createElement('iframe');
+      iframe.id = 'omnia-direct-print-iframe';
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      iframe.style.visibility = 'hidden';
+      document.body.appendChild(iframe);
+
+      const doc = iframe.contentWindow?.document;
+      if (!doc) {
+        alert('Não foi possível inicializar a impressão no navegador.');
+        return;
+      }
+
+      doc.open();
+      doc.write(htmlContent);
+      doc.close();
+
+      setTimeout(() => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch (err) {
+          console.error('Erro ao disparar janela de impressão no iframe:', err);
+          alert('Erro ao abrir a janela de impressão do navegador.');
+        }
+        setTimeout(() => {
+          iframe.remove();
+        }, 5000);
+      }, 600);
+    } catch (err: any) {
+      console.error('Erro ao gerar documento de impressão:', err);
+      alert(`Erro ao preparar documento para impressão: ${err?.message || err}`);
     }
+  };
 
-    const settings: PdfExportSettings = {
-      paperSize: pdfPaperSize,
-      typographyMode: pdfTypographyMode,
-      coverOverlayMode: overlayMode,
-      useDropCap: pdfUseDropCap,
-      includeCatalogPage: includeCatalogPage,
-    };
+  // Handle Printable PDF Preview in New Window (Same-Origin Document)
+  const handlePrintPDF = () => {
+    try {
+      const settings: PdfExportSettings = {
+        paperSize: pdfPaperSize,
+        typographyMode: pdfTypographyMode,
+        coverOverlayMode: overlayMode,
+        useDropCap: pdfUseDropCap,
+        includeCatalogPage: includeCatalogPage,
+      };
 
-    const htmlContent = buildPrintableBookHtml({
-      project,
-      settings,
-    });
+      const htmlContent = buildPrintableBookHtml({
+        project,
+        settings,
+      });
 
-    printWindow.document.open();
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
-    printWindow.focus();
+      const printWin = window.open('', '_blank');
+      if (printWin) {
+        printWin.document.open();
+        printWin.document.write(htmlContent);
+        printWin.document.close();
+        printWin.focus();
+      } else {
+        // Fall back directly to in-page print dialog
+        handleDirectIframePrint();
+      }
+    } catch (err: any) {
+      console.error('Erro ao abrir leitor de impressão:', err);
+      handleDirectIframePrint();
+    }
   };
 
   // Handle Server-Side PDF Download (Puppeteer Rendering)
   const handleDownloadServerPDF = async () => {
     try {
       setIsGeneratingServerPdf(true);
+      setDownloadNotice(null);
+
       const settings: PdfExportSettings = {
         paperSize: pdfPaperSize,
         typographyMode: pdfTypographyMode,
@@ -1040,18 +1139,28 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || 'Erro ao gerar PDF no servidor.');
+        throw new Error(errData.error?.message || errData.error || `Erro no servidor (código ${response.status}).`);
       }
 
       const blob = await response.blob();
+      if (!blob || blob.size === 0) {
+        throw new Error('O arquivo PDF gerado pelo servidor está vazio.');
+      }
+
       const fileName = `${sanitizeFilename(project.metadata.titulo)}_${pdfPaperSize.toLowerCase()}.pdf`;
-      downloadBlobWithCleanup(blob, fileName);
+      const url = downloadBlobWithCleanup(blob, fileName);
+
+      setDownloadNotice({
+        title: 'Arquivo PDF Gerado com Sucesso!',
+        fileName,
+        url,
+        type: 'pdf',
+      });
     } catch (err: any) {
-      console.warn('Geração no servidor falhou, abrindo impressão do navegador:', err);
+      console.error('Geração no servidor falhou:', err);
       alert(
-        `Servidor de PDF: ${err.message || 'Erro ao processar'}. Abrindo janela de impressão e preview do navegador.`
+        `Erro ao gerar PDF via Puppeteer: ${err.message || err}\n\nVocê também pode utilizar a opção "Imprimir / Salvar PDF (Navegador)" para salvar o PDF diretamente.`
       );
-      handlePrintPDF();
     } finally {
       setIsGeneratingServerPdf(false);
     }
@@ -1573,7 +1682,67 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
               </div>
             </div>
 
+            {/* Direct Download Active Banner */}
+            {downloadNotice && (
+              <div className="bg-emerald-950 border border-emerald-500 p-4 shadow-xl text-emerald-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-fadeIn">
+                <div className="flex items-start space-x-3">
+                  <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-bold text-sm text-emerald-100">{downloadNotice.title}</h4>
+                    <p className="text-xs text-emerald-300/90 mt-0.5">
+                      Arquivo: <code className="font-mono bg-emerald-900/80 px-1.5 py-0.5 text-emerald-200 font-bold">{downloadNotice.fileName}</code>
+                    </p>
+                    <p className="text-[11px] text-stone-300 mt-1">
+                      Se o seu navegador bloqueou o download automático, clique no botão ao lado para baixar seu arquivo diretamente.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2 shrink-0">
+                  <a
+                    href={downloadNotice.url}
+                    download={downloadNotice.fileName}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2.5 bg-emerald-400 hover:bg-emerald-300 text-stone-950 font-bold text-xs uppercase tracking-wider transition flex items-center space-x-2 shadow-sm"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Clique Aqui Para Baixar</span>
+                  </a>
+                  <button
+                    onClick={() => setDownloadNotice(null)}
+                    className="p-2 text-stone-400 hover:text-white transition"
+                    title="Fechar aviso"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Translation & Cultural Localization Card */}
+              {onOpenTranslation && (
+                <button
+                  type="button"
+                  onClick={onOpenTranslation}
+                  className="sm:col-span-2 p-5 bg-gradient-to-r from-amber-950 via-[#1C1917] to-[#292524] text-white hover:opacity-95 border border-amber-800/60 text-left transition space-y-2 group shadow-md"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="px-2.5 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono font-bold text-[10px] uppercase tracking-wider flex items-center space-x-1">
+                      <Globe className="w-3 h-3 text-amber-400" />
+                      <span>Tradutor e Localizador Cultural de E-books</span>
+                    </span>
+                    <Globe className="w-5 h-5 text-amber-400 group-hover:rotate-12 transition-transform duration-300" />
+                  </div>
+                  <h3 className="font-bold font-serif italic text-base text-amber-100">
+                    Traduzir e Localizar E-book para Outros Idiomas
+                  </h3>
+                  <p className="text-[12px] text-amber-200/80 leading-relaxed">
+                    Adaptação literária inteligente de expressões, tom narrativo e gírias com geração automática de uma nova capa no idioma selecionado (Inglês, Espanhol, Francês, Alemão, Japonês, etc.).
+                  </p>
+                </button>
+              )}
+
               {/* EPUB Export Button */}
               <button
                 onClick={handleDownloadEpub}
@@ -1614,30 +1783,48 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
                 <h3 className="font-bold font-serif italic text-sm text-amber-100">
                   {isGeneratingServerPdf
                     ? 'Gerando PDF no Servidor...'
-                    : 'Baixar PDF Direto (Servidor)'}
+                    : 'Baixar PDF no Servidor (Puppeteer)'}
                 </h3>
                 <p className="text-[11px] text-amber-200/80 leading-relaxed">
-                  Gera o arquivo PDF final diretamente com renderização Puppeteer em alta precisão.
+                  Gera o arquivo PDF final diretamente com renderização Puppeteer de alta resolução.
                 </p>
               </button>
 
-              {/* Printable PDF Preview (Browser Print) */}
+              {/* Instant Browser Print / Save PDF (In-App) */}
+              <button
+                onClick={handleDirectIframePrint}
+                className="p-5 bg-[#1C1917] text-white hover:bg-[#292524] border border-[#44403C] text-left transition space-y-2 group shadow-sm"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="px-2 py-0.5 bg-emerald-500 text-black font-mono font-bold text-[10px] uppercase tracking-wider">
+                    IMPRIMIR / SALVAR PDF ({pdfPaperSize})
+                  </span>
+                  <Printer className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition" />
+                </div>
+                <h3 className="font-bold font-serif italic text-sm text-emerald-100">
+                  Imprimir / Salvar PDF (Navegador)
+                </h3>
+                <p className="text-[11px] text-stone-300 leading-relaxed">
+                  Abre instantaneamente a janela de impressão nativa do navegador para salvar em PDF sem bloqueio de pop-up.
+                </p>
+              </button>
+
+              {/* Printable PDF Preview (Open in New Tab) */}
               <button
                 onClick={handlePrintPDF}
                 className="p-5 bg-[#FDFCFB] hover:bg-[#F5F5F4] border border-[#E7E5E4] text-left transition space-y-2 group hover:border-[#1C1917]"
               >
                 <div className="flex items-center justify-between">
                   <span className="px-2 py-0.5 bg-stone-800 text-stone-100 font-mono font-bold text-[10px] uppercase tracking-wider">
-                    PREVIEW / IMPRESSOR ({pdfPaperSize})
+                    LEITOR / NOVA ABA ({pdfPaperSize})
                   </span>
-                  <Printer className="w-4 h-4 text-stone-700 group-hover:text-[#1C1917] transition" />
+                  <ExternalLink className="w-4 h-4 text-stone-700 group-hover:text-[#1C1917] transition" />
                 </div>
                 <h3 className="font-bold font-serif italic text-sm text-[#1C1917]">
-                  Abrir Leitor & Imprimir
+                  Abrir Diagramação em Nova Aba
                 </h3>
                 <p className="text-[11px] text-[#78716C] leading-relaxed">
-                  Abre a janela interativa com pré-visualização de páginas e diálogo de impressão do
-                  navegador.
+                  Visualiza o layout completo diagramado página a página em uma guia dedicada do seu navegador.
                 </p>
               </button>
 

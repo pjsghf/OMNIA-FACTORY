@@ -1,6 +1,8 @@
 import JSZip from 'jszip';
 import { BookProject } from '../types';
 import { parseMarkdownToAST, renderASTToXHTML, escapeXML } from './rendering/editorialAST';
+import { getLanguageInfo } from './utils/languageHelper';
+import { cleanChapterProse } from './rendering/cleanChapterProse';
 
 /**
  * Ensures a valid RFC4122 UUID string format for EPUB dc:identifier
@@ -19,21 +21,10 @@ function getValidUuid(projectId: string): string {
   return `${clean.slice(0, 8)}-${clean.slice(8, 12)}-4${clean.slice(13, 16)}-8${clean.slice(17, 20)}-${clean.slice(20, 32)}`;
 }
 
-/**
- * Normalizes language to BCP 47 (e.g. 'pt-BR', 'en-US', 'es-ES')
- */
-function getBcp47Language(langString?: string): string {
-  if (!langString) return 'pt-BR';
-  const lower = langString.toLowerCase();
-  if (lower.includes('portug') || lower.includes('pt')) return 'pt-BR';
-  if (lower.includes('ingl') || lower.includes('en')) return 'en-US';
-  if (lower.includes('espanh') || lower.includes('es')) return 'es-ES';
-  return 'pt-BR';
-}
-
 export async function generateEpubBlob(project: BookProject): Promise<Blob> {
   const zip = new JSZip();
-  const lang = getBcp47Language(project.metadata.idioma);
+  const langInfo = getLanguageInfo(project.metadata.idioma);
+  const lang = langInfo.bcp47;
   const uuid = getValidUuid(project.id);
   const publisherName = project.metadata.editora || 'Editora OMNIA';
 
@@ -195,7 +186,7 @@ li {
     const rawUrl = project.metadata.coverImageUrl;
     if (rawUrl.startsWith('data:image/')) {
       const match = rawUrl.match(/^data:(image\/[a-zA-Z0-9+\-]+);base64,(.+)$/);
-      if (match) {
+      if (match && match[1] && match[2]) {
         coverImageMime = match[1];
         coverImageExt = coverImageMime.includes('png')
           ? 'png'
@@ -304,7 +295,7 @@ li {
       <p><strong>Dados Internacionais de Catalogação na Publicação (CIP)</strong></p>
       <p>${escapeXML(project.metadata.autor)}</p>
       <p>&nbsp;&nbsp;${escapeXML(project.metadata.titulo)}${project.metadata.subtitulo ? `: ${escapeXML(project.metadata.subtitulo)}` : ''} / ${escapeXML(project.metadata.autor)}. — São Paulo: ${escapeXML(publisherName)}, ${new Date().getFullYear()}.</p>
-      <p>&nbsp;&nbsp;Idioma: ${escapeXML(project.metadata.idioma || 'Português')}.</p>
+      <p>&nbsp;&nbsp;Código do Idioma / País: <strong>${escapeXML(langInfo.code)}</strong> (${escapeXML(langInfo.name)}).</p>
       <p>CDD: 800.8 | ISBN: 978-65-80000-00-0</p>
     </div>
 
@@ -336,7 +327,8 @@ li {
 
   // Chapters
   project.chapters.forEach((cap) => {
-    const ast = parseMarkdownToAST(cap.content || '*Capítulo pendente*');
+    const cleanedContent = cleanChapterProse(cap.content || '*Capítulo pendente*', cap.numero, cap.titulo);
+    const ast = parseMarkdownToAST(cleanedContent);
     items.push({
       id: `chap_${cap.numero}`,
       href: `chapter_${cap.numero}.xhtml`,

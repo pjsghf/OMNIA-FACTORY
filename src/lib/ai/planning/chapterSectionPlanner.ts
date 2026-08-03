@@ -74,7 +74,10 @@ export function buildChapterSectionPlan(
       tituloBloco,
       proposito,
       topicos: blockTopics,
-      fatosObrigatorios: subtopicos.length > 0 ? [subtopicos[(b - 1) % subtopicos.length]] : [],
+      fatosObrigatorios:
+        subtopicos.length > 0 && subtopicos[(b - 1) % subtopicos.length]
+          ? [subtopicos[(b - 1) % subtopicos.length]!]
+          : [],
       transicaoProximoBloco:
         b < blockCount
           ? `Conectar naturalmente com o bloco ${b + 1}`

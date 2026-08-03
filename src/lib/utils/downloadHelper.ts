@@ -3,21 +3,33 @@
  * Prevents premature revocation errors and memory leaks across browsers.
  */
 
-export function downloadBlobWithCleanup(blob: Blob, fileName: string): void {
+export function downloadBlobWithCleanup(blob: Blob, fileName: string): string {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = fileName;
+  a.setAttribute('target', '_blank');
   a.style.display = 'none';
 
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
 
-  // Controlled cleanup after 10 seconds to ensure the browser finishes streaming the file
+  // Keep URL active longer (60 seconds) so user can click fallback links if needed
   setTimeout(() => {
     URL.revokeObjectURL(url);
-  }, 10000);
+  }, 60000);
+
+  return url;
+}
+
+export function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 }
 
 /**

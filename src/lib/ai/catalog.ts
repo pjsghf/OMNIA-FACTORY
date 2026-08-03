@@ -12,6 +12,16 @@ export const GEMINI_MODEL_CATALOG: Record<string, ModelCapability> = {
     contextWindow: 1000000,
     isDefault: true,
   },
+  'gemini-3.1-pro-preview': {
+    id: 'gemini-3.1-pro-preview',
+    displayName: 'Gemini 3.1 Pro',
+    provider: 'gemini',
+    allowedTasks: ['plan', 'writing', 'review', 'general'],
+    maxOutputTokens: 8192,
+    inputCostPer1k: 0.00125,
+    outputCostPer1k: 0.005,
+    contextWindow: 2000000,
+  },
   'gemini-2.5-flash': {
     id: 'gemini-2.5-flash',
     displayName: 'Gemini 2.5 Flash',
@@ -77,6 +87,16 @@ export const OPENCODE_MODEL_CATALOG: Record<string, ModelCapability> = {
     outputCostPer1k: 0.01,
     contextWindow: 128000,
   },
+  'opencode/gemini-2.5-pro': {
+    id: 'opencode/gemini-2.5-pro',
+    displayName: 'Gemini 2.5 Pro (OpenCode)',
+    provider: 'opencode',
+    allowedTasks: ['plan', 'writing', 'review', 'general'],
+    maxOutputTokens: 8192,
+    inputCostPer1k: 0.00125,
+    outputCostPer1k: 0.005,
+    contextWindow: 1000000,
+  },
   'opencode/deepseek-r1': {
     id: 'opencode/deepseek-r1',
     displayName: 'DeepSeek R1 (OpenCode)',
@@ -86,6 +106,16 @@ export const OPENCODE_MODEL_CATALOG: Record<string, ModelCapability> = {
     inputCostPer1k: 0.00055,
     outputCostPer1k: 0.00219,
     contextWindow: 64000,
+  },
+  'opencode/llama-3.3-70b': {
+    id: 'opencode/llama-3.3-70b',
+    displayName: 'Llama 3.3 70B (OpenCode)',
+    provider: 'opencode',
+    allowedTasks: ['plan', 'writing', 'review', 'general'],
+    maxOutputTokens: 8192,
+    inputCostPer1k: 0.0004,
+    outputCostPer1k: 0.0004,
+    contextWindow: 128000,
   },
 };
 

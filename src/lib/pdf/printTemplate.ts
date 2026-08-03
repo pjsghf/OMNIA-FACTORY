@@ -1,14 +1,16 @@
-import { BookProject } from '../../types';
-import { PdfExportSettings, PrintableBookOptions } from './types';
+import { PrintableBookOptions } from './types';
 import { escapeHtml, buildPrintableCoverHtml } from './coverRenderer';
 import { renderMarkdownForPrint } from './markdownRenderer';
 import { renderCatalogPageHtml } from './catalogRenderer';
 import { buildPrintStyles } from './printStyles';
 import { buildPrintAssetsScript } from './printAssets';
+import { getLanguageInfo } from '../utils/languageHelper';
+import { cleanChapterProse } from '../rendering/cleanChapterProse';
 
 export function buildPrintableBookHtml(options: PrintableBookOptions): string {
   const { project, settings } = options;
   const currentYear = new Date().getFullYear();
+  const langInfo = getLanguageInfo(project.metadata.idioma);
 
   // TOC items generator
   const tocItems: { id: string; type: string; title: string }[] = [];
@@ -73,7 +75,7 @@ export function buildPrintableBookHtml(options: PrintableBookOptions): string {
   const dropCapClass = settings.useDropCap ? 'pdf-use-drop-cap' : 'pdf-no-drop-cap';
 
   return `<!DOCTYPE html>
-<html lang="${project.metadata.idioma || 'pt-BR'}">
+<html lang="${escapeHtml(langInfo.code)}">
 <head>
   <meta charset="utf-8">
   <title>${escapeHtml(project.metadata.titulo)} — Diagramação Editorial PDF (${settings.paperSize})</title>
@@ -85,14 +87,15 @@ export function buildPrintableBookHtml(options: PrintableBookOptions): string {
   <!-- Sticky Toolbar -->
   <div class="no-print-toolbar">
     <div class="toolbar-info">
-      <span class="toolbar-badge">${settings.paperSize} • ${
+      <span class="toolbar-badge">${settings.paperSize} • ${escapeHtml(langInfo.code)} • ${
         settings.typographyMode === 'literary' ? 'Ficção' : 'Não-Ficção'
       }</span>
-      <span><strong>Diagramação Editorial PDF</strong> — ${escapeHtml(project.metadata.titulo)}</span>
-      <span class="toolbar-status" id="print-status-text">Carregando recursos...</span>
+      <span><strong>Diagramação Editorial</strong> — ${escapeHtml(project.metadata.titulo)}</span>
+      <span class="toolbar-status" id="print-status-text">💡 No painel de impressão, em <b>Destino</b>, selecione <b>"Salvar como PDF"</b></span>
     </div>
     <div class="toolbar-actions">
-      <button id="print-button" class="btn-action" onclick="window.print()">🖨️ Imprimir / Salvar em PDF</button>
+      <button id="print-button" class="btn-action" onclick="window.print()">🖨️ Abrir Janela de Salvar PDF</button>
+      <button class="btn-action" style="background:#27272a;color:#fafafa;" onclick="const blob=new Blob([document.documentElement.outerHTML],{type:'text/html'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='${escapeHtml(project.metadata.titulo).toLowerCase().replace(/[^a-z0-9]/g,'_')}_livro.html';a.click();">💾 Salvar HTML do Livro</button>
       <button class="btn-close" onclick="window.close()">✕ Fechar</button>
     </div>
   </div>
@@ -118,7 +121,7 @@ export function buildPrintableBookHtml(options: PrintableBookOptions): string {
         </div>
         <div class="pub-footer">
           <p class="pub-brand">OMNIA FACTORY</p>
-          <p class="pub-loc">São Paulo — ${currentYear}</p>
+          <p class="pub-loc">São Paulo — ${currentYear} • Idioma: ${escapeHtml(langInfo.code)}</p>
         </div>
       </div>
     </div>
@@ -173,7 +176,7 @@ export function buildPrintableBookHtml(options: PrintableBookOptions): string {
             <div class="chapter-badge">CAPÍTULO ${cap.numero}</div>
             <h1 class="chapter-title">${escapeHtml(cap.titulo)}</h1>
           </div>
-          <div class="chapter-content">${renderMarkdownForPrint(cap.content)}</div>
+          <div class="chapter-content">${renderMarkdownForPrint(cleanChapterProse(cap.content, cap.numero, cap.titulo))}</div>
         </div>
       </div>
     `

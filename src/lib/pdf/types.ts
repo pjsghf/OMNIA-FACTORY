@@ -1,4 +1,4 @@
-import { BookProject, BookMetadata } from '../../types';
+import { BookProject } from '../../types';
 
 export type PdfPaperSize = 'A5' | 'A4';
 export type PdfTypographyMode = 'literary' | 'nonfiction';

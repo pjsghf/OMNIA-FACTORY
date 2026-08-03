@@ -32,7 +32,6 @@ export function parseInlineSpans(text: string): ASTInlineSpan[] {
   if (!text) return [];
   // Basic inline formatting parser for bold, italic, and code
   const spans: ASTInlineSpan[] = [];
-  let remaining = text;
 
   // Simple token regex matching **bold**, *italic*, _italic_, `code`
   const regex = /(\*\*(.*?)\*\*|\*(.*?)\*|_(.*?)_|`(.*?)`)/g;
@@ -120,8 +119,9 @@ export function parseMarkdownToAST(markdown: string): EditorialAST {
     // Callouts [!NOTE], [!WARNING], etc
     else if (trimmed.match(/^> \[!(NOTE|WARNING|TIP|QUOTE)\]/i)) {
       const lines = trimmed.split('\n');
-      const tagMatch = lines[0].match(/\[!(NOTE|WARNING|TIP|QUOTE)\]/i);
-      const calloutType = (tagMatch ? tagMatch[1].toLowerCase() : 'note') as any;
+      const firstLine = lines[0] || '';
+      const tagMatch = firstLine.match(/\[!(NOTE|WARNING|TIP|QUOTE)\]/i);
+      const calloutType = (tagMatch && tagMatch[1] ? tagMatch[1].toLowerCase() : 'note') as any;
       const body = lines
         .slice(1)
         .map((l) => l.replace(/^>\s*/, ''))
@@ -265,8 +265,8 @@ export function renderASTToHTML(ast: EditorialAST): string {
 }
 
 export function renderASTToXHTML(ast: EditorialAST): string {
-  // Strict XHTML rendering for EPUB
-  return renderASTToHTML(ast);
+  // Strict XHTML rendering for EPUB (replace invalid named entity &nbsp; with &#160;)
+  return renderASTToHTML(ast).replace(/&nbsp;/g, '&#160;');
 }
 
 export function renderASTToMarkdown(ast: EditorialAST): string {

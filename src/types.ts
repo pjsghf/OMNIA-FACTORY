@@ -1,3 +1,5 @@
+import { BookBibleMemory } from './lib/ai/memory/bookBibleMemory';
+
 export type BookStyle =
   | 'desenvolvimento_pessoal'
   | 'nao_ficcao'
@@ -165,6 +167,7 @@ export interface BookProject {
   frontMatter: FrontMatter;
   endMatter: EndMatter;
   editorialReport: EditorialReport | null;
+  bookBibleMemory?: BookBibleMemory;
   chapterVersions?: Record<number, ChapterVersionItem[]>;
   projectVersionHash?: string;
   currentStage: EditorialStage;

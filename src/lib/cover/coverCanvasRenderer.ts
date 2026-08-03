@@ -1,6 +1,5 @@
 import {
   CoverBrief,
-  CoverFormatProfile,
   COVER_FORMAT_SPECS,
   calculateSpineWidthMm,
 } from './coverBrief';
@@ -61,7 +60,6 @@ export function renderCompositeCoverSvg(options: RenderCoverOptions): string {
   const height = spec.heightPx;
 
   const safeTitle = escapeXml(brief.title || 'Sem Título');
-  const safeSubtitle = escapeXml(brief.subtitle || '');
   const safeAuthor = escapeXml(brief.author || 'Autor Exemplo');
   const safePublisher = escapeXml(brief.publisher || 'EDITORA OMNIA');
 

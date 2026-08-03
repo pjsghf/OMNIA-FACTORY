@@ -34,7 +34,11 @@ export class GeminiProvider implements AiProvider {
   }
 
   async generateText(request: TextGenerationRequest): Promise<TextGenerationResult> {
-    const modelId = request.model || getDefaultModel('gemini', request.taskType);
+    const userSelectedModel = request.aiConfig?.geminiModel;
+    const modelId =
+      userSelectedModel && validateModelForTask('gemini', userSelectedModel, request.taskType).valid
+        ? userSelectedModel
+        : request.model || getDefaultModel('gemini', request.taskType);
 
     // Validate model allowlist & task capability
     const validation = validateModelForTask('gemini', modelId, request.taskType);
@@ -56,7 +60,7 @@ export class GeminiProvider implements AiProvider {
 
     const outputText = await executeWithRetry({
       providerName: 'gemini',
-      operation: async (signal) => {
+      operation: async (_signal) => {
         const ai = this.getClient();
         const config: any = {
           systemInstruction: fullSystemInstruction,
@@ -97,7 +101,11 @@ export class GeminiProvider implements AiProvider {
   async generateStructured<T>(
     request: StructuredRequest<T>
   ): Promise<{ data: T; result: TextGenerationResult }> {
-    const modelId = request.model || getDefaultModel('gemini', request.taskType);
+    const userSelectedModel = request.aiConfig?.geminiModel;
+    const modelId =
+      userSelectedModel && validateModelForTask('gemini', userSelectedModel, request.taskType).valid
+        ? userSelectedModel
+        : request.model || getDefaultModel('gemini', request.taskType);
 
     const validation = validateModelForTask('gemini', modelId, request.taskType);
     if (!validation.valid) {
@@ -117,7 +125,7 @@ export class GeminiProvider implements AiProvider {
 
     const rawText = await executeWithRetry({
       providerName: 'gemini',
-      operation: async (signal) => {
+      operation: async (_signal) => {
         const ai = this.getClient();
         const config: any = {
           systemInstruction: fullSystemInstruction,

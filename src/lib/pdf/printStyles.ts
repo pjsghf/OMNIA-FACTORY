@@ -20,6 +20,7 @@ export function buildPrintStyles(settings: PdfExportSettings): string {
       background-color: #1c1917;
       text-rendering: optimizeLegibility;
       -webkit-font-smoothing: antialiased;
+      counter-reset: page 0;
     }
 
     /* Floating On-Screen Toolbar */
@@ -130,6 +131,28 @@ export function buildPrintStyles(settings: PdfExportSettings): string {
       padding: ${metrics.topMarginMm}mm ${metrics.outerMarginMm}mm ${metrics.bottomMarginMm}mm ${metrics.innerMarginMm}mm;
       page-break-after: always;
       break-after: page;
+      counter-increment: page;
+    }
+
+    /* Cover Page Sheet suppresses page counter */
+    .page-sheet.cover-sheet {
+      counter-increment: none;
+      counter-reset: page 0;
+    }
+
+    /* Page number indicator in bottom right corner (canto inferior direito) */
+    .page-sheet:not(.cover-sheet)::after {
+      content: "Pág. " counter(page);
+      position: absolute;
+      bottom: 8mm;
+      right: 12mm;
+      font-family: 'Georgia', 'Garamond', 'Palatino Linotype', 'Times New Roman', serif;
+      font-size: 8.5pt;
+      font-weight: 600;
+      color: #52525b;
+      letter-spacing: 0.5px;
+      pointer-events: none;
+      z-index: 100;
     }
 
     .page-sheet:last-child {

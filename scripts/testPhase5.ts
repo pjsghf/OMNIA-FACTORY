@@ -2,7 +2,7 @@ import { validateBookConfig } from '../src/lib/ai/validation/configValidator';
 import { reconcileEditorialPlan } from '../src/lib/ai/validation/planReconciler';
 import { buildChapterSectionPlan } from '../src/lib/ai/planning/chapterSectionPlanner';
 import { normalizeProse } from '../src/lib/ai/normalization/proseNormalizer';
-import { validateChapterContent, countWords } from '../src/lib/ai/validation/contentValidator';
+import { validateChapterContent } from '../src/lib/ai/validation/contentValidator';
 import { checkChapterCoverage } from '../src/lib/ai/validation/coverageChecker';
 import { detectSensitiveNiche } from '../src/lib/ai/policies/sensitiveNichePolicy';
 import { createInitialBookBibleMemory, updateBookBibleMemoryWithChapter, formatMemoryForPrompt } from '../src/lib/ai/memory/bookBibleMemory';
@@ -55,14 +55,16 @@ async function runPhase5Audit() {
   };
   const reconciled = reconcileEditorialPlan(rawAiPlan, validConfig.sanitizedMetadata!);
   assert(reconciled.reconciledPlan.sumario.length === 8, 'Reconciles sumario to exact requested chapter count (8)');
-  assert(reconciled.reconciledPlan.sumario[0].estimativaPalavras >= 1200, 'Adjusts chapter word estimate up to min boundary');
+  assert((reconciled.reconciledPlan.sumario[0]?.estimativaPalavras ?? 0) >= 1200, 'Adjusts chapter word estimate up to min boundary');
 
   // 3. Sub-block Chapter Planning Tests
   console.log('\n--- 3. Sub-block Chapter Planning Tests ---');
   const chapterPlan = reconciled.reconciledPlan.sumario[0];
-  const detailed = buildChapterSectionPlan(chapterPlan, validConfig.sanitizedMetadata!);
-  assert(detailed.sections.length >= 2, 'Divides chapter into sub-block working sections (>= 2 sections)');
-  assert(detailed.sections[0].estimativaPalavras >= 600 && detailed.sections[0].estimativaPalavras <= 1200, 'Sub-block word estimates stay in optimal 600-1200 range');
+  if (chapterPlan) {
+    const detailed = buildChapterSectionPlan(chapterPlan, validConfig.sanitizedMetadata!);
+    assert(detailed.sections.length >= 2, 'Divides chapter into sub-block working sections (>= 2 sections)');
+    assert((detailed.sections[0]?.estimativaPalavras ?? 0) >= 600 && (detailed.sections[0]?.estimativaPalavras ?? 0) <= 1200, 'Sub-block word estimates stay in optimal 600-1200 range');
+  }
 
   // 4. Non-Destructive Prose Normalization Tests
   console.log('\n--- 4. Non-Destructive Prose Normalization Tests ---');

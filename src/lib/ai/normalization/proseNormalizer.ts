@@ -3,7 +3,9 @@
  * Replaces destructive regexes with token protection for code, math, snake_case, and markdown symbols.
  */
 
-export function normalizeProse(rawContent: string): string {
+import { cleanChapterProse } from '../../rendering/cleanChapterProse';
+
+export function normalizeProse(rawContent: string, chapterNumber?: number, chapterTitle?: string): string {
   if (!rawContent || typeof rawContent !== 'string') return '';
 
   let text = rawContent;
@@ -17,6 +19,9 @@ export function normalizeProse(rawContent: string): string {
     /\n+(espero que este capítulo|espero que goste|quaisquer dúvidas|boa leitura!)[^\n]*$/gi,
     ''
   );
+
+  // 1b. Clean redundant leading chapter header if present
+  text = cleanChapterProse(text, chapterNumber, chapterTitle);
 
   // 2. Protect Code Blocks
   const codeBlocks: string[] = [];

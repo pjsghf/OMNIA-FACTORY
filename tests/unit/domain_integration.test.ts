@@ -6,12 +6,13 @@ import { normalizeProse } from '../../src/lib/ai/normalization/proseNormalizer';
 import { validateChapterContent } from '../../src/lib/ai/validation/contentValidator';
 import { checkChapterCoverage } from '../../src/lib/ai/validation/coverageChecker';
 import { detectSensitiveNiche } from '../../src/lib/ai/policies/sensitiveNichePolicy';
+import { cleanChapterProse } from '../../src/lib/rendering/cleanChapterProse';
 import {
   createInitialBookBibleMemory,
   updateBookBibleMemoryWithChapter,
   formatMemoryForPrompt,
 } from '../../src/lib/ai/memory/bookBibleMemory';
-import { BookProject, ChapterContent } from '../../src/types';
+import { ChapterContent } from '../../src/types';
 
 describe('Domain & Editorial Planning (Unit Tests)', () => {
   it('DOM-001: Preserves chapter order when updating or reordering editorial plan', () => {
@@ -159,5 +160,22 @@ Espero que goste deste capítulo!`;
     const report = checkChapterCoverage(text, ['Respiração', 'Foco'], meta as any);
     expect(report.coverageScore).toBeGreaterThanOrEqual(50);
     expect(report.forbiddenTermsViolated.length).toBe(0);
+  });
+
+  it('DOM-009: Strips redundant chapter headers (e.g. CAPÍTULO 1 and title) from prose', () => {
+    const rawWithHeading = `# CAPÍTULO 1
+## O Peso de Dizer Está Tudo Bem
+
+Era uma noite chuvosa e fria quando as luzes se apagaram...`;
+
+    const cleaned = cleanChapterProse(rawWithHeading, 1, 'O Peso de Dizer Está Tudo Bem');
+    expect(cleaned).toBe('Era uma noite chuvosa e fria quando as luzes se apagaram...');
+
+    const rawWithInline = `Capítulo 1: O Peso de Dizer Está Tudo Bem
+
+Era uma noite chuvosa e fria quando as luzes se apagaram...`;
+
+    const cleanedInline = cleanChapterProse(rawWithInline, 1, 'O Peso de Dizer Está Tudo Bem');
+    expect(cleanedInline).toBe('Era uma noite chuvosa e fria quando as luzes se apagaram...');
   });
 });

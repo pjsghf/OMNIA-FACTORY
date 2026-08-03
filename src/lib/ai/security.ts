@@ -84,8 +84,8 @@ function isPrivateIPv4(ip: string): boolean {
   const match = ip.match(ipv4Regex);
   if (!match) return false;
 
-  const octet1 = parseInt(match[1], 10);
-  const octet2 = parseInt(match[2], 10);
+  const octet1 = parseInt(match[1] || '0', 10);
+  const octet2 = parseInt(match[2] || '0', 10);
 
   // 127.0.0.0/8 (Loopback)
   if (octet1 === 127) return true;

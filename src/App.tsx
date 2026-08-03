@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   BookProject,
   EditorialPlan,
@@ -17,6 +17,7 @@ import { BookReaderModal } from './components/BookReaderModal';
 import { AiTextAssistModal } from './components/AiTextAssistModal';
 import { ProjectListModal } from './components/ProjectListModal';
 import { AiSettingsModal } from './components/AiSettingsModal';
+import { TranslationModal } from './components/TranslationModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastContainer, ToastMessage } from './components/common/Toast';
 import { createChapterVersion } from './lib/ai/review/versionManager';
@@ -52,6 +53,19 @@ const DEFAULT_AI_CONFIG: AiConfig = {
   opencodeApiKey: '',
   opencodeBaseUrl: 'https://opencode.go/api/v1',
   opencodeModel: 'opencode/claude-3-5-sonnet',
+};
+
+const DEFAULT_PROJECT: BookProject = {
+  id: 'proj_default',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  metadata: DEFAULT_METADATA,
+  plan: null,
+  chapters: [],
+  frontMatter: {},
+  endMatter: {},
+  editorialReport: null,
+  currentStage: 'config',
 };
 
 export default function App() {
@@ -128,11 +142,36 @@ export default function App() {
   const [isReaderOpen, setIsReaderOpen] = useState<boolean>(false);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState<boolean>(false);
   const [isAiSettingsOpen, setIsAiSettingsOpen] = useState<boolean>(false);
+  const [isTranslationModalOpen, setIsTranslationModalOpen] = useState<boolean>(false);
   const [aiAssistState, setAiAssistState] = useState<{
     text: string;
     action: string;
     chapterIndex?: number;
   } | null>(null);
+
+  const handleTranslationComplete = (
+    translatedProject: BookProject,
+    saveMode: 'new_project' | 'replace_current'
+  ) => {
+    if (saveMode === 'new_project') {
+      setProjects((prev) => [translatedProject, ...prev]);
+      setCurrentProjectId(translatedProject.id);
+      addToast(
+        'success',
+        'Edição Localizada Criada!',
+        `Nova versão em ${translatedProject.metadata.idioma} com capa gerada adicionada à biblioteca.`
+      );
+    } else {
+      setProjects((prev) =>
+        prev.map((p) => (p.id === activeProject.id ? translatedProject : p))
+      );
+      addToast(
+        'success',
+        'E-book Atualizado!',
+        `O e-book ativo foi substituído pela versão em ${translatedProject.metadata.idioma}.`
+      );
+    }
+  };
 
   // Auto-save projects to localStorage
   useEffect(() => {
@@ -144,7 +183,8 @@ export default function App() {
     localStorage.setItem('scriptor_aiconfig_v1', JSON.stringify(aiConfig));
   }, [aiConfig]);
 
-  const activeProject = projects.find((p) => p.id === currentProjectId) || projects[0];
+  const activeProject =
+    projects.find((p) => p.id === currentProjectId) || projects[0] || DEFAULT_PROJECT;
 
   const updateActiveProject = (updater: (prev: BookProject) => BookProject) => {
     setProjects((prev) =>
@@ -228,8 +268,8 @@ export default function App() {
     try {
       const previousSummaries = activeProject.chapters
         .slice(0, index)
-        .filter((c) => c.content)
-        .map((c) => `Capítulo ${c.numero} (${c.titulo}): ${c.content.slice(0, 300)}...`);
+        .filter((c: ChapterContent) => Boolean(c.content))
+        .map((c: ChapterContent) => `Capítulo ${c.numero} (${c.titulo}): ${c.content.slice(0, 300)}...`);
 
       const res = await fetch('/api/editorial/generate-chapter', {
         method: 'POST',
@@ -238,6 +278,7 @@ export default function App() {
           metadata: activeProject.metadata,
           plan: activeProject.plan,
           chapterIndex: index,
+          memory: activeProject.bookBibleMemory,
           previousSummaries,
           aiConfig,
         }),
@@ -248,30 +289,35 @@ export default function App() {
         updateActiveProject((p) => {
           const chapters = [...p.chapters];
           const newContent = data.content;
-          chapters[index] = {
-            ...chapters[index],
+          const targetCap = chapters[index];
+          if (!targetCap) return p;
+
+          const updatedCap: ChapterContent = {
+            ...targetCap,
             content: newContent,
             wordCount: data.wordCount,
             status: 'completed',
           };
+          chapters[index] = updatedCap;
 
           // Save Version Item
           const versionItem = createChapterVersion({
-            chapterNumber: chapters[index].numero,
+            chapterNumber: updatedCap.numero,
             content: newContent,
             author: 'ia',
             label: 'Draft Inicial Gerado por IA',
           });
 
           const currentVersions = p.chapterVersions || {};
-          const capVersions = currentVersions[chapters[index].numero] || [];
+          const capVersions = currentVersions[updatedCap.numero] || [];
 
           return {
             ...p,
             chapters,
+            bookBibleMemory: data.updatedMemory || p.bookBibleMemory,
             chapterVersions: {
               ...currentVersions,
-              [chapters[index].numero]: [versionItem, ...capVersions],
+              [updatedCap.numero]: [versionItem, ...capVersions],
             },
           };
         });
@@ -382,6 +428,7 @@ export default function App() {
 
     for (let i = 0; i < sections.length; i++) {
       const sec = sections[i];
+      if (!sec) continue;
       const success = await handleGenerateFrontOrEndMatter(sec);
       if (!success) break;
       if (i < sections.length - 1) {
@@ -482,29 +529,33 @@ export default function App() {
           updateActiveProject((p) => {
             const chapters = [...p.chapters];
             const newContent = data.content;
-            chapters[chapterIndex] = {
-              ...chapters[chapterIndex],
+            const targetCap = chapters[chapterIndex];
+            if (!targetCap) return p;
+
+            const updatedCap: ChapterContent = {
+              ...targetCap,
               content: newContent,
               wordCount: data.wordCount,
               status: 'edited',
             };
+            chapters[chapterIndex] = updatedCap;
 
             const versionItem = createChapterVersion({
-              chapterNumber: chapters[chapterIndex].numero,
+              chapterNumber: updatedCap.numero,
               content: newContent,
               author: 'review_patch',
               label: 'Revisão Editorial Aplicada (IA)',
             });
 
             const currentVersions = p.chapterVersions || {};
-            const capVersions = currentVersions[chapters[chapterIndex].numero] || [];
+            const capVersions = currentVersions[updatedCap.numero] || [];
 
             return {
               ...p,
               chapters,
               chapterVersions: {
                 ...currentVersions,
-                [chapters[chapterIndex].numero]: [versionItem, ...capVersions],
+                [updatedCap.numero]: [versionItem, ...capVersions],
               },
             };
           });
@@ -547,29 +598,33 @@ export default function App() {
               updateActiveProject((p) => {
                 const chapters = [...p.chapters];
                 const newContent = data.content;
-                chapters[i] = {
-                  ...chapters[i],
+                const targetCap = chapters[i];
+                if (!targetCap) return p;
+
+                const updatedCap: ChapterContent = {
+                  ...targetCap,
                   content: newContent,
                   wordCount: data.wordCount,
                   status: 'edited',
                 };
+                chapters[i] = updatedCap;
 
                 const versionItem = createChapterVersion({
-                  chapterNumber: chapters[i].numero,
+                  chapterNumber: updatedCap.numero,
                   content: newContent,
                   author: 'review_patch',
                   label: 'Revisão Editorial Aplicada (IA)',
                 });
 
                 const currentVersions = p.chapterVersions || {};
-                const capVersions = currentVersions[chapters[i].numero] || [];
+                const capVersions = currentVersions[updatedCap.numero] || [];
 
                 return {
                   ...p,
                   chapters,
                   chapterVersions: {
                     ...currentVersions,
-                    [chapters[i].numero]: [versionItem, ...capVersions],
+                    [updatedCap.numero]: [versionItem, ...capVersions],
                   },
                 };
               });
@@ -663,7 +718,7 @@ export default function App() {
     if (projects.length <= 1) return;
     const filtered = projects.filter((p) => p.id !== id);
     setProjects(filtered);
-    if (currentProjectId === id) {
+    if (currentProjectId === id && filtered[0]) {
       setCurrentProjectId(filtered[0].id);
     }
   };
@@ -676,7 +731,9 @@ export default function App() {
         const newProjects = imported.filter((p) => !existingIds.has(p.id));
         return [...newProjects, ...prev];
       });
-      setCurrentProjectId(imported[0].id);
+      if (imported[0]) {
+        setCurrentProjectId(imported[0].id);
+      }
     } else {
       setProjects((prev) => [imported, ...prev.filter((p) => p.id !== imported.id)]);
       setCurrentProjectId(imported.id);
@@ -684,7 +741,10 @@ export default function App() {
     addToast('success', 'Importação Concluída', 'Projetos sincronizados com sucesso.');
   };
 
-  const totalWords = activeProject.chapters.reduce((acc, c) => acc + (c.wordCount || 0), 0);
+  const totalWords = activeProject.chapters.reduce(
+    (acc: number, c: ChapterContent) => acc + (c.wordCount || 0),
+    0
+  );
 
   return (
     <ErrorBoundary>
@@ -699,6 +759,7 @@ export default function App() {
           onNewProject={handleNewProject}
           onOpenProjectList={() => setIsProjectModalOpen(true)}
           onOpenAiSettings={() => setIsAiSettingsOpen(true)}
+          onOpenTranslation={() => setIsTranslationModalOpen(true)}
           totalWordCount={totalWords}
         />
 
@@ -746,12 +807,15 @@ export default function App() {
                 updateActiveProject((p) => {
                   const chapters = [...p.chapters];
                   const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
-                  chapters[index] = {
-                    ...chapters[index],
-                    content,
-                    wordCount,
-                    status: 'edited',
-                  };
+                  const target = chapters[index];
+                  if (target) {
+                    chapters[index] = {
+                      ...target,
+                      content,
+                      wordCount,
+                      status: 'edited',
+                    };
+                  }
                   return { ...p, chapters };
                 });
               }}
@@ -760,7 +824,9 @@ export default function App() {
               onGenerateBatchChapters={handleGenerateBatchChapters}
               onGenerateFrontOrEndMatter={handleGenerateFrontOrEndMatter}
               onGenerateBatchFrontAndEndMatter={handleGenerateBatchFrontAndEndMatter}
-              onOpenAiAssist={(text, action) => setAiAssistState({ text, action })}
+              onOpenAiAssist={(text, action, chapterIndex) =>
+                setAiAssistState({ text, action, chapterIndex })
+              }
               isGeneratingBatch={isGeneratingBatch}
               isGeneratingFrontEndBatch={isGeneratingFrontEndBatch}
               generatingIndex={generatingIndex}
@@ -769,7 +835,6 @@ export default function App() {
 
           {activeProject.currentStage === 'review' && (
             <ReviewStage
-              metadata={activeProject.metadata}
               report={activeProject.editorialReport}
               onRunReview={handleRunEditorialReview}
               onApplyReviewImprovements={handleApplyReviewImprovements}
@@ -792,6 +857,7 @@ export default function App() {
               onOpenReader={() => setIsReaderOpen(true)}
               onGenerateCover={handleGenerateCover}
               isGeneratingCover={isGeneratingCover}
+              onOpenTranslation={() => setIsTranslationModalOpen(true)}
             />
           )}
         </main>
@@ -807,7 +873,36 @@ export default function App() {
             initialText={aiAssistState.text}
             initialAction={aiAssistState.action}
             language={activeProject.metadata.idioma}
-            onApply={(replacement) => {
+            aiConfig={aiConfig}
+            onApply={(replacementText) => {
+              if (aiAssistState.chapterIndex !== undefined && activeProject) {
+                const idx = aiAssistState.chapterIndex;
+                updateActiveProject((p) => {
+                  const chapters = [...p.chapters];
+                  const targetCap = chapters[idx];
+                  if (!targetCap) return p;
+
+                  let updatedContent = targetCap.content;
+                  if (updatedContent.includes(aiAssistState.text)) {
+                    updatedContent = updatedContent.replace(aiAssistState.text, replacementText);
+                  } else {
+                    updatedContent = replacementText;
+                  }
+
+                  const updatedCap: ChapterContent = {
+                    ...targetCap,
+                    content: updatedContent,
+                    wordCount: updatedContent.trim().split(/\s+/).filter(Boolean).length,
+                    status: 'edited',
+                  };
+                  chapters[idx] = updatedCap;
+
+                  return {
+                    ...p,
+                    chapters,
+                  };
+                });
+              }
               setAiAssistState(null);
               addToast('success', 'Texto Substituído', 'A sugestão da IA foi aplicada no editor.');
             }}
@@ -837,6 +932,17 @@ export default function App() {
               addToast('success', 'Configuração Salva', 'Provedores de IA e chaves atualizados.');
             }}
             onClose={() => setIsAiSettingsOpen(false)}
+          />
+        )}
+
+        {/* Translation & Cultural Localizer Modal */}
+        {isTranslationModalOpen && (
+          <TranslationModal
+            isOpen={isTranslationModalOpen}
+            onClose={() => setIsTranslationModalOpen(false)}
+            project={activeProject}
+            aiConfig={aiConfig}
+            onTranslationComplete={handleTranslationComplete}
           />
         )}
 

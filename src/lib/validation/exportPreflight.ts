@@ -37,9 +37,6 @@ export function validateExportPreflight(project: BookProject): ExportPreflightRe
   // 1. Chapters Check
   const chapters = project.chapters || [];
   const totalChapters = chapters.length;
-  const completedChapters = chapters.filter(
-    (c) => c.status === 'completed' || c.status === 'edited'
-  );
   const emptyChapters = chapters.filter((c) => !c.content || c.content.trim().length < 100);
 
   if (totalChapters === 0) {
@@ -204,7 +201,6 @@ export function validateExportPreflight(project: BookProject): ExportPreflightRe
 
   // Compute metrics
   const errorCount = items.filter((i) => i.severity === 'error' && !i.passed).length;
-  const warningCount = items.filter((i) => i.severity === 'warning' && !i.passed).length;
 
   const passedCount = items.filter((i) => i.passed).length;
   const score = Math.round((passedCount / items.length) * 100);

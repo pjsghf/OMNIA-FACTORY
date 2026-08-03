@@ -1,4 +1,4 @@
-import { BookProject, EditorialReport, ReviewFinding, ReviewModalityScore } from '../../../types';
+import { BookProject, EditorialReport, ReviewFinding } from '../../../types';
 import { aiOrchestrator } from '../orchestrator';
 import { sanitizeEditorialReport, sanitizeReviewFinding } from './reviewSchema';
 
@@ -98,6 +98,8 @@ export async function runHierarchicalEditorialReview({
   // MAP STAGE: Review each unit
   for (let i = 0; i < totalUnits; i++) {
     const unit = unitsToReview[i];
+    if (!unit) continue;
+
     if (onProgress) {
       onProgress(
         `Auditando unidade ${i + 1}/${totalUnits}: ${unit.title}`,
@@ -156,7 +158,7 @@ Analise rigorosamente e retorne o JSON de auditoria.`;
       });
 
       const rawAchados = Array.isArray(resData?.achados) ? resData.achados : [];
-      rawAchados.forEach((raw) => {
+      rawAchados.forEach((raw: any) => {
         let start: number | undefined;
         let end: number | undefined;
         if (raw.snippet && typeof raw.snippet === 'string') {
@@ -245,7 +247,16 @@ Gere a síntese global da auditoria em JSON.`;
     };
   }
 
-  const coveragePercent = 100; // 100% of available units audited
+  const totalPossibleUnits =
+    (project.chapters?.length || 1) +
+    (project.frontMatter?.apresentacao ? 1 : 0) +
+    (project.frontMatter?.introducao ? 1 : 0) +
+    (project.endMatter?.conclusao ? 1 : 0) +
+    (project.endMatter?.exercicios ? 1 : 0);
+  const coveragePercent = Math.min(
+    100,
+    Math.round((unitsToReview.length / Math.max(1, totalPossibleUnits)) * 100)
+  );
 
   const report = sanitizeEditorialReport(
     {

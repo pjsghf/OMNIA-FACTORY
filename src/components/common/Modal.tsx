@@ -33,7 +33,7 @@ export const Modal: React.FC<ModalProps> = ({
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
     );
     if (focusable && focusable.length > 0) {
-      focusable[0].focus();
+      focusable[0]?.focus();
     }
 
     return () => {

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Sparkles, Wand2, Check } from 'lucide-react';
+import { AiConfig } from '../types';
 
 interface AiTextAssistModalProps {
   initialText: string;
@@ -7,6 +8,7 @@ interface AiTextAssistModalProps {
   onApply: (replacementText: string) => void;
   onClose: () => void;
   language?: string;
+  aiConfig?: AiConfig;
 }
 
 export const AiTextAssistModal: React.FC<AiTextAssistModalProps> = ({
@@ -15,9 +17,10 @@ export const AiTextAssistModal: React.FC<AiTextAssistModalProps> = ({
   onApply,
   onClose,
   language = 'Português',
+  aiConfig,
 }) => {
   const [action, setAction] = useState<string>(initialAction || 'expand');
-  const [tone, setTone] = useState<string>('didático e envolvente');
+  const [tone] = useState<string>('didático e envolvente');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [resultText, setResultText] = useState<string>('');
 
@@ -32,6 +35,7 @@ export const AiTextAssistModal: React.FC<AiTextAssistModalProps> = ({
           text: initialText,
           tone,
           language,
+          aiConfig,
         }),
       });
       const data = await res.json();

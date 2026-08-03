@@ -115,8 +115,10 @@ export const PlanningStage: React.FC<PlanningStageProps> = ({
 
     const list = [...plan.sumario];
     const temp = list[index];
-    list[index] = list[targetIndex];
-    list[targetIndex] = temp;
+    if (temp && list[targetIndex]) {
+      list[index] = list[targetIndex]!;
+      list[targetIndex] = temp;
+    }
 
     // re-number
     const renumbered = list.map((cap, i) => ({ ...cap, numero: i + 1 }));
