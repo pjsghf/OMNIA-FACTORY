@@ -50,7 +50,7 @@ const DEFAULT_METADATA: BookMetadata = {
 
 const DEFAULT_AI_CONFIG: AiConfig = {
   provider: 'gemini',
-  geminiModel: 'gemini-3.6-flash',
+  geminiModel: 'gemini-2.5-flash',
   opencodeApiKey: '',
   opencodeBaseUrl: OPENCODE_DEFAULT_BASE_URL,
   opencodeModel: 'opencode/claude-3-5-sonnet',

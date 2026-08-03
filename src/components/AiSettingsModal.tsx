@@ -11,7 +11,7 @@ interface AiSettingsModalProps {
 
 export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ config, onSave, onClose }) => {
   const [provider, setProvider] = useState<'gemini' | 'opencode'>(config.provider || 'gemini');
-  const [geminiModel, setGeminiModel] = useState<string>(config.geminiModel || 'gemini-3.6-flash');
+  const [geminiModel, setGeminiModel] = useState<string>(config.geminiModel || 'gemini-2.5-flash');
   const [opencodeApiKey, setOpencodeApiKey] = useState<string>(config.opencodeApiKey || '');
   const [opencodeBaseUrl, setOpencodeBaseUrl] = useState<string>(
     config.opencodeBaseUrl || OPENCODE_DEFAULT_BASE_URL
@@ -22,14 +22,17 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ config, onSave
   const [customOpencodeModel, setCustomOpencodeModel] = useState<string>('');
   const [showKey, setShowKey] = useState<boolean>(false);
 
+  // Stable, long-standing ids first: these are the ones known to exist upstream.
+  // The newer entries are kept selectable but flagged, because an id that the API
+  // does not recognise fails every generation in the app.
   const geminiModels = [
-    { id: 'gemini-3.6-flash', label: 'Gemini 3.6 Flash (Padrão - Ultra Rápido & Alto Volume)' },
+    { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Padrão — Rápido e Estável)' },
+    { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (Análise Avançada)' },
+    { id: 'gemini-3.6-flash', label: 'Gemini 3.6 Flash (verifique disponibilidade na sua conta)' },
     {
       id: 'gemini-3.1-pro-preview',
-      label: 'Gemini 3.1 Pro (Alta Precisão & Raciocínio Editorial)',
+      label: 'Gemini 3.1 Pro (verifique disponibilidade na sua conta)',
     },
-    { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Rápido e Estável)' },
-    { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (Análise Avançada)' },
   ];
 
   const opencodeModels = [

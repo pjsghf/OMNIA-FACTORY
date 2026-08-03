@@ -13,6 +13,7 @@ import {
   getModelCapability,
   calculateEstimatedCost,
   getDefaultModel,
+  GEMINI_MODEL_CATALOG,
 } from '../catalog';
 import { executeWithRetry } from '../retry';
 import { sanitizePromptInputs } from '../security';
@@ -262,13 +263,12 @@ export class GeminiProvider implements AiProvider {
     return {
       provider: 'gemini',
       status: 'ok',
-      details: 'Conexão ativa e chave configurada.',
-      modelsAvailable: [
-        'gemini-3.6-flash',
-        'gemini-2.5-flash',
-        'gemini-2.5-pro',
-        'imagen-3.0-generate-002',
-      ],
+      // "Configured", not "reachable": this checks only that a key is present. It
+      // does not call the API, so it cannot attest that these ids actually resolve.
+      details: 'Chave configurada (não verificado contra a API).',
+      // Derived from the catalog so the two cannot drift; the hardcoded list here
+      // had already fallen out of sync with it.
+      modelsAvailable: Object.keys(GEMINI_MODEL_CATALOG),
     };
   }
 }

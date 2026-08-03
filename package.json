@@ -21,7 +21,8 @@
     "test:integration": "vitest run tests/integration",
     "test:security": "vitest run tests/security",
     "test:exports": "vitest run tests/exports",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "verify:providers": "tsx scripts/verifyProviders.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

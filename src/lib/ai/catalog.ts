@@ -12,6 +12,13 @@ import { ModelCapability, AiTaskType } from './types';
  */
 export const OPENCODE_DEFAULT_BASE_URL = 'https://opencode.ai/zen/go/v1';
 
+/**
+ * NOTE ON DEFAULTS: the default is deliberately the model with the longest track
+ * record, not the newest entry in this list. A default that does not exist upstream
+ * fails *every* text generation in the app, so the blast radius of guessing wrong
+ * here is total. The newer ids remain selectable; verify them against
+ * `GET /v1beta/models` (see scripts/verifyProviders.ts) before promoting one.
+ */
 export const GEMINI_MODEL_CATALOG: Record<string, ModelCapability> = {
   'gemini-3.6-flash': {
     id: 'gemini-3.6-flash',
@@ -22,7 +29,6 @@ export const GEMINI_MODEL_CATALOG: Record<string, ModelCapability> = {
     inputCostPer1k: 0.000075,
     outputCostPer1k: 0.0003,
     contextWindow: 1000000,
-    isDefault: true,
   },
   'gemini-3.1-pro-preview': {
     id: 'gemini-3.1-pro-preview',
@@ -43,6 +49,7 @@ export const GEMINI_MODEL_CATALOG: Record<string, ModelCapability> = {
     inputCostPer1k: 0.000075,
     outputCostPer1k: 0.0003,
     contextWindow: 1000000,
+    isDefault: true,
   },
   'gemini-2.5-pro': {
     id: 'gemini-2.5-pro',
@@ -173,7 +180,7 @@ export function getDefaultModel(provider: 'gemini' | 'opencode', task: AiTaskTyp
   return anyMatch
     ? anyMatch.id
     : provider === 'gemini'
-      ? 'gemini-3.6-flash'
+      ? 'gemini-2.5-flash'
       : 'opencode/claude-3-5-sonnet';
 }
 
