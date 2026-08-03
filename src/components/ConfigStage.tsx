@@ -73,7 +73,7 @@ export const ConfigStage: React.FC<ConfigStageProps> = ({
       // Try standard JSON parse
       try {
         parsed = JSON.parse(rawText.trim());
-      } catch (jsonErr) {
+      } catch {
         // Extract JSON from markdown code blocks or brackets
         const match = rawText.match(/\{[\s\S]*\}/);
         if (match) {
@@ -229,7 +229,7 @@ IDEIAS E INFORMAÇÕES BRUTAS DO AUTOR SOBRE O LIVRO:
       setImportStatus('Prompt do agente copiado para a área de transferência com sucesso!');
       setTimeout(() => setCopiedPrompt(false), 3000);
       setTimeout(() => setImportStatus(null), 6000);
-    } catch (err) {
+    } catch {
       alert(
         'Não foi possível copiar automaticamente. Selecione e copie manualmente se necessário.'
       );
