@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   BookProject,
   EditorialPlan,
@@ -146,6 +146,16 @@ export default function App() {
 
   const activeProject = projects.find((p) => p.id === currentProjectId) || projects[0];
 
+  if (!activeProject) {
+    return (
+      <ErrorBoundary>
+        <div className="min-h-screen flex items-center justify-center bg-[#FDFCFB] text-[#1C1917]">
+          Nenhum projeto disponível. Recarregue a aplicação para criar um novo projeto.
+        </div>
+      </ErrorBoundary>
+    );
+  }
+
   const updateActiveProject = (updater: (prev: BookProject) => BookProject) => {
     setProjects((prev) =>
       prev.map((p) => {
@@ -247,31 +257,34 @@ export default function App() {
       if (data.success) {
         updateActiveProject((p) => {
           const chapters = [...p.chapters];
+          const chapter = chapters[index];
+          if (!chapter) return p;
           const newContent = data.content;
           chapters[index] = {
-            ...chapters[index],
+            ...chapter,
             content: newContent,
             wordCount: data.wordCount,
             status: 'completed',
           };
+          const chapterNumber = chapter.numero;
 
           // Save Version Item
           const versionItem = createChapterVersion({
-            chapterNumber: chapters[index].numero,
+            chapterNumber,
             content: newContent,
             author: 'ia',
             label: 'Draft Inicial Gerado por IA',
           });
 
           const currentVersions = p.chapterVersions || {};
-          const capVersions = currentVersions[chapters[index].numero] || [];
+          const capVersions = currentVersions[chapterNumber] || [];
 
           return {
             ...p,
             chapters,
             chapterVersions: {
               ...currentVersions,
-              [chapters[index].numero]: [versionItem, ...capVersions],
+              [chapterNumber]: [versionItem, ...capVersions],
             },
           };
         });
@@ -382,6 +395,7 @@ export default function App() {
 
     for (let i = 0; i < sections.length; i++) {
       const sec = sections[i];
+      if (!sec) break;
       const success = await handleGenerateFrontOrEndMatter(sec);
       if (!success) break;
       if (i < sections.length - 1) {
@@ -481,30 +495,33 @@ export default function App() {
         if (data.success) {
           updateActiveProject((p) => {
             const chapters = [...p.chapters];
+            const chapter = chapters[chapterIndex];
+            if (!chapter) return p;
             const newContent = data.content;
             chapters[chapterIndex] = {
-              ...chapters[chapterIndex],
+              ...chapter,
               content: newContent,
               wordCount: data.wordCount,
               status: 'edited',
             };
+            const chapterNumber = chapter.numero;
 
             const versionItem = createChapterVersion({
-              chapterNumber: chapters[chapterIndex].numero,
+              chapterNumber,
               content: newContent,
               author: 'review_patch',
               label: 'Revisão Editorial Aplicada (IA)',
             });
 
             const currentVersions = p.chapterVersions || {};
-            const capVersions = currentVersions[chapters[chapterIndex].numero] || [];
+            const capVersions = currentVersions[chapterNumber] || [];
 
             return {
               ...p,
               chapters,
               chapterVersions: {
                 ...currentVersions,
-                [chapters[chapterIndex].numero]: [versionItem, ...capVersions],
+                [chapterNumber]: [versionItem, ...capVersions],
               },
             };
           });
@@ -546,30 +563,33 @@ export default function App() {
               appliedCount++;
               updateActiveProject((p) => {
                 const chapters = [...p.chapters];
+                const chapter = chapters[i];
+                if (!chapter) return p;
                 const newContent = data.content;
                 chapters[i] = {
-                  ...chapters[i],
+                  ...chapter,
                   content: newContent,
                   wordCount: data.wordCount,
                   status: 'edited',
                 };
+                const chapterNumber = chapter.numero;
 
                 const versionItem = createChapterVersion({
-                  chapterNumber: chapters[i].numero,
+                  chapterNumber,
                   content: newContent,
                   author: 'review_patch',
                   label: 'Revisão Editorial Aplicada (IA)',
                 });
 
                 const currentVersions = p.chapterVersions || {};
-                const capVersions = currentVersions[chapters[i].numero] || [];
+                const capVersions = currentVersions[chapterNumber] || [];
 
                 return {
                   ...p,
                   chapters,
                   chapterVersions: {
                     ...currentVersions,
-                    [chapters[i].numero]: [versionItem, ...capVersions],
+                    [chapterNumber]: [versionItem, ...capVersions],
                   },
                 };
               });
@@ -664,7 +684,8 @@ export default function App() {
     const filtered = projects.filter((p) => p.id !== id);
     setProjects(filtered);
     if (currentProjectId === id) {
-      setCurrentProjectId(filtered[0].id);
+      const nextProject = filtered[0];
+      if (nextProject) setCurrentProjectId(nextProject.id);
     }
   };
 
@@ -676,7 +697,8 @@ export default function App() {
         const newProjects = imported.filter((p) => !existingIds.has(p.id));
         return [...newProjects, ...prev];
       });
-      setCurrentProjectId(imported[0].id);
+      const firstImportedProject = imported[0];
+      if (firstImportedProject) setCurrentProjectId(firstImportedProject.id);
     } else {
       setProjects((prev) => [imported, ...prev.filter((p) => p.id !== imported.id)]);
       setCurrentProjectId(imported.id);
@@ -745,9 +767,11 @@ export default function App() {
               onUpdateChapter={(index, content) => {
                 updateActiveProject((p) => {
                   const chapters = [...p.chapters];
+                  const chapter = chapters[index];
+                  if (!chapter) return p;
                   const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
                   chapters[index] = {
-                    ...chapters[index],
+                    ...chapter,
                     content,
                     wordCount,
                     status: 'edited',
@@ -769,7 +793,6 @@ export default function App() {
 
           {activeProject.currentStage === 'review' && (
             <ReviewStage
-              metadata={activeProject.metadata}
               report={activeProject.editorialReport}
               onRunReview={handleRunEditorialReview}
               onApplyReviewImprovements={handleApplyReviewImprovements}
@@ -807,7 +830,7 @@ export default function App() {
             initialText={aiAssistState.text}
             initialAction={aiAssistState.action}
             language={activeProject.metadata.idioma}
-            onApply={(replacement) => {
+            onApply={(_replacement) => {
               setAiAssistState(null);
               addToast('success', 'Texto Substituído', 'A sugestão da IA foi aplicada no editor.');
             }}
