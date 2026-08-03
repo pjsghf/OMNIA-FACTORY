@@ -14,6 +14,19 @@ import {
 import { executeWithRetry } from '../retry';
 import { validateProviderBaseUrl, sanitizePromptInputs } from '../security';
 
+/**
+ * Strips the API key out of a provider error body before it is surfaced.
+ *
+ * Uses split/join rather than `new RegExp(apiKey, 'g')`: an API key is arbitrary
+ * text, and regex metacharacters in it either change the match or throw outright
+ * ("sk-a+b(c" raises "Invalid regular expression: Unterminated group"), which
+ * replaced the real provider error with a confusing SyntaxError.
+ */
+function redactApiKey(text: string, apiKey: string): string {
+  if (!apiKey) return text;
+  return text.split(apiKey).join('***REDACTED***');
+}
+
 export class OpenCodeProvider implements AiProvider {
   public name = 'opencode';
 
@@ -79,8 +92,7 @@ export class OpenCodeProvider implements AiProvider {
 
         if (!res.ok) {
           const errText = await res.text();
-          // Redact API key if ever present in error body
-          const safeErr = errText.replace(new RegExp(apiKey, 'g'), '***REDACTED***');
+          const safeErr = redactApiKey(errText, apiKey);
           throw new Error(`Erro OpenCode GO (${res.status}): ${safeErr}`);
         }
 
@@ -172,7 +184,7 @@ export class OpenCodeProvider implements AiProvider {
 
         if (!res.ok) {
           const errText = await res.text();
-          const safeErr = errText.replace(new RegExp(apiKey, 'g'), '***REDACTED***');
+          const safeErr = redactApiKey(errText, apiKey);
           throw new Error(`Erro OpenCode GO (${res.status}): ${safeErr}`);
         }
 
