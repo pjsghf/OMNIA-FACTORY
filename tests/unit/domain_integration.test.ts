@@ -7,6 +7,7 @@ import { validateChapterContent } from '../../src/lib/ai/validation/contentValid
 import { checkChapterCoverage } from '../../src/lib/ai/validation/coverageChecker';
 import { detectSensitiveNiche } from '../../src/lib/ai/policies/sensitiveNichePolicy';
 import { cleanChapterProse } from '../../src/lib/rendering/cleanChapterProse';
+import { parseMarkdownToAST, parseInlineSpans } from '../../src/lib/rendering/editorialAST';
 import {
   createInitialBookBibleMemory,
   updateBookBibleMemoryWithChapter,
@@ -191,5 +192,31 @@ Era uma noite chuvosa e fria quando as luzes se apagaram...`;
 
     const fenced = 'Texto.\n\n```js\nconst price = `$${total}`;\n```\n\nFim.';
     expect(normalizeProse(fenced)).toContain('const price = `$${total}`;');
+  });
+
+  it('DOM-011: Parses callouts as callouts, not as blockquotes with a stray tag', () => {
+    // "> [!WARNING]" also starts with "> ", so with the blockquote branch checked
+    // first the callout branch was unreachable and the tag leaked into the prose.
+    const [callout] = parseMarkdownToAST('> [!WARNING]\n> Cuidado com esta prática.');
+    expect(callout?.type).toBe('callout');
+    expect(callout?.calloutType).toBe('warning');
+    expect(callout?.text).toBe('Cuidado com esta prática.');
+    expect(callout?.text).not.toContain('[!WARNING]');
+
+    // Plain quotes must still parse as quotes.
+    const [quote] = parseMarkdownToAST('> Uma citação comum do autor.');
+    expect(quote?.type).toBe('blockquote');
+  });
+
+  it('DOM-012: Leaves underscores inside identifiers alone when parsing emphasis', () => {
+    // `_(.*?)_` also matched the underscores *inside* a word, so "snake_case_x"
+    // exported as "snake" + italic "case" + "x", deleting the underscores.
+    expect(parseInlineSpans('a variável snake_case_x vale')).toEqual([
+      { text: 'a variável snake_case_x vale' },
+    ]);
+
+    // Real emphasis still works.
+    const spans = parseInlineSpans('isto é _mesmo_ importante');
+    expect(spans.some((s) => s.italic && s.text === 'mesmo')).toBe(true);
   });
 });

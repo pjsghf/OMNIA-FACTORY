@@ -33,8 +33,14 @@ export function parseInlineSpans(text: string): ASTInlineSpan[] {
   // Basic inline formatting parser for bold, italic, and code
   const spans: ASTInlineSpan[] = [];
 
-  // Simple token regex matching **bold**, *italic*, _italic_, `code`
-  const regex = /(\*\*(.*?)\*\*|\*(.*?)\*|_(.*?)_|`(.*?)`)/g;
+  // Simple token regex matching **bold**, *italic*, _italic_, `code`.
+  //
+  // The _italic_ alternative is boundary-anchored on purpose. A bare `_(.*?)_`
+  // also matches the underscores *inside* an identifier, so "snake_case_x" came
+  // out as "snake" + italic "case" + "x" -- the underscores silently deleted from
+  // the exported book. Underscore emphasis now only applies when the delimiters
+  // are not glued to alphanumerics, which is also how CommonMark treats them.
+  const regex = /(\*\*(.*?)\*\*|\*(.*?)\*|(?<![A-Za-z0-9])_([^_\n]+)_(?![A-Za-z0-9])|`(.*?)`)/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
@@ -104,20 +110,11 @@ export function parseMarkdownToAST(markdown: string): EditorialAST {
         spans: parseInlineSpans(trimmed.substring(5).trim()),
       });
     }
-    // Blockquote
-    else if (trimmed.startsWith('> ')) {
-      const quoteText = trimmed
-        .split('\n')
-        .map((l) => l.replace(/^>\s*/, ''))
-        .join(' ');
-      ast.push({
-        type: 'blockquote',
-        text: quoteText,
-        spans: parseInlineSpans(quoteText),
-      });
-    }
-    // Callouts [!NOTE], [!WARNING], etc
-    else if (trimmed.match(/^> \[!(NOTE|WARNING|TIP|QUOTE)\]/i)) {
+    // Callouts [!NOTE], [!WARNING], etc.
+    // MUST come before the blockquote branch: a callout also starts with "> ", so
+    // when blockquote was checked first this branch was unreachable and callouts
+    // rendered as ordinary quotes with a literal "[!WARNING]" left in the prose.
+    else if (trimmed.match(/^>\s*\[!(NOTE|WARNING|TIP|QUOTE)\]/i)) {
       const lines = trimmed.split('\n');
       const firstLine = lines[0] || '';
       const tagMatch = firstLine.match(/\[!(NOTE|WARNING|TIP|QUOTE)\]/i);
@@ -131,6 +128,18 @@ export function parseMarkdownToAST(markdown: string): EditorialAST {
         calloutType,
         text: body,
         spans: parseInlineSpans(body),
+      });
+    }
+    // Blockquote (plain "> " with no callout tag)
+    else if (trimmed.startsWith('> ')) {
+      const quoteText = trimmed
+        .split('\n')
+        .map((l) => l.replace(/^>\s*/, ''))
+        .join(' ');
+      ast.push({
+        type: 'blockquote',
+        text: quoteText,
+        spans: parseInlineSpans(quoteText),
       });
     }
     // Horizontal rule
