@@ -40,7 +40,9 @@ export function recordFailure(providerName: string) {
 
   if (state.failures >= FAILURE_THRESHOLD) {
     state.isOpen = true;
-    console.warn(`[Circuit Breaker] Provedor ${providerName} atingiu ${state.failures} falhas consecutivas. Circuito aberto por 60s.`);
+    console.warn(
+      `[Circuit Breaker] Provedor ${providerName} atingiu ${state.failures} falhas consecutivas. Circuito aberto por 60s.`
+    );
   }
 }
 
@@ -84,7 +86,9 @@ export async function executeWithRetry<T>({
   timeoutMs?: number;
 }): Promise<T> {
   if (isCircuitOpen(providerName)) {
-    throw new Error(`[Circuit Breaker] O provedor ${providerName} está indisponível temporariamente devido a falhas recentes.`);
+    throw new Error(
+      `[Circuit Breaker] O provedor ${providerName} está indisponível temporariamente devido a falhas recentes.`
+    );
   }
 
   let lastError: any = null;
@@ -104,7 +108,9 @@ export async function executeWithRetry<T>({
 
       // Handle AbortSignal timeout
       if (err.name === 'AbortError' || controller.signal.aborted) {
-        lastError = new Error(`Tempo limite de ${timeoutMs / 1000}s excedido na chamada para ${providerName}.`);
+        lastError = new Error(
+          `Tempo limite de ${timeoutMs / 1000}s excedido na chamada para ${providerName}.`
+        );
       }
 
       const retryable = isTransientError(lastError);
@@ -112,7 +118,9 @@ export async function executeWithRetry<T>({
       if (retryable && attempt < maxAttempts) {
         // Calculate exponential backoff with jitter
         const backoffMs = Math.min(1000 * Math.pow(2, attempt - 1) + Math.random() * 500, 10000);
-        console.warn(`[AI Retry] Tentativa ${attempt}/${maxAttempts} para ${providerName} falhou (${lastError.message}). Aguardando ${Math.round(backoffMs)}ms...`);
+        console.warn(
+          `[AI Retry] Tentativa ${attempt}/${maxAttempts} para ${providerName} falhou (${lastError.message}). Aguardando ${Math.round(backoffMs)}ms...`
+        );
         await new Promise((resolve) => setTimeout(resolve, backoffMs));
       } else {
         // Permanent error or max attempts reached

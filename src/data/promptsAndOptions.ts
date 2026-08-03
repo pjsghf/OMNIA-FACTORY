@@ -61,7 +61,8 @@ export const BOOK_STYLES_OPTIONS: StyleOption[] = [
   {
     id: 'ficcao',
     label: 'Ficção, Romance & Narrativa Literária',
-    description: 'Construção narrativa imersiva, diálogos vívidos, conflito e desenvolvimento de personagens.',
+    description:
+      'Construção narrativa imersiva, diálogos vívidos, conflito e desenvolvimento de personagens.',
     agentSystemPrompt: `DIRETRIZ DE AGENTE - ESTILO FICÇÃO & ROMANCE:
 - Priorize 'Show, Don't Tell' (Mostre, Não Apenas Conte) através de detalhes sensoriais e ações dramáticas.
 - Desenvolva subtexto nos diálogos, ritmo de cena variado e arco de tensão crescente em cada capítulo.
@@ -164,7 +165,8 @@ export const BOOK_STYLES_OPTIONS: StyleOption[] = [
   {
     id: 'poesia_cronicas',
     label: 'Poesia, Crônicas & Prosa Poética',
-    description: 'Sensibilidade lírica, ritmo verbal, metáforas marcantes e olhar sobre o cotidiano.',
+    description:
+      'Sensibilidade lírica, ritmo verbal, metáforas marcantes e olhar sobre o cotidiano.',
     agentSystemPrompt: `DIRETRIZ DE AGENTE - ESTILO POESIA & CRÔNICAS:
 - Destaque a sonoridade das palavras, a beleza das pausas e imagens poéticas surpreendentes.
 - Eleve pequenos detalhes da vida comum a reflexões profundas sobre a condição humana.`,
@@ -176,61 +178,73 @@ export const WRITING_TONES_OPTIONS: ToneOption[] = [
     id: 'didatico_inspirador',
     label: 'Didático & Inspirador (Encorajador e Claro)',
     description: 'Explica com clareza enquanto eleva a motivação e a confiança do leitor.',
-    agentSystemPrompt: 'TOM DE ESCRITA: Transmita entusiasmo contagiante e autoridade acolhedora. Simplifique o complexo e encoraje a ação.',
+    agentSystemPrompt:
+      'TOM DE ESCRITA: Transmita entusiasmo contagiante e autoridade acolhedora. Simplifique o complexo e encoraje a ação.',
   },
   {
     id: 'analitico_rigoroso',
     label: 'Analítico, Acadêmico & Rigoroso',
     description: 'Linguagem precisa, estrutura lógica impecável e fundamentação técnica.',
-    agentSystemPrompt: 'TOM DE ESCRITA: Mantenha postura objetiva, vocabulário refinado e encadeamento lógico irrefutável.',
+    agentSystemPrompt:
+      'TOM DE ESCRITA: Mantenha postura objetiva, vocabulário refinado e encadeamento lógico irrefutável.',
   },
   {
     id: 'conversacional',
     label: 'Conversacional, Próximo & Acolhedor',
     description: 'Como uma conversa intimista entre velhos amigos com sabedoria.',
-    agentSystemPrompt: 'TOM DE ESCRITA: Use linguagem direta no ' + 'você' + ', tom caloroso, empático e extremamente acessível.',
+    agentSystemPrompt:
+      'TOM DE ESCRITA: Use linguagem direta no ' +
+      'você' +
+      ', tom caloroso, empático e extremamente acessível.',
   },
   {
     id: 'poetico_sensivel',
     label: 'Poético, Sensível & Evocativo',
     description: 'Prosa rica em lirismo, sonoridade e imagens evocativas.',
-    agentSystemPrompt: 'TOM DE ESCRITA: Explore metáforas delicadas, ritmo cadenciado e profundidade emocional.',
+    agentSystemPrompt:
+      'TOM DE ESCRITA: Explore metáforas delicadas, ritmo cadenciado e profundidade emocional.',
   },
   {
     id: 'dramatico',
     label: 'Dramático, Intenso & Cinematográfico',
     description: 'Focado em tensão, fortes emoções e alto contraste visual.',
-    agentSystemPrompt: 'TOM DE ESCRITA: Destaque o conflito, a urgência e a intensidade dramática das cenas e temas.',
+    agentSystemPrompt:
+      'TOM DE ESCRITA: Destaque o conflito, a urgência e a intensidade dramática das cenas e temas.',
   },
   {
     id: 'persuasivo_vendedor',
     label: 'Persuasivo, Motivacional & Direto',
     description: 'Voltado a quebrar objeções e engajar o leitor para decisões imediatas.',
-    agentSystemPrompt: 'TOM DE ESCRITA: Use gatilhos mentais de urgência, contraste, valor e convicção absoluta.',
+    agentSystemPrompt:
+      'TOM DE ESCRITA: Use gatilhos mentais de urgência, contraste, valor e convicção absoluta.',
   },
   {
     id: 'jornalistico',
     label: 'Jornalístico, Investigativo & Objetivo',
     description: 'Foco nos fatos, dados, múltiplas perspectivas e imparcialidade.',
-    agentSystemPrompt: 'TOM DE ESCRITA: Apresente fatos com clareza cristalina, dinamismo, objetividade e precisão factual.',
+    agentSystemPrompt:
+      'TOM DE ESCRITA: Apresente fatos com clareza cristalina, dinamismo, objetividade e precisão factual.',
   },
   {
     id: 'provocativo_provocante',
     label: 'Provocativo, Questionador & Desafiador',
     description: 'Desafia o senso comum e obriga o leitor a repensar suas certezas.',
-    agentSystemPrompt: 'TOM DE ESCRITA: Questionador, audacioso, provocando desconforto produtivo e reflexão profunda.',
+    agentSystemPrompt:
+      'TOM DE ESCRITA: Questionador, audacioso, provocando desconforto produtivo e reflexão profunda.',
   },
   {
     id: 'humoristico_satirico',
     label: 'Leve, Bem-Humorado & Irônico',
     description: 'Usa a ironia elegante e o humor para tornar a leitura fluida e envolvente.',
-    agentSystemPrompt: 'TOM DE ESCRITA: Inteligente, bem-humorado, leve, usando observações sagazes do cotidiano.',
+    agentSystemPrompt:
+      'TOM DE ESCRITA: Inteligente, bem-humorado, leve, usando observações sagazes do cotidiano.',
   },
   {
     id: 'sombrio_misterioso',
     label: 'Sombrio, Atmosférico & Enigmático',
     description: 'Clima denso, mistério e exploração das sombras.',
-    agentSystemPrompt: 'TOM DE ESCRITA: Atmosférico, misterioso, despertando curiosidade e fascínio pelo desconhecido.',
+    agentSystemPrompt:
+      'TOM DE ESCRITA: Atmosférico, misterioso, despertando curiosidade e fascínio pelo desconhecido.',
   },
 ];
 

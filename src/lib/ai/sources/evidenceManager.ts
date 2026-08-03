@@ -13,7 +13,10 @@ export interface VerificationReport {
   resolvedCitations: string[];
 }
 
-export function extractCitationsAndClaims(content: string, sources: UserSourceItem[]): VerificationReport {
+export function extractCitationsAndClaims(
+  content: string,
+  sources: UserSourceItem[]
+): VerificationReport {
   if (!content) {
     return {
       hasSources: sources.length > 0,
@@ -32,7 +35,9 @@ export function extractCitationsAndClaims(content: string, sources: UserSourceIt
       content.toLowerCase().includes(source.title.toLowerCase()) ||
       (source.author && content.toLowerCase().includes(source.author.toLowerCase()))
     ) {
-      resolvedCitations.push(`Fonte citada: "${source.title}" (${source.author || 'Autor informado'})`);
+      resolvedCitations.push(
+        `Fonte citada: "${source.title}" (${source.author || 'Autor informado'})`
+      );
     }
   });
 

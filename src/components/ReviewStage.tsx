@@ -1,6 +1,16 @@
 import React from 'react';
 import { BookMetadata, EditorialReport, ReviewFinding } from '../types';
-import { CheckCircle2, AlertTriangle, Sparkles, ShieldCheck, RefreshCw, BarChart2, Wand2, Layers, AlertCircle } from 'lucide-react';
+import {
+  CheckCircle2,
+  AlertTriangle,
+  Sparkles,
+  ShieldCheck,
+  RefreshCw,
+  BarChart2,
+  Wand2,
+  Layers,
+  AlertCircle,
+} from 'lucide-react';
 
 interface ReviewStageProps {
   metadata: BookMetadata;
@@ -99,7 +109,8 @@ export const ReviewStage: React.FC<ReviewStageProps> = ({
           <div className="flex items-center space-x-2">
             <AlertCircle className="w-5 h-5 text-amber-700 flex-shrink-0" />
             <span>
-              <strong>Atenção:</strong> O texto do livro foi editado após esta auditoria. Clique em "Refazer Auditoria" para atualizar as notas e os localizadores.
+              <strong>Atenção:</strong> O texto do livro foi editado após esta auditoria. Clique em
+              "Refazer Auditoria" para atualizar as notas e os localizadores.
             </span>
           </div>
           <button
@@ -121,7 +132,8 @@ export const ReviewStage: React.FC<ReviewStageProps> = ({
             Nenhuma Auditoria Realizada Ainda
           </h2>
           <p className="text-xs text-[#57534E] max-w-md mx-auto font-serif">
-            Gere os capítulos do seu livro e execute a auditoria para obter a nota de qualidade, identificação de incoerências e recomendações de polimento.
+            Gere os capítulos do seu livro e execute a auditoria para obter a nota de qualidade,
+            identificação de incoerências e recomendações de polimento.
           </p>
         </div>
       ) : (
@@ -137,7 +149,8 @@ export const ReviewStage: React.FC<ReviewStageProps> = ({
                 Deseja aplicar as correções sugeridas aos capítulos?
               </h3>
               <p className="text-xs text-stone-300 font-serif">
-                A IA reescreverá e polirá as unidades auditadas preservando o estilo do autor e gerando histórico de versões.
+                A IA reescreverá e polirá as unidades auditadas preservando o estilo do autor e
+                gerando histórico de versões.
               </p>
             </div>
             <button
@@ -158,7 +171,8 @@ export const ReviewStage: React.FC<ReviewStageProps> = ({
                 Índice Geral de Qualidade
               </span>
               <div className="text-5xl font-serif italic font-bold text-[#1C1917]">
-                {report.notaGeral}<span className="text-xl text-[#78716C] font-normal">/100</span>
+                {report.notaGeral}
+                <span className="text-xl text-[#78716C] font-normal">/100</span>
               </div>
               <div className="text-[10px] text-emerald-800 font-mono font-bold bg-emerald-50 border border-emerald-200 py-1 px-2 rounded-xs mt-1 inline-block">
                 Cobertura Auditada: {report.coberturaTotalUnidadesPercent || 100}% das unidades
@@ -214,8 +228,12 @@ export const ReviewStage: React.FC<ReviewStageProps> = ({
 
           {/* Evaluative Summary */}
           <div className="bg-white border border-[#E7E5E4] p-6 space-y-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#1C1917]">Parecer Geral da Junta Editorial</h3>
-            <p className="text-xs text-[#44403C] leading-relaxed font-serif">{report.resumoAvaliatorio}</p>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#1C1917]">
+              Parecer Geral da Junta Editorial
+            </h3>
+            <p className="text-xs text-[#44403C] leading-relaxed font-serif">
+              {report.resumoAvaliatorio}
+            </p>
           </div>
 
           {/* Problems Table */}
@@ -223,14 +241,18 @@ export const ReviewStage: React.FC<ReviewStageProps> = ({
             <div className="flex items-center justify-between pb-4 border-b border-[#E7E5E4]">
               <h3 className="text-base font-serif italic font-bold text-[#1C1917] flex items-center space-x-2">
                 <AlertTriangle className="w-5 h-5 text-[#1C1917]" />
-                <span>Oportunidades de Melhoria Encontradas ({report.problemasDetectados?.length || 0})</span>
+                <span>
+                  Oportunidades de Melhoria Encontradas ({report.problemasDetectados?.length || 0})
+                </span>
               </h3>
               <button
                 onClick={() => onApplyReviewImprovements()}
                 disabled={isApplyingReview || isReviewing}
                 className="text-xs font-bold text-[#1C1917] hover:underline flex items-center space-x-1"
               >
-                <Wand2 className={`w-3.5 h-3.5 ${isApplyingReview ? 'animate-spin text-amber-500' : ''}`} />
+                <Wand2
+                  className={`w-3.5 h-3.5 ${isApplyingReview ? 'animate-spin text-amber-500' : ''}`}
+                />
                 <span>
                   {isApplyingReview
                     ? typeof generatingIndex === 'number'
@@ -254,7 +276,9 @@ export const ReviewStage: React.FC<ReviewStageProps> = ({
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div className="flex items-center space-x-2">
-                        <span className="font-bold text-[#1C1917] font-serif italic">{prob.unitTitle}</span>
+                        <span className="font-bold text-[#1C1917] font-serif italic">
+                          {prob.unitTitle}
+                        </span>
                         <span className="text-[#A8A29E]">•</span>
                         <span className="text-[#57534E] font-medium capitalize">{prob.tipo}</span>
                       </div>
@@ -265,8 +289,8 @@ export const ReviewStage: React.FC<ReviewStageProps> = ({
                             isHigh
                               ? 'bg-rose-50 text-rose-800 border-rose-300'
                               : isMed
-                              ? 'bg-amber-50 text-amber-800 border-amber-300'
-                              : 'bg-[#F5F5F4] text-[#44403C] border-[#D6D3D1]'
+                                ? 'bg-amber-50 text-amber-800 border-amber-300'
+                                : 'bg-[#F5F5F4] text-[#44403C] border-[#D6D3D1]'
                           }`}
                         >
                           Severidade {prob.severidade}
@@ -288,7 +312,9 @@ export const ReviewStage: React.FC<ReviewStageProps> = ({
                     <p className="text-[#44403C] leading-relaxed font-serif">{prob.descricao}</p>
 
                     <div className="bg-white border border-[#E7E5E4] p-3 text-[#44403C] font-serif">
-                      <strong className="text-[#1C1917] block mb-1 font-sans text-[10px] uppercase tracking-wider">Sugestão de Correção Editorial:</strong>
+                      <strong className="text-[#1C1917] block mb-1 font-sans text-[10px] uppercase tracking-wider">
+                        Sugestão de Correção Editorial:
+                      </strong>
                       <span>{prob.sugestaoDeCorrecao}</span>
                     </div>
                   </div>

@@ -125,4 +125,3 @@ export function renderMarkdownForPrint(markdown: string): string {
 
   return sanitized;
 }
-

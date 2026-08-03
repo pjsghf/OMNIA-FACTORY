@@ -1,6 +1,12 @@
-import { CoverBrief, CoverFormatProfile, COVER_FORMAT_SPECS, calculateSpineWidthMm } from './coverBrief';
+import {
+  CoverBrief,
+  CoverFormatProfile,
+  COVER_FORMAT_SPECS,
+  calculateSpineWidthMm,
+} from './coverBrief';
 
-export type CoverOverlayLayer = 'none' | 'editorial_3d' | 'selo_vidro' | 'textura_papel' | 'ribbon_gold' | 'manga_gloss';
+export type CoverOverlayLayer =
+  'none' | 'editorial_3d' | 'selo_vidro' | 'textura_papel' | 'ribbon_gold' | 'manga_gloss';
 
 export interface RenderCoverOptions {
   brief: CoverBrief;
@@ -153,17 +159,25 @@ export function renderCompositeCoverSvg(options: RenderCoverOptions): string {
           ${theme.badgeText}
         </text>
 
-        ${titleLines.map((line, i) => `
+        ${titleLines
+          .map(
+            (line, i) => `
           <text x="${coverPx / 2}" y="${220 + i * 50}" text-anchor="middle" font-family="'Georgia', serif" font-size="42" font-weight="bold" font-style="italic" fill="${theme.titleColor}">
             ${escapeXml(line)}
           </text>
-        `).join('')}
+        `
+          )
+          .join('')}
 
-        ${subtitleLines.map((line, i) => `
+        ${subtitleLines
+          .map(
+            (line, i) => `
           <text x="${coverPx / 2}" y="${220 + titleLines.length * 50 + 40 + i * 28}" text-anchor="middle" font-family="'Georgia', serif" font-size="20" fill="${theme.subColor}">
             ${escapeXml(line)}
           </text>
-        `).join('')}
+        `
+          )
+          .join('')}
 
         <line x1="100" y1="${height - 150}" x2="${coverPx - 100}" y2="${height - 150}" stroke="${theme.accent}" stroke-width="2"/>
 
@@ -201,18 +215,30 @@ export function renderCompositeCoverSvg(options: RenderCoverOptions): string {
     <rect width="${width}" height="${height}" fill="rgba(0,0,0,0.4)" />
 
     <!-- Overlay Effects -->
-    ${overlay === 'selo_vidro' ? `
+    ${
+      overlay === 'selo_vidro'
+        ? `
       <rect x="${width * 0.1}" y="${height * 0.15}" width="${width * 0.8}" height="${height * 0.7}" rx="16" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.3)" stroke-width="2" />
-    ` : ''}
+    `
+        : ''
+    }
 
-    ${overlay === 'ribbon_gold' ? `
+    ${
+      overlay === 'ribbon_gold'
+        ? `
       <polygon points="0,0 160,0 0,160" fill="${theme.accent}" opacity="0.95"/>
       <text x="35" y="55" transform="rotate(-45 35 55)" font-family="sans-serif" font-size="14" font-weight="bold" fill="#000">OMNIA GOLD</text>
-    ` : ''}
+    `
+        : ''
+    }
 
-    ${overlay === 'manga_gloss' ? `
+    ${
+      overlay === 'manga_gloss'
+        ? `
       <rect x="0" y="0" width="${width}" height="${height}" fill="none" stroke="${theme.accent}" stroke-width="12" />
-    ` : ''}
+    `
+        : ''
+    }
 
     <!-- Frame Lines -->
     <rect x="30" y="30" width="${width - 60}" height="${height - 60}" fill="none" stroke="${theme.accent}" stroke-width="1.5" opacity="0.7" />
@@ -224,17 +250,25 @@ export function renderCompositeCoverSvg(options: RenderCoverOptions): string {
 
     <!-- Title Block -->
     <g filter="url(#shadow)">
-      ${titleLines.map((line, i) => `
+      ${titleLines
+        .map(
+          (line, i) => `
         <text x="${width / 2}" y="${220 + i * 50}" text-anchor="middle" font-family="'Georgia', 'Times New Roman', serif" font-size="42" font-weight="bold" font-style="italic" fill="${theme.titleColor}">
           ${escapeXml(line)}
         </text>
-      `).join('')}
+      `
+        )
+        .join('')}
 
-      ${subtitleLines.map((line, i) => `
+      ${subtitleLines
+        .map(
+          (line, i) => `
         <text x="${width / 2}" y="${220 + titleLines.length * 50 + 35 + i * 26}" text-anchor="middle" font-family="'Georgia', serif" font-size="18" fill="${theme.subColor}">
           ${escapeXml(line)}
         </text>
-      `).join('')}
+      `
+        )
+        .join('')}
     </g>
 
     <!-- Author & Publisher Footer -->
@@ -256,8 +290,6 @@ export function renderCompositeCoverSvg(options: RenderCoverOptions): string {
  * Converts an SVG string into a UTF-8 Data URI
  */
 export function svgToDataUri(svgString: string): string {
-  const encoded = encodeURIComponent(svgString)
-    .replace(/'/g, '%27')
-    .replace(/"/g, '%22');
+  const encoded = encodeURIComponent(svgString).replace(/'/g, '%27').replace(/"/g, '%22');
   return `data:image/svg+xml;charset=utf-8,${encoded}`;
 }

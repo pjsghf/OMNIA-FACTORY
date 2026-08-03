@@ -9,7 +9,8 @@ export const globalApiRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: {
-    error: 'Muitas requisições enviadas ao servidor OMNIA. Por favor aguarde alguns minutos antes de tentar novamente.',
+    error:
+      'Muitas requisições enviadas ao servidor OMNIA. Por favor aguarde alguns minutos antes de tentar novamente.',
     code: 'RATE_LIMIT_EXCEEDED',
   },
 });

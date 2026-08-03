@@ -31,8 +31,8 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onDismis
               isErr
                 ? 'bg-rose-950 text-white border-rose-800'
                 : isSuccess
-                ? 'bg-[#1C1917] text-white border-emerald-600'
-                : 'bg-stone-900 text-white border-stone-700'
+                  ? 'bg-[#1C1917] text-white border-emerald-600'
+                  : 'bg-stone-900 text-white border-stone-700'
             }`}
           >
             <div className="flex items-start space-x-3 pr-2">
@@ -45,7 +45,9 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onDismis
               )}
               <div className="space-y-0.5">
                 <h4 className="font-bold text-xs uppercase tracking-wider">{toast.title}</h4>
-                {toast.message && <p className="text-xs text-stone-300 font-serif">{toast.message}</p>}
+                {toast.message && (
+                  <p className="text-xs text-stone-300 font-serif">{toast.message}</p>
+                )}
               </div>
             </div>
             <button

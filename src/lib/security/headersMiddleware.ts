@@ -14,30 +14,17 @@ export function createSecurityHeadersMiddleware(): RequestHandler {
           "'self'",
           "'unsafe-inline'", // Required for Vite SPA inline client script bundles in dev/preview
           "'unsafe-eval'",
-          "https://cdn.jsdelivr.net",
+          'https://cdn.jsdelivr.net',
         ],
         styleSrc: [
           "'self'",
           "'unsafe-inline'", // Required for Tailwind CSS & inline SVG styling
-          "https://fonts.googleapis.com",
+          'https://fonts.googleapis.com',
         ],
-        fontSrc: [
-          "'self'",
-          "data:",
-          "https://fonts.gstatic.com",
-        ],
-        imgSrc: [
-          "'self'",
-          "data:",
-          "blob:",
-          "https:",
-        ],
-        connectSrc: [
-          "'self'",
-          "https://generativelanguage.googleapis.com",
-          "https://*",
-        ],
-        frameAncestors: ["'self'", "https://*", "http://*"], // Allows embedding in AI Studio preview iframe
+        fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
+        imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+        connectSrc: ["'self'", 'https://generativelanguage.googleapis.com', 'https://*'],
+        frameAncestors: ["'self'", 'https://*', 'http://*'], // Allows embedding in AI Studio preview iframe
         objectSrc: ["'none'"],
         upgradeInsecureRequests: [],
       },
@@ -45,11 +32,14 @@ export function createSecurityHeadersMiddleware(): RequestHandler {
     crossOriginEmbedderPolicy: false, // Disabled for cross-origin image assets in canvas
     crossOriginResourcePolicy: { policy: 'cross-origin' },
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-    hsts: process.env.NODE_ENV === 'production' ? {
-      maxAge: 31536000,
-      includeSubDomains: true,
-      preload: true,
-    } : false,
+    hsts:
+      process.env.NODE_ENV === 'production'
+        ? {
+            maxAge: 31536000,
+            includeSubDomains: true,
+            preload: true,
+          }
+        : false,
     noSniff: true,
     xssFilter: true,
   });

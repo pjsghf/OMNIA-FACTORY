@@ -21,7 +21,8 @@ export function buildChapterSectionPlan(
   chapter: ChapterPlan,
   metadata: BookMetadata
 ): DetailedChapterPlan {
-  const targetWords = chapter.estimativaPalavras || Math.round((metadata.minPalavras + metadata.maxPalavras) / 2);
+  const targetWords =
+    chapter.estimativaPalavras || Math.round((metadata.minPalavras + metadata.maxPalavras) / 2);
 
   // Determine optimal block count (each block 700-1200 words)
   let blockCount = 2;
@@ -33,9 +34,10 @@ export function buildChapterSectionPlan(
 
   const wordsPerBlock = Math.round(targetWords / blockCount);
 
-  const topicos = chapter.topicos && chapter.topicos.length > 0
-    ? chapter.topicos
-    : ['Introdução ao tema', 'Desenvolvimento do conceito', 'Aplicações e conclusão'];
+  const topicos =
+    chapter.topicos && chapter.topicos.length > 0
+      ? chapter.topicos
+      : ['Introdução ao tema', 'Desenvolvimento do conceito', 'Aplicações e conclusão'];
 
   const subtopicos = chapter.subtopicos || [];
 
@@ -73,7 +75,10 @@ export function buildChapterSectionPlan(
       proposito,
       topicos: blockTopics,
       fatosObrigatorios: subtopicos.length > 0 ? [subtopicos[(b - 1) % subtopicos.length]] : [],
-      transicaoProximoBloco: b < blockCount ? `Conectar naturalmente com o bloco ${b + 1}` : 'Conclusão firme do capítulo',
+      transicaoProximoBloco:
+        b < blockCount
+          ? `Conectar naturalmente com o bloco ${b + 1}`
+          : 'Conclusão firme do capítulo',
       estimativaPalavras: wordsPerBlock,
     });
   }

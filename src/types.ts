@@ -124,7 +124,8 @@ export interface ReviewFinding {
   start?: number;
   end?: number;
   snippet?: string;
-  tipo: 'estrutural' | 'linguistica' | 'continuidade' | 'factual' | 'sensibilidade' | 'conformidade';
+  tipo:
+    'estrutural' | 'linguistica' | 'continuidade' | 'factual' | 'sensibilidade' | 'conformidade';
   severidade: 'Alta' | 'Média' | 'Baixa';
   descricao: string;
   sugestaoDeCorrecao: string;
@@ -132,7 +133,8 @@ export interface ReviewFinding {
 }
 
 export interface ReviewModalityScore {
-  categoria: 'estrutural' | 'linguistica' | 'continuidade' | 'factual' | 'sensibilidade' | 'conformidade';
+  categoria:
+    'estrutural' | 'linguistica' | 'continuidade' | 'factual' | 'sensibilidade' | 'conformidade';
   nota: number;
   resumo: string;
 }

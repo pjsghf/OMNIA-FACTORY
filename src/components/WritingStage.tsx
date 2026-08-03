@@ -18,14 +18,14 @@ import {
   RefreshCw,
   PlusCircle,
   HelpCircle,
-  Layers
+  Layers,
 } from 'lucide-react';
 
-export type MatterType = 'apresentacao' | 'introducao' | 'conclusao' | 'agradecimentos' | 'sobreAutor' | 'exercicios';
+export type MatterType =
+  'apresentacao' | 'introducao' | 'conclusao' | 'agradecimentos' | 'sobreAutor' | 'exercicios';
 
 export type SelectedItem =
-  | { kind: 'chapter'; index: number }
-  | { kind: 'matter'; type: MatterType };
+  { kind: 'chapter'; index: number } | { kind: 'matter'; type: MatterType };
 
 interface WritingStageProps {
   metadata: BookMetadata;
@@ -67,13 +67,40 @@ export const WritingStage: React.FC<WritingStageProps> = ({
   const [selectedText, setSelectedText] = useState<string>('');
   const [isGeneratingSingleSection, setIsGeneratingSingleSection] = useState<string | null>(null);
 
-  const matterMeta: Record<MatterType, { title: string; subtitle: string; category: 'Pré-Textual' | 'Pós-Textual' }> = {
-    apresentacao: { title: 'Apresentação', subtitle: 'Visão geral e contexto de criação da obra', category: 'Pré-Textual' },
-    introducao: { title: 'Introdução', subtitle: 'Primeiro contato profundo com a tese central', category: 'Pré-Textual' },
-    conclusao: { title: 'Conclusão', subtitle: 'Síntese das ideias e fechamento transformador', category: 'Pós-Textual' },
-    exercicios: { title: 'Exercícios e Práticas', subtitle: 'Atividades e guias de aplicação prática', category: 'Pós-Textual' },
-    agradecimentos: { title: 'Agradecimentos', subtitle: 'Reconhecimento às contribuições e apoios', category: 'Pós-Textual' },
-    sobreAutor: { title: 'Sobre o Autor', subtitle: 'Biografia, credenciais e trajetória do autor', category: 'Pós-Textual' },
+  const matterMeta: Record<
+    MatterType,
+    { title: string; subtitle: string; category: 'Pré-Textual' | 'Pós-Textual' }
+  > = {
+    apresentacao: {
+      title: 'Apresentação',
+      subtitle: 'Visão geral e contexto de criação da obra',
+      category: 'Pré-Textual',
+    },
+    introducao: {
+      title: 'Introdução',
+      subtitle: 'Primeiro contato profundo com a tese central',
+      category: 'Pré-Textual',
+    },
+    conclusao: {
+      title: 'Conclusão',
+      subtitle: 'Síntese das ideias e fechamento transformador',
+      category: 'Pós-Textual',
+    },
+    exercicios: {
+      title: 'Exercícios e Práticas',
+      subtitle: 'Atividades e guias de aplicação prática',
+      category: 'Pós-Textual',
+    },
+    agradecimentos: {
+      title: 'Agradecimentos',
+      subtitle: 'Reconhecimento às contribuições e apoios',
+      category: 'Pós-Textual',
+    },
+    sobreAutor: {
+      title: 'Sobre o Autor',
+      subtitle: 'Biografia, credenciais e trajetória do autor',
+      category: 'Pós-Textual',
+    },
   };
 
   const isMatterGenerated = (type: MatterType): boolean => {
@@ -144,10 +171,15 @@ export const WritingStage: React.FC<WritingStageProps> = ({
   const minWords = metadata.minPalavras || 1000;
   const maxWords = metadata.maxPalavras || 2500;
 
-  const isWordCountOptimal = selectedItem.kind === 'chapter' ? (wordCount >= minWords && wordCount <= maxWords) : wordCount > 100;
+  const isWordCountOptimal =
+    selectedItem.kind === 'chapter'
+      ? wordCount >= minWords && wordCount <= maxWords
+      : wordCount > 100;
   const isWordCountLow = selectedItem.kind === 'chapter' ? wordCount < minWords : wordCount === 0;
 
-  const completedCount = chapters.filter((c) => c.status === 'completed' || c.status === 'edited').length;
+  const completedCount = chapters.filter(
+    (c) => c.status === 'completed' || c.status === 'edited'
+  ).length;
   const progressPercent = Math.round((completedCount / (chapters.length || 1)) * 100);
 
   const preMatterKeys: MatterType[] = ['apresentacao', 'introducao'];
@@ -165,9 +197,19 @@ export const WritingStage: React.FC<WritingStageProps> = ({
             {metadata.titulo}
           </h1>
           <div className="flex items-center space-x-4 text-xs text-[#57534E]">
-            <span>Capítulos Prontos: <strong className="text-[#1C1917] font-semibold">{completedCount}/{chapters.length} ({progressPercent}%)</strong></span>
+            <span>
+              Capítulos Prontos:{' '}
+              <strong className="text-[#1C1917] font-semibold">
+                {completedCount}/{chapters.length} ({progressPercent}%)
+              </strong>
+            </span>
             <span>•</span>
-            <span>Meta de Palavras: <strong className="text-[#1C1917]">{minWords} - {maxWords} por cap.</strong></span>
+            <span>
+              Meta de Palavras:{' '}
+              <strong className="text-[#1C1917]">
+                {minWords} - {maxWords} por cap.
+              </strong>
+            </span>
           </div>
         </div>
 
@@ -228,7 +270,8 @@ export const WritingStage: React.FC<WritingStageProps> = ({
                 const isSelected = selectedItem.kind === 'matter' && selectedItem.type === key;
                 const generated = isMatterGenerated(key);
                 const meta = matterMeta[key];
-                const isGeneratingThis = isGeneratingSingleSection === key || isGeneratingFrontEndBatch;
+                const isGeneratingThis =
+                  isGeneratingSingleSection === key || isGeneratingFrontEndBatch;
 
                 return (
                   <button
@@ -242,7 +285,9 @@ export const WritingStage: React.FC<WritingStageProps> = ({
                   >
                     <div>
                       <div className="font-semibold text-xs font-serif italic">{meta.title}</div>
-                      <div className={`text-[10px] ${isSelected ? 'text-stone-300' : 'text-[#78716C]'}`}>
+                      <div
+                        className={`text-[10px] ${isSelected ? 'text-stone-300' : 'text-[#78716C]'}`}
+                      >
                         {meta.subtitle}
                       </div>
                     </div>
@@ -251,9 +296,15 @@ export const WritingStage: React.FC<WritingStageProps> = ({
                       {isGeneratingThis ? (
                         <Wand2 className="w-3.5 h-3.5 text-amber-500 animate-spin" />
                       ) : generated ? (
-                        <CheckCircle className={`w-3.5 h-3.5 ${isSelected ? 'text-emerald-300' : 'text-emerald-600'}`} />
+                        <CheckCircle
+                          className={`w-3.5 h-3.5 ${isSelected ? 'text-emerald-300' : 'text-emerald-600'}`}
+                        />
                       ) : (
-                        <span className={`text-[10px] font-mono ${isSelected ? 'text-stone-400' : 'text-[#A8A29E]'}`}>+ Gerar</span>
+                        <span
+                          className={`text-[10px] font-mono ${isSelected ? 'text-stone-400' : 'text-[#A8A29E]'}`}
+                        >
+                          + Gerar
+                        </span>
                       )}
                     </div>
                   </button>
@@ -269,7 +320,9 @@ export const WritingStage: React.FC<WritingStageProps> = ({
                 <BookOpen className="w-3.5 h-3.5 text-[#78716C]" />
                 <span>Sumário de Capítulos</span>
               </h2>
-              <span className="text-[11px] text-[#78716C] font-mono">{completedCount}/{chapters.length} Prontos</span>
+              <span className="text-[11px] text-[#78716C] font-mono">
+                {completedCount}/{chapters.length} Prontos
+              </span>
             </div>
 
             <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1 scrollbar-thin">
@@ -290,17 +343,23 @@ export const WritingStage: React.FC<WritingStageProps> = ({
                   >
                     <div className="space-y-1 max-w-[180px] sm:max-w-[220px]">
                       <div className="flex items-center space-x-2">
-                        <span className={`text-[10px] font-mono px-1.5 py-0.5 font-bold ${
-                          isSelected ? 'bg-white text-[#1C1917]' : 'bg-[#F5F5F4] text-[#1C1917]'
-                        }`}>
+                        <span
+                          className={`text-[10px] font-mono px-1.5 py-0.5 font-bold ${
+                            isSelected ? 'bg-white text-[#1C1917]' : 'bg-[#F5F5F4] text-[#1C1917]'
+                          }`}
+                        >
                           Cap. {planCap.numero}
                         </span>
                         <span className="text-xs font-serif italic font-semibold truncate block">
                           {planCap.titulo}
                         </span>
                       </div>
-                      <div className={`text-[11px] truncate ${isSelected ? 'text-stone-300' : 'text-[#78716C]'}`}>
-                        {capState.wordCount ? `${capState.wordCount} pal.` : `~${planCap.estimativaPalavras} pal. meta`}
+                      <div
+                        className={`text-[11px] truncate ${isSelected ? 'text-stone-300' : 'text-[#78716C]'}`}
+                      >
+                        {capState.wordCount
+                          ? `${capState.wordCount} pal.`
+                          : `~${planCap.estimativaPalavras} pal. meta`}
                       </div>
                     </div>
 
@@ -308,9 +367,13 @@ export const WritingStage: React.FC<WritingStageProps> = ({
                       {isGeneratingThis ? (
                         <Wand2 className="w-4 h-4 text-amber-500 animate-spin" />
                       ) : capState.status === 'completed' || capState.status === 'edited' ? (
-                        <CheckCircle className={`w-4 h-4 ${isSelected ? 'text-emerald-300' : 'text-emerald-600'}`} />
+                        <CheckCircle
+                          className={`w-4 h-4 ${isSelected ? 'text-emerald-300' : 'text-emerald-600'}`}
+                        />
                       ) : (
-                        <Clock className={`w-4 h-4 ${isSelected ? 'text-stone-400' : 'text-[#A8A29E]'}`} />
+                        <Clock
+                          className={`w-4 h-4 ${isSelected ? 'text-stone-400' : 'text-[#A8A29E]'}`}
+                        />
                       )}
                     </div>
                   </button>
@@ -333,7 +396,8 @@ export const WritingStage: React.FC<WritingStageProps> = ({
                 const isSelected = selectedItem.kind === 'matter' && selectedItem.type === key;
                 const generated = isMatterGenerated(key);
                 const meta = matterMeta[key];
-                const isGeneratingThis = isGeneratingSingleSection === key || isGeneratingFrontEndBatch;
+                const isGeneratingThis =
+                  isGeneratingSingleSection === key || isGeneratingFrontEndBatch;
 
                 return (
                   <button
@@ -347,7 +411,9 @@ export const WritingStage: React.FC<WritingStageProps> = ({
                   >
                     <div>
                       <div className="font-semibold text-xs font-serif italic">{meta.title}</div>
-                      <div className={`text-[10px] ${isSelected ? 'text-stone-300' : 'text-[#78716C]'}`}>
+                      <div
+                        className={`text-[10px] ${isSelected ? 'text-stone-300' : 'text-[#78716C]'}`}
+                      >
                         {meta.subtitle}
                       </div>
                     </div>
@@ -356,9 +422,15 @@ export const WritingStage: React.FC<WritingStageProps> = ({
                       {isGeneratingThis ? (
                         <Wand2 className="w-3.5 h-3.5 text-amber-500 animate-spin" />
                       ) : generated ? (
-                        <CheckCircle className={`w-3.5 h-3.5 ${isSelected ? 'text-emerald-300' : 'text-emerald-600'}`} />
+                        <CheckCircle
+                          className={`w-3.5 h-3.5 ${isSelected ? 'text-emerald-300' : 'text-emerald-600'}`}
+                        />
                       ) : (
-                        <span className={`text-[10px] font-mono ${isSelected ? 'text-stone-400' : 'text-[#A8A29E]'}`}>+ Gerar</span>
+                        <span
+                          className={`text-[10px] font-mono ${isSelected ? 'text-stone-400' : 'text-[#A8A29E]'}`}
+                        >
+                          + Gerar
+                        </span>
                       )}
                     </div>
                   </button>
@@ -375,7 +447,9 @@ export const WritingStage: React.FC<WritingStageProps> = ({
             <div>
               <div className="flex items-center space-x-2">
                 <span className="px-2 py-0.5 bg-[#1C1917] text-white font-mono text-xs font-bold">
-                  {selectedItem.kind === 'chapter' ? `Capítulo ${selectedItem.index + 1}` : matterMeta[selectedItem.type].category}
+                  {selectedItem.kind === 'chapter'
+                    ? `Capítulo ${selectedItem.index + 1}`
+                    : matterMeta[selectedItem.type].category}
                 </span>
                 <h2 className="text-lg font-serif italic font-bold text-[#1C1917]">
                   {getItemTitle()}
@@ -392,15 +466,15 @@ export const WritingStage: React.FC<WritingStageProps> = ({
                     isWordCountOptimal
                       ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
                       : isWordCountLow
-                      ? 'bg-amber-50 text-amber-800 border-amber-300'
-                      : 'bg-rose-50 text-rose-800 border-rose-300'
+                        ? 'bg-amber-50 text-amber-800 border-amber-300'
+                        : 'bg-rose-50 text-rose-800 border-rose-300'
                   }`}
                 >
                   {isWordCountOptimal
                     ? '✓ No limite ideal'
                     : isWordCountLow
-                    ? 'Pendente / Curto'
-                    : 'Volume Alto'}
+                      ? 'Pendente / Curto'
+                      : 'Volume Alto'}
                 </span>
               </div>
             </div>
@@ -411,7 +485,9 @@ export const WritingStage: React.FC<WritingStageProps> = ({
                 <button
                   onClick={() => setViewMode('edit')}
                   className={`p-1.5 text-xs ${
-                    viewMode === 'edit' ? 'bg-[#1C1917] text-white' : 'text-[#78716C] hover:text-[#1C1917]'
+                    viewMode === 'edit'
+                      ? 'bg-[#1C1917] text-white'
+                      : 'text-[#78716C] hover:text-[#1C1917]'
                   }`}
                   title="Apenas Editor"
                 >
@@ -420,7 +496,9 @@ export const WritingStage: React.FC<WritingStageProps> = ({
                 <button
                   onClick={() => setViewMode('split')}
                   className={`p-1.5 text-xs ${
-                    viewMode === 'split' ? 'bg-[#1C1917] text-white' : 'text-[#78716C] hover:text-[#1C1917]'
+                    viewMode === 'split'
+                      ? 'bg-[#1C1917] text-white'
+                      : 'text-[#78716C] hover:text-[#1C1917]'
                   }`}
                   title="Visão Lado a Lado"
                 >
@@ -429,7 +507,9 @@ export const WritingStage: React.FC<WritingStageProps> = ({
                 <button
                   onClick={() => setViewMode('preview')}
                   className={`p-1.5 text-xs ${
-                    viewMode === 'preview' ? 'bg-[#1C1917] text-white' : 'text-[#78716C] hover:text-[#1C1917]'
+                    viewMode === 'preview'
+                      ? 'bg-[#1C1917] text-white'
+                      : 'text-[#78716C] hover:text-[#1C1917]'
                   }`}
                   title="Apenas Visualização"
                 >
@@ -440,10 +520,17 @@ export const WritingStage: React.FC<WritingStageProps> = ({
               {/* Single Generate Button */}
               <button
                 onClick={handleGenerateCurrentItem}
-                disabled={generatingIndex !== null || isGeneratingSingleSection !== null || isGeneratingBatch || isGeneratingFrontEndBatch}
+                disabled={
+                  generatingIndex !== null ||
+                  isGeneratingSingleSection !== null ||
+                  isGeneratingBatch ||
+                  isGeneratingFrontEndBatch
+                }
                 className="flex items-center space-x-1.5 px-4 py-2 bg-[#1C1917] hover:bg-[#44403C] text-white font-bold text-xs uppercase tracking-widest transition shadow-xs"
               >
-                <Wand2 className={`w-3.5 h-3.5 ${(generatingIndex === (selectedItem.kind === 'chapter' ? selectedItem.index : -1) || isGeneratingSingleSection === (selectedItem.kind === 'matter' ? selectedItem.type : null)) ? 'animate-spin' : ''}`} />
+                <Wand2
+                  className={`w-3.5 h-3.5 ${generatingIndex === (selectedItem.kind === 'chapter' ? selectedItem.index : -1) || isGeneratingSingleSection === (selectedItem.kind === 'matter' ? selectedItem.type : null) ? 'animate-spin' : ''}`}
+                />
                 <span>{currentContent ? 'Regerar com IA' : 'Gerar com IA'}</span>
               </button>
             </div>
@@ -489,7 +576,9 @@ export const WritingStage: React.FC<WritingStageProps> = ({
             {(viewMode === 'edit' || viewMode === 'split') && (
               <div className="bg-white border border-[#E7E5E4] p-4 flex flex-col h-[580px]">
                 <div className="flex items-center justify-between pb-2 border-b border-[#F5F5F4] mb-2">
-                  <span className="text-[10px] uppercase tracking-[0.2em] font-semibold text-[#A8A29E]">Editor Markdown</span>
+                  <span className="text-[10px] uppercase tracking-[0.2em] font-semibold text-[#A8A29E]">
+                    Editor Markdown
+                  </span>
                   <span className="text-[11px] text-[#78716C]">Digite ou use a IA para gerar</span>
                 </div>
                 <textarea

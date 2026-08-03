@@ -97,7 +97,9 @@ export function validateAndRestoreBackup(backupPkg: any): {
   }
 
   // Basic validation of projects
-  const validProjects = projects.filter((p) => p && p.id && p.metadata && typeof p.metadata.titulo === 'string');
+  const validProjects = projects.filter(
+    (p) => p && p.id && p.metadata && typeof p.metadata.titulo === 'string'
+  );
 
   if (validProjects.length === 0) {
     return { success: false, error: 'Nenhum projeto válido encontrado no arquivo de backup.' };

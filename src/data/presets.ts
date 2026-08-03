@@ -4,23 +4,31 @@ export const PROJECT_PRESETS: ProjectPreset[] = [
   {
     id: 'mindset-sucesso',
     name: 'Desenvolvimento Pessoal & Alta Performance',
-    description: 'Guia prático e inspirador sobre hábitos, mentalidade, foco e superação de obstáculos.',
+    description:
+      'Guia prático e inspirador sobre hábitos, mentalidade, foco e superação de obstáculos.',
     metadata: {
       titulo: 'O Código da Mente Inabalável',
-      subtitulo: 'Estratégias Práticas para Dominar o Foco, Vencer a Procrastinação e Construir uma Vida de Resultados',
+      subtitulo:
+        'Estratégias Práticas para Dominar o Foco, Vencer a Procrastinação e Construir uma Vida de Resultados',
       autor: 'Dr. Lucas Vane',
       idioma: 'Português',
-      publicoAlvo: 'Profissionais, estudantes e empreendedores que buscam alta performance e inteligência emocional',
-      resumo: 'Um livro transformador focado na reestruturação de modelos mentais, eliminação de crenças limitantes e implementação de rotinas de alta disciplina e clareza mental.',
+      publicoAlvo:
+        'Profissionais, estudantes e empreendedores que buscam alta performance e inteligência emocional',
+      resumo:
+        'Um livro transformador focado na reestruturação de modelos mentais, eliminação de crenças limitantes e implementação de rotinas de alta disciplina e clareza mental.',
       estilo: 'desenvolvimento_pessoal',
-      promptEstilo: 'Enfatize estudos de caso práticos, metáforas marcantes, exercícios reflexivos ao final de cada capítulo e uma linguagem diretamente voltada à ação.',
+      promptEstilo:
+        'Enfatize estudos de caso práticos, metáforas marcantes, exercícios reflexivos ao final de cada capítulo e uma linguagem diretamente voltada à ação.',
       tom: 'didatico_inspirador',
       qtdCapitulos: 7,
       minPalavras: 1200,
       maxPalavras: 2500,
-      materiais: 'Capítulo 1 sobre Gatilhos de Atenção; Capítulo 3 sobre Matriz de Decisão sob Pressão.',
-      informacoesObrigatorias: 'Incluir técnicas de respiração e ancoragem mental; Tabela de hábitos matinais.',
-      restricoes: 'Evitar clichês superficiais de coaching. Focar em psicologia comportamental fundamentada.',
+      materiais:
+        'Capítulo 1 sobre Gatilhos de Atenção; Capítulo 3 sobre Matriz de Decisão sob Pressão.',
+      informacoesObrigatorias:
+        'Incluir técnicas de respiração e ancoragem mental; Tabela de hábitos matinais.',
+      restricoes:
+        'Evitar clichês superficiais de coaching. Focar em psicologia comportamental fundamentada.',
     },
   },
   {
@@ -33,31 +41,37 @@ export const PROJECT_PRESETS: ProjectPreset[] = [
       autor: 'Renata S. Camargo',
       idioma: 'Português',
       publicoAlvo: 'CEOs, Diretores de Tecnologia, Gestores de Produto e Investidores',
-      resumo: 'Um mapa definitivo sobre como reestruturar processos de negócios, automatizar fluxos de valor e criar vantagens competitivas sustentáveis usando IA Generativa e análise preditiva.',
+      resumo:
+        'Um mapa definitivo sobre como reestruturar processos de negócios, automatizar fluxos de valor e criar vantagens competitivas sustentáveis usando IA Generativa e análise preditiva.',
       estilo: 'negocios_estrategia',
-      promptEstilo: 'Use frameworks conceituais, diagramas explicativos em texto, listas de verificação para executivos e análises rigorosas de ROI.',
+      promptEstilo:
+        'Use frameworks conceituais, diagramas explicativos em texto, listas de verificação para executivos e análises rigorosas de ROI.',
       tom: 'analitico_rigoroso',
       qtdCapitulos: 8,
       minPalavras: 1500,
       maxPalavras: 3000,
       materiais: 'Relatórios de automação corporativa e estudos de produtividade de 2025-2026.',
-      informacoesObrigatorias: 'Discutir governança de dados, conformidade regulatória e cultura de inovação contínua.',
+      informacoesObrigatorias:
+        'Discutir governança de dados, conformidade regulatória e cultura de inovação contínua.',
       restricoes: 'Sem previsões apocalípticas ou jargões sem aplicação real.',
     },
   },
   {
     id: 'ficcao-scifi',
     name: 'Ficção Científica / Cyberpunk',
-    description: 'Romance distópico e futurista focado em dilemas de consciência, IA e cibernética.',
+    description:
+      'Romance distópico e futurista focado em dilemas de consciência, IA e cibernética.',
     metadata: {
       titulo: 'Ecos de Silício',
       subtitulo: 'Onde os Sonhos Digitais se Encontram com a Lenda de Aethel',
       autor: 'Arthur B. Sterling',
       idioma: 'Português',
       publicoAlvo: 'Leitores de ficção científica, distopias contemporâneas e aventuras futuristas',
-      resumo: 'Em uma metrópole vertical dividida por redes neurais, uma hacker de memórias descobre um código ancestral que pode devolver a empatia humana a uma sociedade governada por algoritmos.',
+      resumo:
+        'Em uma metrópole vertical dividida por redes neurais, uma hacker de memórias descobre um código ancestral que pode devolver a empatia humana a uma sociedade governada por algoritmos.',
       estilo: 'ficcao',
-      promptEstilo: 'Incorpore ambientação imersiva com detalhes sensoriais marcantes, diálogos ágeis, conflitos morais intensos e ritmo cinematográfico.',
+      promptEstilo:
+        'Incorpore ambientação imersiva com detalhes sensoriais marcantes, diálogos ágeis, conflitos morais intensos e ritmo cinematográfico.',
       tom: 'dramatico',
       qtdCapitulos: 10,
       minPalavras: 1500,
@@ -77,15 +91,18 @@ export const PROJECT_PRESETS: ProjectPreset[] = [
       autor: 'Eng. Gabriel Santos',
       idioma: 'Português',
       publicoAlvo: 'Engenheiros de Software, Arquitetos de Soluções e Tech Leads',
-      resumo: 'Um livro técnico prático sobre construção de sistemas distribuídos tolerantes a falhas, observabilidade, padrões CQRS, Event Sourcing e escalabilidade vertical/horizontal.',
+      resumo:
+        'Um livro técnico prático sobre construção de sistemas distribuídos tolerantes a falhas, observabilidade, padrões CQRS, Event Sourcing e escalabilidade vertical/horizontal.',
       estilo: 'tecnico_educacional',
-      promptEstilo: 'Apresente diagramas textuais, exemplos de código bem comentados, análises de trade-offs de desempenho e boas práticas de engenharia.',
+      promptEstilo:
+        'Apresente diagramas textuais, exemplos de código bem comentados, análises de trade-offs de desempenho e boas práticas de engenharia.',
       tom: 'didatico_inspirador',
       qtdCapitulos: 6,
       minPalavras: 1400,
       maxPalavras: 2800,
       materiais: 'Tópicos de idempotência, circuit breaker, rate limiting e distribuídos.',
-      informacoesObrigatorias: 'Cobrir métricas de SLO, SLA e rastreamento distribuído (OpenTelemetry).',
+      informacoesObrigatorias:
+        'Cobrir métricas de SLO, SLA e rastreamento distribuído (OpenTelemetry).',
       restricoes: 'Códigos devem ser sintaticamente válidos e limpos.',
     },
   },

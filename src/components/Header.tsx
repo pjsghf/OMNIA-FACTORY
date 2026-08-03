@@ -1,5 +1,15 @@
 import React from 'react';
-import { BookOpen, FileText, Sparkles, CheckCircle2, Download, Plus, Library, Layers, Cpu } from 'lucide-react';
+import {
+  BookOpen,
+  FileText,
+  Sparkles,
+  CheckCircle2,
+  Download,
+  Plus,
+  Library,
+  Layers,
+  Cpu,
+} from 'lucide-react';
 import { BookProject, EditorialStage } from '../types';
 
 interface HeaderProps {
@@ -26,10 +36,16 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'planning', label: '2. Planejamento', icon: <BookOpen className="w-3.5 h-3.5" /> },
     { id: 'writing', label: '3. Redação', icon: <FileText className="w-3.5 h-3.5" /> },
     { id: 'review', label: '4. Revisão Editorial', icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
-    { id: 'design_export', label: '5. Capa & Exportação', icon: <Download className="w-3.5 h-3.5" /> },
+    {
+      id: 'design_export',
+      label: '5. Capa & Exportação',
+      icon: <Download className="w-3.5 h-3.5" />,
+    },
   ];
 
-  const completedChapters = project.chapters.filter((c) => c.status === 'completed' || c.status === 'edited').length;
+  const completedChapters = project.chapters.filter(
+    (c) => c.status === 'completed' || c.status === 'edited'
+  ).length;
   const totalChapters = project.metadata.qtdCapitulos || project.chapters.length || 0;
 
   return (
@@ -43,7 +59,9 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <span className="font-serif text-xl italic font-bold text-[#1C1917] tracking-tight">OMNIA Factory</span>
+                <span className="font-serif text-xl italic font-bold text-[#1C1917] tracking-tight">
+                  OMNIA Factory
+                </span>
                 <span className="text-[9px] uppercase tracking-[0.2em] px-2 py-0.5 bg-[#F5F5F4] text-[#78716C] border border-[#E7E5E4] font-semibold">
                   Editora OMNIA
                 </span>
@@ -57,21 +75,28 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Quick Stats Banner */}
           <div className="hidden lg:flex items-center space-x-8 text-xs text-[#57534E]">
             <div className="text-center">
-              <p className="text-[9px] uppercase tracking-[0.2em] text-[#A8A29E] font-medium">Capítulos</p>
+              <p className="text-[9px] uppercase tracking-[0.2em] text-[#A8A29E] font-medium">
+                Capítulos
+              </p>
               <p className="font-serif text-sm italic font-semibold text-[#1C1917]">
                 {completedChapters} / {totalChapters}
               </p>
             </div>
             <div className="h-6 w-px bg-[#E7E5E4]" />
             <div className="text-center">
-              <p className="text-[9px] uppercase tracking-[0.2em] text-[#A8A29E] font-medium">Volume Total</p>
+              <p className="text-[9px] uppercase tracking-[0.2em] text-[#A8A29E] font-medium">
+                Volume Total
+              </p>
               <p className="font-serif text-sm italic font-semibold text-[#1C1917]">
-                {totalWordCount.toLocaleString('pt-BR')} <span className="text-[10px] font-sans text-[#78716C]">palavras</span>
+                {totalWordCount.toLocaleString('pt-BR')}{' '}
+                <span className="text-[10px] font-sans text-[#78716C]">palavras</span>
               </p>
             </div>
             <div className="h-6 w-px bg-[#E7E5E4]" />
             <div className="text-center">
-              <p className="text-[9px] uppercase tracking-[0.2em] text-[#A8A29E] font-medium">Gênero</p>
+              <p className="text-[9px] uppercase tracking-[0.2em] text-[#A8A29E] font-medium">
+                Gênero
+              </p>
               <p className="font-serif text-sm italic capitalize font-semibold text-[#1C1917]">
                 {project.metadata.estilo.replace('_', ' ')}
               </p>
@@ -124,7 +149,9 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               >
                 {stage.icon}
-                <span className="uppercase tracking-wider text-[11px] font-medium">{stage.label}</span>
+                <span className="uppercase tracking-wider text-[11px] font-medium">
+                  {stage.label}
+                </span>
               </button>
             );
           })}

@@ -8,7 +8,29 @@ import {
   CoverOverlayMode,
   PdfExportSettings,
 } from '../lib/pdf';
-import { Sparkles, Download, Image, BookOpen, Printer, FileText, Code2, Wand2, Eye, Maximize2, X, RefreshCw, Palette, Layers, Upload, UploadCloud, CheckCircle2, FileCheck, Sliders, AlertCircle, ShieldCheck } from 'lucide-react';
+import {
+  Sparkles,
+  Download,
+  Image,
+  BookOpen,
+  Printer,
+  FileText,
+  Code2,
+  Wand2,
+  Eye,
+  Maximize2,
+  X,
+  RefreshCw,
+  Palette,
+  Layers,
+  Upload,
+  UploadCloud,
+  CheckCircle2,
+  FileCheck,
+  Sliders,
+  AlertCircle,
+  ShieldCheck,
+} from 'lucide-react';
 import { checkProjectPreflight } from '../lib/validation/preflightGate';
 import { downloadBlobWithCleanup, sanitizeFilename } from '../lib/utils/downloadHelper';
 import { validateExportPreflight } from '../lib/validation/exportPreflight';
@@ -1026,7 +1048,9 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
       downloadBlobWithCleanup(blob, fileName);
     } catch (err: any) {
       console.warn('Geração no servidor falhou, abrindo impressão do navegador:', err);
-      alert(`Servidor de PDF: ${err.message || 'Erro ao processar'}. Abrindo janela de impressão e preview do navegador.`);
+      alert(
+        `Servidor de PDF: ${err.message || 'Erro ao processar'}. Abrindo janela de impressão e preview do navegador.`
+      );
       handlePrintPDF();
     } finally {
       setIsGeneratingServerPdf(false);
@@ -1035,10 +1059,14 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
 
   // Handle Export Full Project JSON
   const handleExportProjectJson = () => {
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(project, null, 2));
+    const dataStr =
+      'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(project, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `${project.metadata.titulo.toLowerCase().replace(/\s+/g, '_')}_scriptor_project.json`);
+    downloadAnchor.setAttribute(
+      'download',
+      `${project.metadata.titulo.toLowerCase().replace(/\s+/g, '_')}_scriptor_project.json`
+    );
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
@@ -1056,7 +1084,8 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
             Publicação e Exportação da Obra
           </h1>
           <p className="text-xs text-[#57534E] font-serif">
-            Diagramação profissional com capa embutida para EPUB, PDF (com ficha catalográfica) e HTML.
+            Diagramação profissional com capa embutida para EPUB, PDF (com ficha catalográfica) e
+            HTML.
           </p>
         </div>
 
@@ -1088,7 +1117,9 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
                     : 'bg-amber-50 text-amber-800 border-amber-300'
                 }`}
               >
-                {preflight.readyToPublish ? '✓ Pronto para Publicar' : `Conclusão: ${preflight.score}%`}
+                {preflight.readyToPublish
+                  ? '✓ Pronto para Publicar'
+                  : `Conclusão: ${preflight.score}%`}
               </span>
             </div>
 
@@ -1097,7 +1128,9 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
                 <div
                   key={idx}
                   className={`p-3 border flex items-start space-x-2.5 ${
-                    item.passed ? 'bg-emerald-50/50 border-emerald-200' : 'bg-rose-50/50 border-rose-200'
+                    item.passed
+                      ? 'bg-emerald-50/50 border-emerald-200'
+                      : 'bg-rose-50/50 border-rose-200'
                   }`}
                 >
                   {item.passed ? (
@@ -1107,7 +1140,9 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
                   )}
                   <div className="space-y-0.5">
                     <span className="font-bold text-[#1C1917] block">{item.label}</span>
-                    <p className="text-[11px] text-[#57534E] font-serif leading-snug">{item.message}</p>
+                    <p className="text-[11px] text-[#57534E] font-serif leading-snug">
+                      {item.message}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -1179,10 +1214,18 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
                     {overlayMode === 'card' && (
                       <div className="absolute inset-0 p-6 flex flex-col justify-end pointer-events-none z-10">
                         <div className="bg-black/85 backdrop-blur-md border border-amber-500/40 p-3.5 text-center text-white space-y-1 shadow-2xl">
-                          <span className="text-[8px] font-bold uppercase tracking-widest text-amber-400">★ EDITORA OMNIA ★</span>
-                          <h3 className="text-base font-serif italic font-bold text-amber-100">{project.metadata.titulo}</h3>
-                          <p className="text-[10px] font-serif text-stone-300 uppercase tracking-widest">{project.metadata.autor}</p>
-                          <p className="text-[8px] font-mono text-amber-400/80 uppercase tracking-widest">✦ {project.metadata.editora || 'OMNIA'} ✦</p>
+                          <span className="text-[8px] font-bold uppercase tracking-widest text-amber-400">
+                            ★ EDITORA OMNIA ★
+                          </span>
+                          <h3 className="text-base font-serif italic font-bold text-amber-100">
+                            {project.metadata.titulo}
+                          </h3>
+                          <p className="text-[10px] font-serif text-stone-300 uppercase tracking-widest">
+                            {project.metadata.autor}
+                          </p>
+                          <p className="text-[8px] font-mono text-amber-400/80 uppercase tracking-widest">
+                            ✦ {project.metadata.editora || 'OMNIA'} ✦
+                          </p>
                         </div>
                       </div>
                     )}
@@ -1203,11 +1246,15 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
               {/* Overlay Toggle Controls */}
               {project.metadata.coverImageUrl && (
                 <div className="flex items-center space-x-1 bg-stone-100 p-1 rounded border border-stone-200 text-[10px]">
-                  <span className="text-[#78716C] px-2 font-semibold uppercase tracking-wider text-[9px]">Textos na Capa:</span>
+                  <span className="text-[#78716C] px-2 font-semibold uppercase tracking-wider text-[9px]">
+                    Textos na Capa:
+                  </span>
                   <button
                     onClick={() => setOverlayMode('overlay')}
                     className={`px-2.5 py-1 font-bold transition ${
-                      overlayMode === 'overlay' ? 'bg-[#1C1917] text-white shadow-xs' : 'text-[#78716C] hover:text-[#1C1917]'
+                      overlayMode === 'overlay'
+                        ? 'bg-[#1C1917] text-white shadow-xs'
+                        : 'text-[#78716C] hover:text-[#1C1917]'
                     }`}
                   >
                     Editorial 3D
@@ -1215,7 +1262,9 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
                   <button
                     onClick={() => setOverlayMode('card')}
                     className={`px-2.5 py-1 font-bold transition ${
-                      overlayMode === 'card' ? 'bg-[#1C1917] text-white shadow-xs' : 'text-[#78716C] hover:text-[#1C1917]'
+                      overlayMode === 'card'
+                        ? 'bg-[#1C1917] text-white shadow-xs'
+                        : 'text-[#78716C] hover:text-[#1C1917]'
                     }`}
                   >
                     Selo Vidro
@@ -1223,7 +1272,9 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
                   <button
                     onClick={() => setOverlayMode('none')}
                     className={`px-2.5 py-1 font-bold transition ${
-                      overlayMode === 'none' ? 'bg-[#1C1917] text-white shadow-xs' : 'text-[#78716C] hover:text-[#1C1917]'
+                      overlayMode === 'none'
+                        ? 'bg-[#1C1917] text-white shadow-xs'
+                        : 'text-[#78716C] hover:text-[#1C1917]'
                     }`}
                   >
                     Apenas Arte
@@ -1267,7 +1318,8 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
                     Formatos aceitos: <strong>JPG, PNG, WEBP</strong>
                   </p>
                   <p className="text-[10px] text-amber-800 font-medium mt-1.5 bg-amber-50 inline-block px-2.5 py-1 border border-amber-200">
-                    💡 <strong>Proporção ideal A5 recomendada: 14,8×21 cm</strong> (ex: 1480×2100px ou 1184×1680px)
+                    💡 <strong>Proporção ideal A5 recomendada: 14,8×21 cm</strong> (ex: 1480×2100px
+                    ou 1184×1680px)
                   </p>
                 </div>
               </div>
@@ -1325,7 +1377,11 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4 text-amber-400" />
-                    <span>{project.metadata.coverImageUrl ? 'Gerar Nova Versão com IA' : 'Gerar Arte da Capa com IA'}</span>
+                    <span>
+                      {project.metadata.coverImageUrl
+                        ? 'Gerar Nova Versão com IA'
+                        : 'Gerar Arte da Capa com IA'}
+                    </span>
                   </>
                 )}
               </button>
@@ -1338,7 +1394,9 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
                   <Image className="w-3 h-3 text-[#78716C]" />
                   <span>Galeria de Telas & Obras HD:</span>
                 </span>
-                <span className="text-[9px] text-[#78716C] font-normal italic">Aplicação Instantânea</span>
+                <span className="text-[9px] text-[#78716C] font-normal italic">
+                  Aplicação Instantânea
+                </span>
               </label>
 
               <div className="grid grid-cols-3 gap-2">
@@ -1408,14 +1466,18 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
                   <Sliders className="w-4 h-4 text-amber-700" />
                   <span>Configurações de Diagramação do PDF:</span>
                 </span>
-                <span className="text-[10px] text-stone-500 italic">Padrão Editorial ABNT / A5</span>
+                <span className="text-[10px] text-stone-500 italic">
+                  Padrão Editorial ABNT / A5
+                </span>
               </div>
 
               {/* Grid of Options */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* 1. Paper Size Selector */}
                 <div className="space-y-1">
-                  <label className="block text-[10px] uppercase font-bold text-stone-600">Formato da Página:</label>
+                  <label className="block text-[10px] uppercase font-bold text-stone-600">
+                    Formato da Página:
+                  </label>
                   <div className="grid grid-cols-2 gap-1.5">
                     <button
                       onClick={() => setPdfPaperSize('A5')}
@@ -1445,7 +1507,9 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
 
                 {/* 2. Typography Mode Selector */}
                 <div className="space-y-1">
-                  <label className="block text-[10px] uppercase font-bold text-stone-600">Estilo Tipográfico:</label>
+                  <label className="block text-[10px] uppercase font-bold text-stone-600">
+                    Estilo Tipográfico:
+                  </label>
                   <div className="grid grid-cols-2 gap-1.5">
                     <button
                       onClick={() => setPdfTypographyMode('nonfiction')}
@@ -1501,7 +1565,10 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
               <div className="bg-amber-50/80 border border-amber-200 p-2.5 text-[10px] text-amber-900 leading-normal flex items-start space-x-2">
                 <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
                 <div>
-                  <strong>Aviso para Impressão em Gráfica / Editora:</strong> O PDF é gerado com geometrias exatas de página, fontes incorporadas e folhas de estilo isoladas. Para impressão gráfica offset/digital com sangria de 3mm e marcas de corte de gráfica, selecione o formato A5 e salve em alta resolução.
+                  <strong>Aviso para Impressão em Gráfica / Editora:</strong> O PDF é gerado com
+                  geometrias exatas de página, fontes incorporadas e folhas de estilo isoladas. Para
+                  impressão gráfica offset/digital com sangria de 3mm e marcas de corte de gráfica,
+                  selecione o formato A5 e salve em alta resolução.
                 </div>
               </div>
             </div>
@@ -1519,9 +1586,12 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
                   </span>
                   <Download className="w-4 h-4 text-[#78716C] group-hover:text-[#1C1917] transition" />
                 </div>
-                <h3 className="font-bold font-serif italic text-sm text-[#1C1917]">Baixar Livro em EPUB</h3>
+                <h3 className="font-bold font-serif italic text-sm text-[#1C1917]">
+                  Baixar Livro em EPUB
+                </h3>
                 <p className="text-[11px] text-[#78716C] leading-relaxed">
-                  Inclui capa gráfica embutida, capítulos, capitulares e sumário. Compatível com Kindle, Apple Books e Kobo.
+                  Inclui capa gráfica embutida, capítulos, capitulares e sumário. Compatível com
+                  Kindle, Apple Books e Kobo.
                 </p>
               </button>
 
@@ -1542,7 +1612,9 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
                   )}
                 </div>
                 <h3 className="font-bold font-serif italic text-sm text-amber-100">
-                  {isGeneratingServerPdf ? 'Gerando PDF no Servidor...' : 'Baixar PDF Direto (Servidor)'}
+                  {isGeneratingServerPdf
+                    ? 'Gerando PDF no Servidor...'
+                    : 'Baixar PDF Direto (Servidor)'}
                 </h3>
                 <p className="text-[11px] text-amber-200/80 leading-relaxed">
                   Gera o arquivo PDF final diretamente com renderização Puppeteer em alta precisão.
@@ -1560,9 +1632,12 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
                   </span>
                   <Printer className="w-4 h-4 text-stone-700 group-hover:text-[#1C1917] transition" />
                 </div>
-                <h3 className="font-bold font-serif italic text-sm text-[#1C1917]">Abrir Leitor & Imprimir</h3>
+                <h3 className="font-bold font-serif italic text-sm text-[#1C1917]">
+                  Abrir Leitor & Imprimir
+                </h3>
                 <p className="text-[11px] text-[#78716C] leading-relaxed">
-                  Abre a janela interativa com pré-visualização de páginas e diálogo de impressão do navegador.
+                  Abre a janela interativa com pré-visualização de páginas e diálogo de impressão do
+                  navegador.
                 </p>
               </button>
 
@@ -1577,7 +1652,9 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
                   </span>
                   <FileText className="w-4 h-4 text-[#78716C] group-hover:text-[#1C1917] transition" />
                 </div>
-                <h3 className="font-bold font-serif italic text-sm text-[#1C1917]">Baixar Arquivo Markdown (.md)</h3>
+                <h3 className="font-bold font-serif italic text-sm text-[#1C1917]">
+                  Baixar Arquivo Markdown (.md)
+                </h3>
                 <p className="text-[11px] text-[#78716C] leading-relaxed">
                   Texto consolidado da obra com marcações limpas para editores de texto.
                 </p>
@@ -1594,7 +1671,9 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
                   </span>
                   <Code2 className="w-4 h-4 text-[#78716C] group-hover:text-[#1C1917] transition" />
                 </div>
-                <h3 className="font-bold font-serif italic text-sm text-[#1C1917]">Baixar Pacote HTML (.html)</h3>
+                <h3 className="font-bold font-serif italic text-sm text-[#1C1917]">
+                  Baixar Pacote HTML (.html)
+                </h3>
                 <p className="text-[11px] text-[#78716C] leading-relaxed">
                   Página web autônoma e formatada com capa e capítulos estruturados.
                 </p>
@@ -1604,7 +1683,10 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
             {/* Project Backup Download */}
             <div className="pt-4 border-t border-[#E7E5E4] flex items-center justify-between">
               <span className="text-xs text-[#57534E]">
-                Total de Conteúdo: <strong className="text-[#1C1917] font-mono">{totalWords.toLocaleString('pt-BR')} palavras</strong>
+                Total de Conteúdo:{' '}
+                <strong className="text-[#1C1917] font-mono">
+                  {totalWords.toLocaleString('pt-BR')} palavras
+                </strong>
               </span>
               <button
                 onClick={handleExportProjectJson}

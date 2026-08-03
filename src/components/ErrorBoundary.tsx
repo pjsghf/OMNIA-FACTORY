@@ -61,11 +61,14 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
 
             <div className="space-y-2 text-xs font-mono bg-rose-50 border border-rose-200 p-4 rounded-xs overflow-x-auto max-h-40">
-              <p className="font-bold text-rose-900">{this.state.error?.name}: {this.state.error?.message}</p>
+              <p className="font-bold text-rose-900">
+                {this.state.error?.name}: {this.state.error?.message}
+              </p>
             </div>
 
             <p className="text-xs text-[#57534E] font-serif leading-relaxed">
-              Sua obra e dados locais foram preservados. Você pode baixar um arquivo de diagnóstico técnico para auditoria ou recarregar a interface.
+              Sua obra e dados locais foram preservados. Você pode baixar um arquivo de diagnóstico
+              técnico para auditoria ou recarregar a interface.
             </p>
 
             <div className="flex items-center justify-between pt-4 border-t border-[#E7E5E4]">

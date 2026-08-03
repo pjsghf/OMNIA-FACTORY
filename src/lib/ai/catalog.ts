@@ -89,7 +89,10 @@ export const OPENCODE_MODEL_CATALOG: Record<string, ModelCapability> = {
   },
 };
 
-export function getModelCapability(provider: 'gemini' | 'opencode', modelId: string): ModelCapability | null {
+export function getModelCapability(
+  provider: 'gemini' | 'opencode',
+  modelId: string
+): ModelCapability | null {
   if (provider === 'gemini') {
     return GEMINI_MODEL_CATALOG[modelId] || null;
   } else {
@@ -97,7 +100,11 @@ export function getModelCapability(provider: 'gemini' | 'opencode', modelId: str
   }
 }
 
-export function validateModelForTask(provider: 'gemini' | 'opencode', modelId: string, task: AiTaskType): { valid: boolean; reason?: string } {
+export function validateModelForTask(
+  provider: 'gemini' | 'opencode',
+  modelId: string,
+  task: AiTaskType
+): { valid: boolean; reason?: string } {
   const capability = getModelCapability(provider, modelId);
   if (!capability) {
     return {
@@ -121,10 +128,18 @@ export function getDefaultModel(provider: 'gemini' | 'opencode', task: AiTaskTyp
   const match = Object.values(catalog).find((m) => m.isDefault && m.allowedTasks.includes(task));
   if (match) return match.id;
   const anyMatch = Object.values(catalog).find((m) => m.allowedTasks.includes(task));
-  return anyMatch ? anyMatch.id : (provider === 'gemini' ? 'gemini-3.6-flash' : 'opencode/claude-3-5-sonnet');
+  return anyMatch
+    ? anyMatch.id
+    : provider === 'gemini'
+      ? 'gemini-3.6-flash'
+      : 'opencode/claude-3-5-sonnet';
 }
 
-export function calculateEstimatedCost(modelCapability: ModelCapability, inputTokens: number, outputTokens: number): number {
+export function calculateEstimatedCost(
+  modelCapability: ModelCapability,
+  inputTokens: number,
+  outputTokens: number
+): number {
   if (modelCapability.allowedTasks.includes('image')) {
     return modelCapability.outputCostPer1k; // Fixed per image cost
   }

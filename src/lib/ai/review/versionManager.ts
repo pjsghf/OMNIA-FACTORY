@@ -125,7 +125,9 @@ export function createNewChapterVersion({
     versionNumber: nextNum,
     createdAt: new Date().toISOString(),
     author,
-    label: label || `Versão ${nextNum} (${author === 'review_patch' ? 'Correção de Auditoria' : author === 'user' ? 'Edição Manual' : 'Geração de IA'})`,
+    label:
+      label ||
+      `Versão ${nextNum} (${author === 'review_patch' ? 'Correção de Auditoria' : author === 'user' ? 'Edição Manual' : 'Geração de IA'})`,
     content,
     wordCount,
   };

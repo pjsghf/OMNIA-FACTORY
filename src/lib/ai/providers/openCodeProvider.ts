@@ -5,7 +5,12 @@ import {
   StructuredRequest,
   ProviderHealth,
 } from '../types';
-import { validateModelForTask, getModelCapability, calculateEstimatedCost, getDefaultModel } from '../catalog';
+import {
+  validateModelForTask,
+  getModelCapability,
+  calculateEstimatedCost,
+  getDefaultModel,
+} from '../catalog';
 import { executeWithRetry } from '../retry';
 import { validateProviderBaseUrl, sanitizePromptInputs } from '../security';
 
@@ -25,7 +30,10 @@ export class OpenCodeProvider implements AiProvider {
     }
 
     const baseUrl = ssrfCheck.sanitizedUrl;
-    const modelId = request.model || request.aiConfig?.opencodeModel || getDefaultModel('opencode', request.taskType);
+    const modelId =
+      request.model ||
+      request.aiConfig?.opencodeModel ||
+      getDefaultModel('opencode', request.taskType);
 
     // Validate model allowlist
     const validation = validateModelForTask('opencode', modelId, request.taskType);
@@ -62,7 +70,7 @@ export class OpenCodeProvider implements AiProvider {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
+            Authorization: `Bearer ${apiKey}`,
           },
           body: JSON.stringify(body),
           signal,
@@ -96,7 +104,9 @@ export class OpenCodeProvider implements AiProvider {
     };
   }
 
-  async generateStructured<T>(request: StructuredRequest<T>): Promise<{ data: T; result: TextGenerationResult }> {
+  async generateStructured<T>(
+    request: StructuredRequest<T>
+  ): Promise<{ data: T; result: TextGenerationResult }> {
     const apiKey = request.aiConfig?.opencodeApiKey;
     if (!apiKey) {
       throw new Error('Chave de API do OpenCode GO (opencodeApiKey) não fornecida.');
@@ -109,7 +119,10 @@ export class OpenCodeProvider implements AiProvider {
     }
 
     const baseUrl = ssrfCheck.sanitizedUrl;
-    const modelId = request.model || request.aiConfig?.opencodeModel || getDefaultModel('opencode', request.taskType);
+    const modelId =
+      request.model ||
+      request.aiConfig?.opencodeModel ||
+      getDefaultModel('opencode', request.taskType);
 
     const validation = validateModelForTask('opencode', modelId, request.taskType);
     if (!validation.valid) {
@@ -149,7 +162,7 @@ export class OpenCodeProvider implements AiProvider {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
+            Authorization: `Bearer ${apiKey}`,
           },
           body: JSON.stringify(body),
           signal,
@@ -170,16 +183,23 @@ export class OpenCodeProvider implements AiProvider {
 
     let parsedData: any;
     try {
-      const cleanJsonStr = responseContent.replace(/```json/gi, '').replace(/```/g, '').trim();
+      const cleanJsonStr = responseContent
+        .replace(/```json/gi, '')
+        .replace(/```/g, '')
+        .trim();
       parsedData = JSON.parse(cleanJsonStr);
     } catch (parseErr) {
-      throw new Error(`Falha ao converter a resposta da OpenCode GO para JSON: ${parseErr instanceof Error ? parseErr.message : String(parseErr)}`);
+      throw new Error(
+        `Falha ao converter a resposta da OpenCode GO para JSON: ${parseErr instanceof Error ? parseErr.message : String(parseErr)}`
+      );
     }
 
     if (request.validator) {
       const validationRes = request.validator(parsedData);
       if (!validationRes.success) {
-        throw new Error(`Resposta da OpenCode GO não atende ao schema esperado: ${validationRes.error}`);
+        throw new Error(
+          `Resposta da OpenCode GO não atende ao schema esperado: ${validationRes.error}`
+        );
       }
       parsedData = validationRes.data;
     }

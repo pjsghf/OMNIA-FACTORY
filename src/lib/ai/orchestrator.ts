@@ -22,7 +22,9 @@ export class AiOrchestrator {
     const key = providerName || 'gemini';
     const provider = this.providers.get(key);
     if (!provider) {
-      throw new Error(`Provedor de IA desconhecido: '${key}'. Provedores suportados: 'gemini', 'opencode'.`);
+      throw new Error(
+        `Provedor de IA desconhecido: '${key}'. Provedores suportados: 'gemini', 'opencode'.`
+      );
     }
     return provider;
   }
@@ -38,7 +40,9 @@ export class AiOrchestrator {
     }
   }
 
-  async generateStructured<T>(request: StructuredRequest<T>): Promise<{ data: T; result: TextGenerationResult }> {
+  async generateStructured<T>(
+    request: StructuredRequest<T>
+  ): Promise<{ data: T; result: TextGenerationResult }> {
     const selectedProviderName = request.aiConfig?.provider || 'gemini';
     const provider = this.getProvider(selectedProviderName);
 
@@ -90,11 +94,22 @@ export class AiOrchestrator {
 
     // Categorize error codes for clean public responses
     let code = 'PROVIDER_ERROR';
-    if (redactedMsg.includes('SSRF') || redactedMsg.includes('inseguro') || redactedMsg.includes('proibido')) {
+    if (
+      redactedMsg.includes('SSRF') ||
+      redactedMsg.includes('inseguro') ||
+      redactedMsg.includes('proibido')
+    ) {
       code = 'SSRF_PROTECTION_ERROR';
-    } else if (redactedMsg.includes('não é permitido') || redactedMsg.includes('não suporta a tarefa')) {
+    } else if (
+      redactedMsg.includes('não é permitido') ||
+      redactedMsg.includes('não suporta a tarefa')
+    ) {
       code = 'MODEL_NOT_ALLOWED';
-    } else if (redactedMsg.includes('429') || redactedMsg.includes('quota') || redactedMsg.includes('limite')) {
+    } else if (
+      redactedMsg.includes('429') ||
+      redactedMsg.includes('quota') ||
+      redactedMsg.includes('limite')
+    ) {
       code = 'RATE_LIMIT_EXCEEDED';
     } else if (redactedMsg.includes('JSON') || redactedMsg.includes('schema')) {
       code = 'INVALID_SCHEMA_RESPONSE';

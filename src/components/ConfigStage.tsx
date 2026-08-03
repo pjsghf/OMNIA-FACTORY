@@ -79,7 +79,9 @@ export const ConfigStage: React.FC<ConfigStageProps> = ({
         if (match) {
           parsed = JSON.parse(match[0]);
         } else {
-          throw new Error('Não foi possível identificar uma estrutura JSON válida no texto fornecido.');
+          throw new Error(
+            'Não foi possível identificar uma estrutura JSON válida no texto fornecido.'
+          );
         }
       }
 
@@ -98,7 +100,8 @@ export const ConfigStage: React.FC<ConfigStageProps> = ({
           minPalavras: parsed.minPalavras ? Number(parsed.minPalavras) : metadata.minPalavras,
           maxPalavras: parsed.maxPalavras ? Number(parsed.maxPalavras) : metadata.maxPalavras,
           materiais: parsed.materiais || metadata.materiais,
-          informacoesObrigatorias: parsed.informacoesObrigatorias || metadata.informacoesObrigatorias,
+          informacoesObrigatorias:
+            parsed.informacoesObrigatorias || metadata.informacoesObrigatorias,
           restricoes: parsed.restricoes || metadata.restricoes,
           coverImageUrl: parsed.coverImageUrl || metadata.coverImageUrl,
         };
@@ -126,13 +129,16 @@ export const ConfigStage: React.FC<ConfigStageProps> = ({
       publicoAlvo: metadata.publicoAlvo || 'Público-alvo detalhado e perfil do leitor ideal',
       resumo: metadata.resumo || 'Resumo detalhado, premissa central e proposta de valor do livro',
       estilo: metadata.estilo || 'desenvolvimento_pessoal',
-      promptEstilo: metadata.promptEstilo || 'Diretrizes específicas de estilo, metáforas e exercícios reflexivos',
+      promptEstilo:
+        metadata.promptEstilo ||
+        'Diretrizes específicas de estilo, metáforas e exercícios reflexivos',
       tom: metadata.tom || 'didatico_inspirador',
       qtdCapitulos: metadata.qtdCapitulos || 7,
       minPalavras: metadata.minPalavras || 1000,
       maxPalavras: metadata.maxPalavras || 2500,
       materiais: metadata.materiais || 'Notas de pesquisa, citações ou trechos de referência',
-      informacoesObrigatorias: metadata.informacoesObrigatorias || 'Conceitos ou metodologias obrigatórias a incluir',
+      informacoesObrigatorias:
+        metadata.informacoesObrigatorias || 'Conceitos ou metodologias obrigatórias a incluir',
       restricoes: metadata.restricoes || 'Clichês a evitar, assuntos proibidos e limites do tom',
     };
 
@@ -224,7 +230,9 @@ IDEIAS E INFORMAÇÕES BRUTAS DO AUTOR SOBRE O LIVRO:
       setTimeout(() => setCopiedPrompt(false), 3000);
       setTimeout(() => setImportStatus(null), 6000);
     } catch (err) {
-      alert('Não foi possível copiar automaticamente. Selecione e copie manualmente se necessário.');
+      alert(
+        'Não foi possível copiar automaticamente. Selecione e copie manualmente se necessário.'
+      );
     }
   };
 
@@ -292,7 +300,8 @@ IDEIAS E INFORMAÇÕES BRUTAS DO AUTOR SOBRE O LIVRO:
             Configuração do Projeto
           </h1>
           <p className="text-xs sm:text-sm text-[#57534E] leading-relaxed font-serif">
-            Defina os parâmetros centrais, público-alvo, extensão, tom e restrições para orientar a arquitetura editorial e a geração dos capítulos originais.
+            Defina os parâmetros centrais, público-alvo, extensão, tom e restrições para orientar a
+            arquitetura editorial e a geração dos capítulos originais.
           </p>
         </div>
 
@@ -332,7 +341,9 @@ IDEIAS E INFORMAÇÕES BRUTAS DO AUTOR SOBRE O LIVRO:
               </h3>
             </div>
             <p className="text-xs text-stone-300 font-serif leading-relaxed">
-              Copie ou baixe o prompt explicativo, envie para sua IA favorita (ChatGPT, Claude, OpenCode GO, Gemini, DeepSeek) e envie ou cole a ficha completa preenchida diretamente.
+              Copie ou baixe o prompt explicativo, envie para sua IA favorita (ChatGPT, Claude,
+              OpenCode GO, Gemini, DeepSeek) e envie ou cole a ficha completa preenchida
+              diretamente.
             </p>
           </div>
 
@@ -393,12 +404,7 @@ IDEIAS E INFORMAÇÕES BRUTAS DO AUTOR SOBRE O LIVRO:
           <label className="p-3 bg-stone-200 hover:bg-white text-stone-900 font-bold text-xs uppercase tracking-wider cursor-pointer transition flex items-center justify-center space-x-2 shadow-sm">
             <Upload className="w-4 h-4 text-stone-900" />
             <span>5. Upar Arquivo</span>
-            <input
-              type="file"
-              accept=".json,.txt"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
+            <input type="file" accept=".json,.txt" onChange={handleFileUpload} className="hidden" />
           </label>
         </div>
 
@@ -421,16 +427,14 @@ IDEIAS E INFORMAÇÕES BRUTAS DO AUTOR SOBRE O LIVRO:
                 <strong>Copie ou Baixe o Prompt</strong> com as instruções detalhadas.
               </li>
               <li>
-                Abra a sua IA externa de preferência (ChatGPT, Claude, OpenCode GO, Gemini, DeepSeek, Llama).
+                Abra a sua IA externa de preferência (ChatGPT, Claude, OpenCode GO, Gemini,
+                DeepSeek, Llama).
               </li>
+              <li>Cole o prompt fornecido junto com as suas anotações ou ideias do livro.</li>
+              <li>Copie a resposta em formato JSON gerada pela IA.</li>
               <li>
-                Cole o prompt fornecido junto com as suas anotações ou ideias do livro.
-              </li>
-              <li>
-                Copie a resposta em formato JSON gerada pela IA.
-              </li>
-              <li>
-                Clique no botão <strong>"4. Colar Texto IA"</strong> (ou "5. Upar Arquivo") para que todos os campos sejam preenchidos instantaneamente!
+                Clique no botão <strong>"4. Colar Texto IA"</strong> (ou "5. Upar Arquivo") para que
+                todos os campos sejam preenchidos instantaneamente!
               </li>
             </ol>
           </div>
@@ -593,9 +597,7 @@ IDEIAS E INFORMAÇÕES BRUTAS DO AUTOR SOBRE O LIVRO:
 
             {/* 10 Tones Selector */}
             <div className="space-y-2">
-              <label className="block text-xs font-semibold text-[#57534E]">
-                Tom da Escrita
-              </label>
+              <label className="block text-xs font-semibold text-[#57534E]">Tom da Escrita</label>
               <select
                 value={metadata.tom}
                 onChange={(e) => handleChange('tom', e.target.value as WritingTone)}
@@ -645,7 +647,9 @@ IDEIAS E INFORMAÇÕES BRUTAS DO AUTOR SOBRE O LIVRO:
               />
               <div className="flex justify-between text-xs text-[#78716C] mt-1 font-mono">
                 <span>3 Capítulos</span>
-                <span className="font-semibold text-[#1C1917] font-serif italic">{metadata.qtdCapitulos} Capítulos</span>
+                <span className="font-semibold text-[#1C1917] font-serif italic">
+                  {metadata.qtdCapitulos} Capítulos
+                </span>
                 <span>25 Capítulos</span>
               </div>
             </div>
@@ -766,9 +770,12 @@ IDEIAS E INFORMAÇÕES BRUTAS DO AUTOR SOBRE O LIVRO:
               <div className="flex items-center space-x-2">
                 <Clipboard className="w-5 h-5 text-amber-600" />
                 <div>
-                  <h3 className="font-serif italic font-bold text-base">Colar Ficha Técnica da IA Externa</h3>
+                  <h3 className="font-serif italic font-bold text-base">
+                    Colar Ficha Técnica da IA Externa
+                  </h3>
                   <p className="text-[10px] uppercase tracking-wider text-[#78716C]">
-                    Cole abaixo o resultado retornado pelo ChatGPT, Claude, Gemini, OpenCode ou DeepSeek
+                    Cole abaixo o resultado retornado pelo ChatGPT, Claude, Gemini, OpenCode ou
+                    DeepSeek
                   </p>
                 </div>
               </div>

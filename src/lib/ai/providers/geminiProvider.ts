@@ -8,7 +8,12 @@ import {
   ImageResult,
   ProviderHealth,
 } from '../types';
-import { validateModelForTask, getModelCapability, calculateEstimatedCost, getDefaultModel } from '../catalog';
+import {
+  validateModelForTask,
+  getModelCapability,
+  calculateEstimatedCost,
+  getDefaultModel,
+} from '../catalog';
 import { executeWithRetry } from '../retry';
 import { sanitizePromptInputs } from '../security';
 
@@ -89,7 +94,9 @@ export class GeminiProvider implements AiProvider {
     };
   }
 
-  async generateStructured<T>(request: StructuredRequest<T>): Promise<{ data: T; result: TextGenerationResult }> {
+  async generateStructured<T>(
+    request: StructuredRequest<T>
+  ): Promise<{ data: T; result: TextGenerationResult }> {
     const modelId = request.model || getDefaultModel('gemini', request.taskType);
 
     const validation = validateModelForTask('gemini', modelId, request.taskType);
@@ -137,17 +144,24 @@ export class GeminiProvider implements AiProvider {
     // Parse JSON
     let parsedData: any;
     try {
-      const cleanJsonStr = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+      const cleanJsonStr = rawText
+        .replace(/```json/gi, '')
+        .replace(/```/g, '')
+        .trim();
       parsedData = JSON.parse(cleanJsonStr);
     } catch (parseErr) {
-      throw new Error(`Falha ao converter a resposta da IA para JSON: ${parseErr instanceof Error ? parseErr.message : String(parseErr)}`);
+      throw new Error(
+        `Falha ao converter a resposta da IA para JSON: ${parseErr instanceof Error ? parseErr.message : String(parseErr)}`
+      );
     }
 
     // Validate with optional validator schema
     if (request.validator) {
       const validationRes = request.validator(parsedData);
       if (!validationRes.success) {
-        throw new Error(`Resposta da IA não está em conformidade com o schema esperado: ${validationRes.error}`);
+        throw new Error(
+          `Resposta da IA não está em conformidade com o schema esperado: ${validationRes.error}`
+        );
       }
       parsedData = validationRes.data;
     }
@@ -199,7 +213,9 @@ export class GeminiProvider implements AiProvider {
       }
     } catch (err: any) {
       console.warn(`[Gemini Image Gen Error]: modelo ${modelId} falhou:`, err.message || err);
-      throw new Error(`Falha na geração de imagem com o modelo ${modelId}: ${err.message || String(err)}`);
+      throw new Error(
+        `Falha na geração de imagem com o modelo ${modelId}: ${err.message || String(err)}`
+      );
     }
 
     throw new Error(`O modelo de imagem ${modelId} não retornou nenhum dado de imagem.`);
@@ -220,7 +236,12 @@ export class GeminiProvider implements AiProvider {
       provider: 'gemini',
       status: 'ok',
       details: 'Conexão ativa e chave configurada.',
-      modelsAvailable: ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-2.5-pro', 'imagen-3.0-generate-002'],
+      modelsAvailable: [
+        'gemini-3.6-flash',
+        'gemini-2.5-flash',
+        'gemini-2.5-pro',
+        'imagen-3.0-generate-002',
+      ],
     };
   }
 }

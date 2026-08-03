@@ -74,7 +74,9 @@ export interface ModelCapability {
 export interface AiProvider {
   name: string;
   generateText(request: TextGenerationRequest): Promise<TextGenerationResult>;
-  generateStructured<T>(request: StructuredRequest<T>): Promise<{ data: T; result: TextGenerationResult }>;
+  generateStructured<T>(
+    request: StructuredRequest<T>
+  ): Promise<{ data: T; result: TextGenerationResult }>;
   generateImage?(request: ImageGenerationRequest): Promise<ImageResult>;
   healthCheck(): Promise<ProviderHealth>;
 }

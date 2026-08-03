@@ -14,7 +14,15 @@ export interface LogContext {
   [key: string]: unknown;
 }
 
-const SENSITIVE_KEYS = ['apiKey', 'authorization', 'token', 'secret', 'geminiApiKey', 'key', 'password'];
+const SENSITIVE_KEYS = [
+  'apiKey',
+  'authorization',
+  'token',
+  'secret',
+  'geminiApiKey',
+  'key',
+  'password',
+];
 
 function redactSensitiveData(obj: any): any {
   if (obj === null || obj === undefined) return obj;
@@ -43,7 +51,11 @@ function redactSensitiveData(obj: any): any {
 }
 
 export class StructuredLogger {
-  private formatLog(level: 'INFO' | 'WARN' | 'ERROR' | 'DEBUG', message: string, context: LogContext = {}) {
+  private formatLog(
+    level: 'INFO' | 'WARN' | 'ERROR' | 'DEBUG',
+    message: string,
+    context: LogContext = {}
+  ) {
     const timestamp = new Date().toISOString();
     const safeContext = redactSensitiveData(context);
     return JSON.stringify({

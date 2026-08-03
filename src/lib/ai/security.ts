@@ -16,13 +16,7 @@ const BLOCKED_HOSTNAMES = [
   'kubernetes.default.svc',
 ];
 
-const BLOCKED_SUFFIXES = [
-  '.local',
-  '.internal',
-  '.localhost',
-  '.lan',
-  '.home',
-];
+const BLOCKED_SUFFIXES = ['.local', '.internal', '.localhost', '.lan', '.home'];
 
 /**
  * Validates external provider URLs against SSRF (Server Side Request Forgery) attacks.
@@ -113,7 +107,11 @@ function isPrivateIPv4(ip: string): boolean {
  * Delimits untrusted user inputs (materials, restrictions, user notes) using strict XML tags
  * to defend against prompt injection attacks.
  */
-export function sanitizePromptInputs(prompt: string, userMaterials?: string, userRestrictions?: string): {
+export function sanitizePromptInputs(
+  prompt: string,
+  userMaterials?: string,
+  userRestrictions?: string
+): {
   sanitizedPrompt: string;
   injectionGuardInstruction: string;
 } {

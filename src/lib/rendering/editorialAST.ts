@@ -4,13 +4,7 @@
  */
 
 export type ASTNodeType =
-  | 'heading'
-  | 'paragraph'
-  | 'blockquote'
-  | 'list'
-  | 'image'
-  | 'hr'
-  | 'callout';
+  'heading' | 'paragraph' | 'blockquote' | 'list' | 'image' | 'hr' | 'callout';
 
 export interface ASTInlineSpan {
   text: string;
@@ -128,7 +122,10 @@ export function parseMarkdownToAST(markdown: string): EditorialAST {
       const lines = trimmed.split('\n');
       const tagMatch = lines[0].match(/\[!(NOTE|WARNING|TIP|QUOTE)\]/i);
       const calloutType = (tagMatch ? tagMatch[1].toLowerCase() : 'note') as any;
-      const body = lines.slice(1).map((l) => l.replace(/^>\s*/, '')).join(' ');
+      const body = lines
+        .slice(1)
+        .map((l) => l.replace(/^>\s*/, ''))
+        .join(' ');
       ast.push({
         type: 'callout',
         calloutType,

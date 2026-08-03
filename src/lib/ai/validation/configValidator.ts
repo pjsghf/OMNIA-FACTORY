@@ -38,7 +38,8 @@ export function validateBookConfig(input: Partial<BookMetadata>): ValidationResu
   }
 
   if (maxPalavras < minPalavras + 100) {
-    errors.maxPalavras = 'O máximo de palavras deve ser pelo menos 100 palavras maior que o mínimo.';
+    errors.maxPalavras =
+      'O máximo de palavras deve ser pelo menos 100 palavras maior que o mínimo.';
     maxPalavras = minPalavras + 500;
   }
 

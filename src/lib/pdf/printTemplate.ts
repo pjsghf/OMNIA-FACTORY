@@ -47,8 +47,8 @@ export function buildPrintableBookHtml(options: PrintableBookOptions): string {
       <div class="toc-row" data-target="${item.id}">
         <a href="#${item.id}" class="toc-link">
           <span class="toc-label"><strong class="toc-badge">${item.type}</strong> ${escapeHtml(
-        item.title
-      )}</span>
+            item.title
+          )}</span>
           <span class="toc-dots"></span>
           <span class="toc-page-number"></span>
         </a>
@@ -86,8 +86,8 @@ export function buildPrintableBookHtml(options: PrintableBookOptions): string {
   <div class="no-print-toolbar">
     <div class="toolbar-info">
       <span class="toolbar-badge">${settings.paperSize} • ${
-    settings.typographyMode === 'literary' ? 'Ficção' : 'Não-Ficção'
-  }</span>
+        settings.typographyMode === 'literary' ? 'Ficção' : 'Não-Ficção'
+      }</span>
       <span><strong>Diagramação Editorial PDF</strong> — ${escapeHtml(project.metadata.titulo)}</span>
       <span class="toolbar-status" id="print-status-text">Carregando recursos...</span>
     </div>

@@ -1,6 +1,19 @@
 import React, { useState } from 'react';
 import { EditorialPlan, ChapterPlan, BookMetadata } from '../types';
-import { Sparkles, BookOpen, UserCheck, ListOrdered, Plus, Trash2, ArrowUp, ArrowDown, Edit3, Check, Wand2, ArrowRight } from 'lucide-react';
+import {
+  Sparkles,
+  BookOpen,
+  UserCheck,
+  ListOrdered,
+  Plus,
+  Trash2,
+  ArrowUp,
+  ArrowDown,
+  Edit3,
+  Check,
+  Wand2,
+  ArrowRight,
+} from 'lucide-react';
 
 interface PlanningStageProps {
   plan: EditorialPlan | null;
@@ -32,7 +45,8 @@ export const PlanningStage: React.FC<PlanningStageProps> = ({
           Nenhum Planejamento Editorial Gerado
         </h2>
         <p className="text-[#57534E] text-xs sm:text-sm max-w-md mx-auto font-serif">
-          Clique no botão abaixo para que o Scriptor estruture o conceito central, perfil do leitor e o sumário detalhado do livro.
+          Clique no botão abaixo para que o Scriptor estruture o conceito central, perfil do leitor
+          e o sumário detalhado do livro.
         </p>
         <button
           onClick={onRegeneratePlan}
@@ -109,7 +123,10 @@ export const PlanningStage: React.FC<PlanningStageProps> = ({
     onUpdatePlan({ ...plan, sumario: renumbered });
   };
 
-  const totalEstimatedWords = plan.sumario.reduce((acc, cap) => acc + (cap.estimativaPalavras || 0), 0);
+  const totalEstimatedWords = plan.sumario.reduce(
+    (acc, cap) => acc + (cap.estimativaPalavras || 0),
+    0
+  );
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-12">
@@ -123,7 +140,11 @@ export const PlanningStage: React.FC<PlanningStageProps> = ({
             {metadata.titulo}
           </h1>
           <p className="text-xs text-[#57534E] font-serif">
-            Volume total previsto: <span className="text-[#1C1917] font-semibold">{totalEstimatedWords.toLocaleString('pt-BR')} palavras</span> distribuídas em {plan.sumario.length} capítulos.
+            Volume total previsto:{' '}
+            <span className="text-[#1C1917] font-semibold">
+              {totalEstimatedWords.toLocaleString('pt-BR')} palavras
+            </span>{' '}
+            distribuídas em {plan.sumario.length} capítulos.
           </p>
         </div>
 
@@ -154,8 +175,13 @@ export const PlanningStage: React.FC<PlanningStageProps> = ({
             <span>Conceito Central & Promessa</span>
           </h2>
           <div className="text-xs text-[#44403C] space-y-2 leading-relaxed font-serif">
-            <p><strong>Conceito:</strong> {plan.conceitoCentral}</p>
-            <p><strong>Promessa Principal:</strong> <span className="text-[#1C1917] font-semibold italic">{plan.promessaPrincipal}</span></p>
+            <p>
+              <strong>Conceito:</strong> {plan.conceitoCentral}
+            </p>
+            <p>
+              <strong>Promessa Principal:</strong>{' '}
+              <span className="text-[#1C1917] font-semibold italic">{plan.promessaPrincipal}</span>
+            </p>
           </div>
         </div>
 
@@ -169,7 +195,9 @@ export const PlanningStage: React.FC<PlanningStageProps> = ({
             <p className="line-clamp-2">{plan.perfilLeitor?.descricao}</p>
             {plan.perfilLeitor?.doresEAnseios && (
               <div>
-                <span className="font-semibold text-[#78716C] font-sans text-[11px]">Dores e Anseios:</span>
+                <span className="font-semibold text-[#78716C] font-sans text-[11px]">
+                  Dores e Anseios:
+                </span>
                 <ul className="list-disc list-inside text-[#57534E] mt-0.5 space-y-0.5">
                   {plan.perfilLeitor.doresEAnseios.slice(0, 2).map((dor, i) => (
                     <li key={i}>{dor}</li>
@@ -187,8 +215,12 @@ export const PlanningStage: React.FC<PlanningStageProps> = ({
           <div className="flex items-center space-x-3">
             <ListOrdered className="w-5 h-5 text-[#1C1917]" />
             <div>
-              <h2 className="text-lg font-serif italic font-bold text-[#1C1917]">Sumário e Estrutura dos Capítulos</h2>
-              <p className="text-xs text-[#78716C]">Você pode reordenar, ajustar objetivos ou incluir novos capítulos antes da geração.</p>
+              <h2 className="text-lg font-serif italic font-bold text-[#1C1917]">
+                Sumário e Estrutura dos Capítulos
+              </h2>
+              <p className="text-xs text-[#78716C]">
+                Você pode reordenar, ajustar objetivos ou incluir novos capítulos antes da geração.
+              </p>
             </div>
           </div>
           <button
@@ -215,11 +247,15 @@ export const PlanningStage: React.FC<PlanningStageProps> = ({
                   <div className="space-y-3 text-xs">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[#57534E] font-semibold mb-1">Título do Capítulo</label>
+                        <label className="block text-[#57534E] font-semibold mb-1">
+                          Título do Capítulo
+                        </label>
                         <input
                           type="text"
                           value={editCapForm.titulo || ''}
-                          onChange={(e) => setEditCapForm({ ...editCapForm, titulo: e.target.value })}
+                          onChange={(e) =>
+                            setEditCapForm({ ...editCapForm, titulo: e.target.value })
+                          }
                           className="w-full bg-white border border-[#D6D3D1] p-2 text-[#1C1917] font-serif focus:outline-none"
                         />
                       </div>
@@ -228,25 +264,33 @@ export const PlanningStage: React.FC<PlanningStageProps> = ({
                         <input
                           type="text"
                           value={editCapForm.subtitulo || ''}
-                          onChange={(e) => setEditCapForm({ ...editCapForm, subtitulo: e.target.value })}
+                          onChange={(e) =>
+                            setEditCapForm({ ...editCapForm, subtitulo: e.target.value })
+                          }
                           className="w-full bg-white border border-[#D6D3D1] p-2 text-[#1C1917] font-serif focus:outline-none"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-[#57534E] font-semibold mb-1">Objetivo Central</label>
+                      <label className="block text-[#57534E] font-semibold mb-1">
+                        Objetivo Central
+                      </label>
                       <textarea
                         rows={2}
                         value={editCapForm.objetivo || ''}
-                        onChange={(e) => setEditCapForm({ ...editCapForm, objetivo: e.target.value })}
+                        onChange={(e) =>
+                          setEditCapForm({ ...editCapForm, objetivo: e.target.value })
+                        }
                         className="w-full bg-white border border-[#D6D3D1] p-2 text-[#1C1917] font-serif focus:outline-none"
                       />
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[#57534E] font-semibold mb-1">Tópicos (separados por vírgula)</label>
+                        <label className="block text-[#57534E] font-semibold mb-1">
+                          Tópicos (separados por vírgula)
+                        </label>
                         <input
                           type="text"
                           value={editCapForm.topicos?.join(', ') || ''}
@@ -260,11 +304,18 @@ export const PlanningStage: React.FC<PlanningStageProps> = ({
                         />
                       </div>
                       <div>
-                        <label className="block text-[#57534E] font-semibold mb-1">Estimativa de Palavras</label>
+                        <label className="block text-[#57534E] font-semibold mb-1">
+                          Estimativa de Palavras
+                        </label>
                         <input
                           type="number"
                           value={editCapForm.estimativaPalavras || 1500}
-                          onChange={(e) => setEditCapForm({ ...editCapForm, estimativaPalavras: parseInt(e.target.value, 10) })}
+                          onChange={(e) =>
+                            setEditCapForm({
+                              ...editCapForm,
+                              estimativaPalavras: parseInt(e.target.value, 10),
+                            })
+                          }
                           className="w-full bg-white border border-[#D6D3D1] p-2 text-[#1C1917] font-mono focus:outline-none"
                         />
                       </div>
@@ -298,12 +349,17 @@ export const PlanningStage: React.FC<PlanningStageProps> = ({
                           {cap.titulo}
                         </h3>
                         {cap.subtitulo && (
-                          <span className="text-xs text-[#78716C] hidden md:inline font-serif italic">— {cap.subtitulo}</span>
+                          <span className="text-xs text-[#78716C] hidden md:inline font-serif italic">
+                            — {cap.subtitulo}
+                          </span>
                         )}
                       </div>
 
                       <p className="text-xs text-[#44403C] leading-relaxed font-serif">
-                        <span className="text-[#1C1917] font-bold font-sans uppercase tracking-wider text-[10px]">Objetivo:</span> {cap.objetivo}
+                        <span className="text-[#1C1917] font-bold font-sans uppercase tracking-wider text-[10px]">
+                          Objetivo:
+                        </span>{' '}
+                        {cap.objetivo}
                       </p>
 
                       {cap.topicos && cap.topicos.length > 0 && (

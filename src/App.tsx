@@ -23,20 +23,26 @@ import { createChapterVersion } from './lib/ai/review/versionManager';
 
 const DEFAULT_METADATA: BookMetadata = {
   titulo: 'O Código da Mente Inabalável',
-  subtitulo: 'Estratégias Práticas para Dominar o Foco, Vencer a Procrastinação e Construir uma Vida de Resultados',
+  subtitulo:
+    'Estratégias Práticas para Dominar o Foco, Vencer a Procrastinação e Construir uma Vida de Resultados',
   autor: 'Dr. Lucas Vane',
   editora: 'OMNIA',
   idioma: 'Português',
-  publicoAlvo: 'Profissionais, estudantes e empreendedores que buscam alta performance e clareza mental',
-  resumo: 'Um livro transformador focado na reestruturação de modelos mentais, eliminação de crenças limitantes e implementação de rotinas de alta disciplina e controle emocional.',
+  publicoAlvo:
+    'Profissionais, estudantes e empreendedores que buscam alta performance e clareza mental',
+  resumo:
+    'Um livro transformador focado na reestruturação de modelos mentais, eliminação de crenças limitantes e implementação de rotinas de alta disciplina e controle emocional.',
   estilo: 'desenvolvimento_pessoal',
-  promptEstilo: 'Enfatize estudos de caso práticos, metáforas marcantes, exercícios reflexivos ao final de cada capítulo e uma linguagem diretamente voltada à ação.',
+  promptEstilo:
+    'Enfatize estudos de caso práticos, metáforas marcantes, exercícios reflexivos ao final de cada capítulo e uma linguagem diretamente voltada à ação.',
   tom: 'didatico_inspirador',
   qtdCapitulos: 7,
   minPalavras: 1000,
   maxPalavras: 2500,
-  materiais: 'Notas sobre ancoragem mental, técnicas de respiração e a matriz de decisão sob pressão.',
-  informacoesObrigatorias: 'Incluir rotina matinal dos 4 pilares e tabela de rastreamento de hábitos.',
+  materiais:
+    'Notas sobre ancoragem mental, técnicas de respiração e a matriz de decisão sob pressão.',
+  informacoesObrigatorias:
+    'Incluir rotina matinal dos 4 pilares e tabela de rastreamento de hábitos.',
   restricoes: 'Evitar bordões genéricos de autoajuda. Manter rigor na psicologia comportamental.',
 };
 
@@ -122,7 +128,11 @@ export default function App() {
   const [isReaderOpen, setIsReaderOpen] = useState<boolean>(false);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState<boolean>(false);
   const [isAiSettingsOpen, setIsAiSettingsOpen] = useState<boolean>(false);
-  const [aiAssistState, setAiAssistState] = useState<{ text: string; action: string; chapterIndex?: number } | null>(null);
+  const [aiAssistState, setAiAssistState] = useState<{
+    text: string;
+    action: string;
+    chapterIndex?: number;
+  } | null>(null);
 
   // Auto-save projects to localStorage
   useEffect(() => {
@@ -190,9 +200,17 @@ export default function App() {
           chapters,
           currentStage: 'planning',
         }));
-        addToast('success', 'Planejamento Editorial Gerado', 'O plano de capítulos e diretrizes foi montado.');
+        addToast(
+          'success',
+          'Planejamento Editorial Gerado',
+          'O plano de capítulos e diretrizes foi montado.'
+        );
       } else {
-        addToast('error', 'Falha no Planejamento', data.error || 'Erro ao gerar planejamento editorial.');
+        addToast(
+          'error',
+          'Falha no Planejamento',
+          data.error || 'Erro ao gerar planejamento editorial.'
+        );
       }
     } catch (err: any) {
       console.error(err);
@@ -257,10 +275,18 @@ export default function App() {
             },
           };
         });
-        addToast('success', `Capítulo ${index + 1} Redigido`, `${data.wordCount} palavras geradas.`);
+        addToast(
+          'success',
+          `Capítulo ${index + 1} Redigido`,
+          `${data.wordCount} palavras geradas.`
+        );
         return true;
       } else {
-        addToast('error', `Erro no Capítulo ${index + 1}`, data.error || 'Erro ao escrever capítulo.');
+        addToast(
+          'error',
+          `Erro no Capítulo ${index + 1}`,
+          data.error || 'Erro ao escrever capítulo.'
+        );
         return false;
       }
     } catch (err: any) {
@@ -279,7 +305,10 @@ export default function App() {
 
     const totalCaps = activeProject.plan.sumario.length;
     for (let i = 0; i < totalCaps; i++) {
-      if (activeProject.chapters[i]?.status === 'completed' && activeProject.chapters[i]?.content?.trim()) {
+      if (
+        activeProject.chapters[i]?.status === 'completed' &&
+        activeProject.chapters[i]?.content?.trim()
+      ) {
         continue;
       }
 
@@ -298,7 +327,8 @@ export default function App() {
 
   // 4. Generate Front/End Matter Section
   const handleGenerateFrontOrEndMatter = async (
-    type: 'apresentacao' | 'introducao' | 'conclusao' | 'agradecimentos' | 'sobreAutor' | 'exercicios'
+    type:
+      'apresentacao' | 'introducao' | 'conclusao' | 'agradecimentos' | 'sobreAutor' | 'exercicios'
   ): Promise<boolean> => {
     try {
       const res = await fetch('/api/editorial/generate-section', {
@@ -330,7 +360,11 @@ export default function App() {
         addToast('success', 'Seção Gerada', `Seção ${type} adicionada ao livro.`);
         return true;
       } else {
-        addToast('error', 'Falha ao Gerar Seção', data.error || 'Erro ao gerar seção complementar.');
+        addToast(
+          'error',
+          'Falha ao Gerar Seção',
+          data.error || 'Erro ao gerar seção complementar.'
+        );
         return false;
       }
     } catch (err: any) {
@@ -342,14 +376,9 @@ export default function App() {
 
   const handleGenerateBatchFrontAndEndMatter = async () => {
     setIsGeneratingFrontEndBatch(true);
-    const sections: Array<'apresentacao' | 'introducao' | 'conclusao' | 'exercicios' | 'agradecimentos' | 'sobreAutor'> = [
-      'apresentacao',
-      'introducao',
-      'conclusao',
-      'exercicios',
-      'agradecimentos',
-      'sobreAutor',
-    ];
+    const sections: Array<
+      'apresentacao' | 'introducao' | 'conclusao' | 'exercicios' | 'agradecimentos' | 'sobreAutor'
+    > = ['apresentacao', 'introducao', 'conclusao', 'exercicios', 'agradecimentos', 'sobreAutor'];
 
     for (let i = 0; i < sections.length; i++) {
       const sec = sections[i];
@@ -363,7 +392,8 @@ export default function App() {
   };
 
   const handleUpdateFrontOrEndMatter = (
-    type: 'apresentacao' | 'introducao' | 'conclusao' | 'agradecimentos' | 'sobreAutor' | 'exercicios',
+    type:
+      'apresentacao' | 'introducao' | 'conclusao' | 'agradecimentos' | 'sobreAutor' | 'exercicios',
     content: string
   ) => {
     updateActiveProject((p) => {
@@ -398,7 +428,11 @@ export default function App() {
       const data = await res.json();
       if (data.success && data.report) {
         updateActiveProject((p) => ({ ...p, editorialReport: data.report }));
-        addToast('success', 'Auditoria Concluída', `Nota Geral de Qualidade: ${data.report.notaGeral}/100.`);
+        addToast(
+          'success',
+          'Auditoria Concluída',
+          `Nota Geral de Qualidade: ${data.report.notaGeral}/100.`
+        );
       } else {
         addToast('error', 'Erro na Auditoria', data.error || 'Erro na auditoria editorial.');
       }
@@ -474,7 +508,11 @@ export default function App() {
               },
             };
           });
-          addToast('success', 'Melhorias Aplicadas', `Capítulo ${chapterIndex + 1} aprimorado com sucesso.`);
+          addToast(
+            'success',
+            'Melhorias Aplicadas',
+            `Capítulo ${chapterIndex + 1} aprimorado com sucesso.`
+          );
         } else {
           addToast('error', 'Falha ao Aprimorar', data.error || 'Erro desconhecido');
         }
@@ -669,7 +707,9 @@ export default function App() {
           {activeProject.currentStage === 'config' && (
             <ConfigStage
               metadata={activeProject.metadata}
-              onChangeMetadata={(updated) => updateActiveProject((p) => ({ ...p, metadata: updated }))}
+              onChangeMetadata={(updated) =>
+                updateActiveProject((p) => ({ ...p, metadata: updated }))
+              }
               onProceedToPlanning={handleGeneratePlan}
               isGeneratingPlan={isGeneratingPlan}
             />
@@ -679,7 +719,9 @@ export default function App() {
             <PlanningStage
               plan={activeProject.plan}
               metadata={activeProject.metadata}
-              onUpdatePlan={(updatedPlan) => updateActiveProject((p) => ({ ...p, plan: updatedPlan }))}
+              onUpdatePlan={(updatedPlan) =>
+                updateActiveProject((p) => ({ ...p, plan: updatedPlan }))
+              }
               onRegeneratePlan={handleGeneratePlan}
               onProceedToWriting={() => setStage('writing')}
               isGenerating={isGeneratingPlan}
@@ -689,7 +731,14 @@ export default function App() {
           {activeProject.currentStage === 'writing' && (
             <WritingStage
               metadata={activeProject.metadata}
-              plan={activeProject.plan || { conceitoCentral: '', promessaPrincipal: '', perfilLeitor: { descricao: '', doresEAnseios: [], oQueBuscaraNoLivro: [] }, sumario: [] }}
+              plan={
+                activeProject.plan || {
+                  conceitoCentral: '',
+                  promessaPrincipal: '',
+                  perfilLeitor: { descricao: '', doresEAnseios: [], oQueBuscaraNoLivro: [] },
+                  sumario: [],
+                }
+              }
               chapters={activeProject.chapters}
               frontMatter={activeProject.frontMatter}
               endMatter={activeProject.endMatter}
@@ -800,7 +849,8 @@ export default function App() {
             </div>
 
             <div className="text-stone-300 font-sans text-[11px] uppercase tracking-wider">
-              Desenvolvido por <strong className="text-white font-bold">Philippe Simões Fernandes</strong>
+              Desenvolvido por{' '}
+              <strong className="text-white font-bold">Philippe Simões Fernandes</strong>
             </div>
           </div>
         </footer>

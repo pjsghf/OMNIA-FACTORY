@@ -58,7 +58,17 @@ export function validateChapterContent(
   // Basic Portuguese detection test
   let languageMatch = true;
   if (expectedLanguage.startsWith('pt') && !isEmpty) {
-    const ptMarkers = [' que ', ' para ', ' com ', ' como ', ' este ', ' esta ', ' não ', ' do ', ' da '];
+    const ptMarkers = [
+      ' que ',
+      ' para ',
+      ' com ',
+      ' como ',
+      ' este ',
+      ' esta ',
+      ' não ',
+      ' do ',
+      ' da ',
+    ];
     const lower = trimmed.toLowerCase();
     const matchCount = ptMarkers.filter((m) => lower.includes(m)).length;
     if (matchCount < 2 && wordCount > 50) {

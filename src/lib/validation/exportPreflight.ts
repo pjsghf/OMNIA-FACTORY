@@ -37,7 +37,9 @@ export function validateExportPreflight(project: BookProject): ExportPreflightRe
   // 1. Chapters Check
   const chapters = project.chapters || [];
   const totalChapters = chapters.length;
-  const completedChapters = chapters.filter((c) => c.status === 'completed' || c.status === 'edited');
+  const completedChapters = chapters.filter(
+    (c) => c.status === 'completed' || c.status === 'edited'
+  );
   const emptyChapters = chapters.filter((c) => !c.content || c.content.trim().length < 100);
 
   if (totalChapters === 0) {
@@ -74,7 +76,8 @@ export function validateExportPreflight(project: BookProject): ExportPreflightRe
   const hasTitle = Boolean(meta?.titulo?.trim());
   const hasAuthor = Boolean(meta?.autor?.trim());
   const bcp47Lang = meta?.idioma?.toLowerCase() || '';
-  const validLang = bcp47Lang.includes('pt') || bcp47Lang.includes('en') || bcp47Lang.includes('es');
+  const validLang =
+    bcp47Lang.includes('pt') || bcp47Lang.includes('en') || bcp47Lang.includes('es');
 
   if (!hasTitle || !hasAuthor) {
     items.push({
@@ -126,7 +129,8 @@ export function validateExportPreflight(project: BookProject): ExportPreflightRe
       severity: 'warning',
       label: 'Relatório de Auditoria Obsoleto',
       passed: false,
-      message: 'O conteúdo dos capítulos foi editado após a última auditoria. Execute nova revisão.',
+      message:
+        'O conteúdo dos capítulos foi editado após a última auditoria. Execute nova revisão.',
       waiverAllowed: true,
     });
   } else {
@@ -181,7 +185,8 @@ export function validateExportPreflight(project: BookProject): ExportPreflightRe
       severity: 'warning',
       label: 'Capa remota via HTTP',
       passed: false,
-      message: 'A imagem de capa é uma URL remota. Para exportação offline 100% garantida, incorpore ou gere arte vetorial.',
+      message:
+        'A imagem de capa é uma URL remota. Para exportação offline 100% garantida, incorpore ou gere arte vetorial.',
       waiverAllowed: true,
     });
   } else {
@@ -191,7 +196,9 @@ export function validateExportPreflight(project: BookProject): ExportPreflightRe
       severity: 'info',
       label: 'Recursos de Imagem Offline',
       passed: true,
-      message: coverUrl ? 'Capa embutida como recurso offline autônomo (Base64/SVG).' : 'Nenhuma imagem externa pendente.',
+      message: coverUrl
+        ? 'Capa embutida como recurso offline autônomo (Base64/SVG).'
+        : 'Nenhuma imagem externa pendente.',
     });
   }
 

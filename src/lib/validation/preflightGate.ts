@@ -47,8 +47,11 @@ export function checkProjectPreflight(project: BookProject | null): PreflightChe
   });
 
   // 2. Planning Check
-  const hasPlan = Boolean(project.plan && Array.isArray(project.plan.sumario) && project.plan.sumario.length > 0);
-  const planMatch = hasPlan && project.plan!.sumario.length === (project.metadata.qtdCapitulos || 7);
+  const hasPlan = Boolean(
+    project.plan && Array.isArray(project.plan.sumario) && project.plan.sumario.length > 0
+  );
+  const planMatch =
+    hasPlan && project.plan!.sumario.length === (project.metadata.qtdCapitulos || 7);
   items.push({
     stage: 'planning',
     label: 'Plano Editorial e Sumário',
@@ -56,14 +59,16 @@ export function checkProjectPreflight(project: BookProject | null): PreflightChe
     message: planMatch
       ? `Plano editorial completo com ${project.plan!.sumario.length} capítulos.`
       : hasPlan
-      ? `Plano editorial divergente (${project.plan!.sumario.length} caps vs ${project.metadata.qtdCapitulos} solicitados).`
-      : 'Plano editorial não gerado ou sem sumário.',
+        ? `Plano editorial divergente (${project.plan!.sumario.length} caps vs ${project.metadata.qtdCapitulos} solicitados).`
+        : 'Plano editorial não gerado ou sem sumário.',
     targetStage: 'planning',
   });
 
   // 3. Writing Check
   const totalCaps = project.chapters?.length || 0;
-  const completedCaps = (project.chapters || []).filter((c) => c.status === 'completed' || c.status === 'edited').length;
+  const completedCaps = (project.chapters || []).filter(
+    (c) => c.status === 'completed' || c.status === 'edited'
+  ).length;
   const allWritten = totalCaps > 0 && completedCaps === totalCaps;
   items.push({
     stage: 'writing',
@@ -72,8 +77,8 @@ export function checkProjectPreflight(project: BookProject | null): PreflightChe
     message: allWritten
       ? `Todos os ${totalCaps} capítulos redigidos com sucesso.`
       : totalCaps > 0
-      ? `${completedCaps} de ${totalCaps} capítulos redigidos.`
-      : 'Nenhum capítulo foi redigido ainda.',
+        ? `${completedCaps} de ${totalCaps} capítulos redigidos.`
+        : 'Nenhum capítulo foi redigido ainda.',
     targetStage: 'writing',
   });
 
@@ -88,10 +93,10 @@ export function checkProjectPreflight(project: BookProject | null): PreflightChe
     message: goodScore
       ? `Auditoria atualizada realizada com nota ${project.editorialReport!.notaGeral}/100.`
       : hasReport && project.editorialReport?.obsoleto
-      ? 'A auditoria editorial existente está obsoleta devido a edições recentes no texto.'
-      : hasReport
-      ? `Auditoria realizada com nota baixa (${project.editorialReport!.notaGeral}/100). Aplique melhorias.`
-      : 'Auditoria editorial não realizada.',
+        ? 'A auditoria editorial existente está obsoleta devido a edições recentes no texto.'
+        : hasReport
+          ? `Auditoria realizada com nota baixa (${project.editorialReport!.notaGeral}/100). Aplique melhorias.`
+          : 'Auditoria editorial não realizada.',
     targetStage: 'review',
   });
 

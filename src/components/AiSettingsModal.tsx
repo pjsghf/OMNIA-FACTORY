@@ -24,7 +24,10 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ config, onSave
 
   const geminiModels = [
     { id: 'gemini-3.6-flash', label: 'Gemini 3.6 Flash (Padrão - Ultra Rápido & Alto Volume)' },
-    { id: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (Alta Precisão & Raciocínio Editorial)' },
+    {
+      id: 'gemini-3.1-pro-preview',
+      label: 'Gemini 3.1 Pro (Alta Precisão & Raciocínio Editorial)',
+    },
     { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Rápido e Estável)' },
     { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (Análise Avançada)' },
   ];
@@ -39,8 +42,7 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ config, onSave
   ];
 
   const handleSave = () => {
-    const finalOpencodeModel =
-      opencodeModel === 'custom' ? customOpencodeModel : opencodeModel;
+    const finalOpencodeModel = opencodeModel === 'custom' ? customOpencodeModel : opencodeModel;
 
     onSave({
       provider,
@@ -60,7 +62,9 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ config, onSave
           <div className="flex items-center space-x-2">
             <Cpu className="w-5 h-5 text-[#1C1917]" />
             <div>
-              <h3 className="font-serif italic font-bold text-base">Configurações de Inteligência Artificial</h3>
+              <h3 className="font-serif italic font-bold text-base">
+                Configurações de Inteligência Artificial
+              </h3>
               <p className="text-[10px] uppercase tracking-wider text-[#78716C]">
                 Selecione o provedor de IA (Gemini / OpenCode GO) e os modelos ativos
               </p>
@@ -141,7 +145,8 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ config, onSave
             <div className="flex items-start space-x-2 text-[11px] text-[#78716C] bg-white p-3 border border-[#E7E5E4]">
               <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
               <span>
-                A chave de API do Gemini está configurada de forma segura no servidor da aplicação. Não é necessário inserir chaves manualmente para o Google Gemini.
+                A chave de API do Gemini está configurada de forma segura no servidor da aplicação.
+                Não é necessário inserir chaves manualmente para o Google Gemini.
               </span>
             </div>
           </div>

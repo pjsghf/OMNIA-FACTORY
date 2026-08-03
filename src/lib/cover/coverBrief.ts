@@ -134,7 +134,8 @@ export function validateUploadedImageBuffer(
   if (ext === 'svg' || claimedMime.includes('svg')) {
     return {
       valid: false,
-      error: 'Arquivos SVG não são aceitos no upload do usuário por motivos de segurança. Por favor utilize PNG, JPEG ou WebP.',
+      error:
+        'Arquivos SVG não são aceitos no upload do usuário por motivos de segurança. Por favor utilize PNG, JPEG ou WebP.',
     };
   }
 
@@ -157,7 +158,8 @@ export function validateUploadedImageBuffer(
   if (!isPng && !isJpeg && !isWebP) {
     return {
       valid: false,
-      error: 'Formato de imagem inválido ou assinatura corrompida. Formatos aceitos: PNG, JPEG, WebP.',
+      error:
+        'Formato de imagem inválido ou assinatura corrompida. Formatos aceitos: PNG, JPEG, WebP.',
     };
   }
 

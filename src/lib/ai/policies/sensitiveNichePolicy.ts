@@ -29,8 +29,14 @@ export function detectSensitiveNiche(metadata: Partial<BookMetadata>): Sensitive
       requiresSources: true,
       mandatoryDisclaimer:
         'Aviso: As informações contidas nesta obra possuem caráter exclusivamente educativo e informativo, não substituindo o diagnóstico, tratamento ou aconselhamento médico profissional.',
-      forbiddenPhrases: ['cura garantida', 'substitui seu médico', 'refeição milagrosa', '100% eficaz'],
-      toneConstraints: 'Usar tom informativo prudente. Proibido fazer diagnósticos ou promessas de cura.',
+      forbiddenPhrases: [
+        'cura garantida',
+        'substitui seu médico',
+        'refeição milagrosa',
+        '100% eficaz',
+      ],
+      toneConstraints:
+        'Usar tom informativo prudente. Proibido fazer diagnósticos ou promessas de cura.',
     };
   }
 
@@ -47,7 +53,8 @@ export function detectSensitiveNiche(metadata: Partial<BookMetadata>): Sensitive
       mandatoryDisclaimer:
         'Aviso: O conteúdo deste livro destina-se a fins puramente educacionais e não constitui recomendação individual de investimento nem garantia de rentabilidade.',
       forbiddenPhrases: ['lucro certo', 'fique rico rápido', 'rendimento garantido', 'sem risco'],
-      toneConstraints: 'Usar tom analítico responsável. Proibido prometer ganhos financeiros garantidos.',
+      toneConstraints:
+        'Usar tom analítico responsável. Proibido prometer ganhos financeiros garantidos.',
     };
   }
 
@@ -63,7 +70,8 @@ export function detectSensitiveNiche(metadata: Partial<BookMetadata>): Sensitive
       mandatoryDisclaimer:
         'Aviso: Este texto oferece reflexões conceituais e psicoeducativas, não configurando sessão de psicoterapia ou prescrição clínica.',
       forbiddenPhrases: ['elimine a depressão em 2 dias', 'substitui a terapia', 'cura do trauma'],
-      toneConstraints: 'Usar tom empático e cientificamente embasado. Respeitar limites da intervenção psicológica.',
+      toneConstraints:
+        'Usar tom empático e cientificamente embasado. Respeitar limites da intervenção psicológica.',
     };
   }
 

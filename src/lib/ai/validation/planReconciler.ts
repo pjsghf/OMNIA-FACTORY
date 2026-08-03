@@ -25,7 +25,8 @@ export function reconcileEditorialPlan(
 
   const perfilLeitor = {
     descricao:
-      rawPlan?.perfilLeitor?.descricao || `Leitores interessados no público-alvo: ${metadata.publicoAlvo}`,
+      rawPlan?.perfilLeitor?.descricao ||
+      `Leitores interessados no público-alvo: ${metadata.publicoAlvo}`,
     doresEAnseios: Array.isArray(rawPlan?.perfilLeitor?.doresEAnseios)
       ? rawPlan.perfilLeitor.doresEAnseios.map(String)
       : ['Buscar conhecimento e transformação'],
@@ -63,9 +64,14 @@ export function reconcileEditorialPlan(
         ? rawCap.objetivo.trim()
         : `Desenvolver os fundamentos e aplicações do capítulo ${numero}.`;
 
-    const topicos = Array.isArray(rawCap.topicos) && rawCap.topicos.length > 0
-      ? rawCap.topicos.map(String)
-      : ['Apresentação dos conceitos chave', 'Exemplos e análises práticas', 'Conclusões e síntese'];
+    const topicos =
+      Array.isArray(rawCap.topicos) && rawCap.topicos.length > 0
+        ? rawCap.topicos.map(String)
+        : [
+            'Apresentação dos conceitos chave',
+            'Exemplos e análises práticas',
+            'Conclusões e síntese',
+          ];
 
     const subtopicos = Array.isArray(rawCap.subtopicos)
       ? rawCap.subtopicos.map(String)

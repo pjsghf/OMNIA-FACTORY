@@ -78,7 +78,11 @@ export async function generateChapterInBlocks({
       const rawText = result.text || '';
       const normalized = normalizeProse(rawText);
 
-      const validation = validateChapterContent(normalized, blockPlan.estimativaPalavras, metadata.idioma);
+      const validation = validateChapterContent(
+        normalized,
+        blockPlan.estimativaPalavras,
+        metadata.idioma
+      );
 
       if (validation.valid || attempts === 3) {
         blockText = normalized;

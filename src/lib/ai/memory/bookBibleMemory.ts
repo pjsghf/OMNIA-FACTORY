@@ -42,7 +42,9 @@ export function updateBookBibleMemoryWithChapter(
 ): BookBibleMemory {
   const summaryText =
     extractedSummary?.summary ||
-    (chapterContent ? chapterContent.slice(0, 300) + '...' : `Capítulo ${chapterNumber} concluído.`);
+    (chapterContent
+      ? chapterContent.slice(0, 300) + '...'
+      : `Capítulo ${chapterNumber} concluído.`);
 
   const newEntry: ChapterMemoryEntry = {
     chapterNumber,
@@ -63,8 +65,12 @@ export function updateBookBibleMemoryWithChapter(
     version: memory.version + 1,
     updatedAt: new Date().toISOString(),
     resumosCapitulos: updatedChapters,
-    afirmacoesChave: Array.from(new Set([...memory.afirmacoesChave, ...(extractedSummary?.keyTheses || [])])),
-    datasETermos: Array.from(new Set([...memory.datasETermos, ...(extractedSummary?.termsDefined || [])])),
+    afirmacoesChave: Array.from(
+      new Set([...memory.afirmacoesChave, ...(extractedSummary?.keyTheses || [])])
+    ),
+    datasETermos: Array.from(
+      new Set([...memory.datasETermos, ...(extractedSummary?.termsDefined || [])])
+    ),
     exemplosEAnalogiasUtilizados: Array.from(
       new Set([...memory.exemplosEAnalogiasUtilizados, ...(extractedSummary?.analogiesUsed || [])])
     ),
@@ -80,10 +86,14 @@ export function formatMemoryForPrompt(memory: BookBibleMemory): string {
     .map((c) => `- Capítulo ${c.chapterNumber} ("${c.title}"): ${c.summary}`)
     .join('\n');
 
-  const terms = memory.datasETermos.length > 0 ? `\n\nTERMOS JÁ DEFINIDOS: ${memory.datasETermos.join(', ')}` : '';
-  const analogies = memory.exemplosEAnalogiasUtilizados.length > 0
-    ? `\n\nANALOGIAS E EXEMPLOS JÁ UTILIZADOS (NÃO REPETIR): ${memory.exemplosEAnalogiasUtilizados.join('; ')}`
-    : '';
+  const terms =
+    memory.datasETermos.length > 0
+      ? `\n\nTERMOS JÁ DEFINIDOS: ${memory.datasETermos.join(', ')}`
+      : '';
+  const analogies =
+    memory.exemplosEAnalogiasUtilizados.length > 0
+      ? `\n\nANALOGIAS E EXEMPLOS JÁ UTILIZADOS (NÃO REPETIR): ${memory.exemplosEAnalogiasUtilizados.join('; ')}`
+      : '';
 
   return `MEMÓRIA EDITORIAL E CONTINUIDADE (CAPÍTULOS ANTERIORES):\n${summaries}${terms}${analogies}`;
 }

@@ -9,8 +9,14 @@ export function normalizeProse(rawContent: string): string {
   let text = rawContent;
 
   // 1. Remove AI conversational prefixes and suffixes
-  text = text.replace(/^(com certeza|aqui está|certamente|com prazer|abaixo está|segue o)[^\n]*:\n+/gi, '');
-  text = text.replace(/\n+(espero que este capítulo|espero que goste|quaisquer dúvidas|boa leitura!)[^\n]*$/gi, '');
+  text = text.replace(
+    /^(com certeza|aqui está|certamente|com prazer|abaixo está|segue o)[^\n]*:\n+/gi,
+    ''
+  );
+  text = text.replace(
+    /\n+(espero que este capítulo|espero que goste|quaisquer dúvidas|boa leitura!)[^\n]*$/gi,
+    ''
+  );
 
   // 2. Protect Code Blocks
   const codeBlocks: string[] = [];

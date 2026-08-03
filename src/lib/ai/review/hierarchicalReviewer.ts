@@ -41,25 +41,50 @@ export async function runHierarchicalEditorialReview({
 
   // Front Matter units
   if (project.frontMatter?.apresentacao?.trim()) {
-    unitsToReview.push({ id: 'front-apresentacao', title: 'Apresentação', type: 'front', content: project.frontMatter.apresentacao });
+    unitsToReview.push({
+      id: 'front-apresentacao',
+      title: 'Apresentação',
+      type: 'front',
+      content: project.frontMatter.apresentacao,
+    });
   }
   if (project.frontMatter?.introducao?.trim()) {
-    unitsToReview.push({ id: 'front-introducao', title: 'Introdução', type: 'front', content: project.frontMatter.introducao });
+    unitsToReview.push({
+      id: 'front-introducao',
+      title: 'Introdução',
+      type: 'front',
+      content: project.frontMatter.introducao,
+    });
   }
 
   // Chapter units
   (project.chapters || []).forEach((cap) => {
     if (cap.content?.trim()) {
-      unitsToReview.push({ id: `cap-${cap.numero}`, title: `Capítulo ${cap.numero}: ${cap.titulo}`, type: 'chapter', content: cap.content });
+      unitsToReview.push({
+        id: `cap-${cap.numero}`,
+        title: `Capítulo ${cap.numero}: ${cap.titulo}`,
+        type: 'chapter',
+        content: cap.content,
+      });
     }
   });
 
   // End Matter units
   if (project.endMatter?.conclusao?.trim()) {
-    unitsToReview.push({ id: 'end-conclusao', title: 'Conclusão', type: 'end', content: project.endMatter.conclusao });
+    unitsToReview.push({
+      id: 'end-conclusao',
+      title: 'Conclusão',
+      type: 'end',
+      content: project.endMatter.conclusao,
+    });
   }
   if (project.endMatter?.exercicios?.trim()) {
-    unitsToReview.push({ id: 'end-exercicios', title: 'Exercícios', type: 'end', content: project.endMatter.exercicios });
+    unitsToReview.push({
+      id: 'end-exercicios',
+      title: 'Exercícios',
+      type: 'end',
+      content: project.endMatter.exercicios,
+    });
   }
 
   const totalUnits = unitsToReview.length;
@@ -74,7 +99,10 @@ export async function runHierarchicalEditorialReview({
   for (let i = 0; i < totalUnits; i++) {
     const unit = unitsToReview[i];
     if (onProgress) {
-      onProgress(`Auditando unidade ${i + 1}/${totalUnits}: ${unit.title}`, Math.round(((i + 1) / (totalUnits + 1)) * 80));
+      onProgress(
+        `Auditando unidade ${i + 1}/${totalUnits}: ${unit.title}`,
+        Math.round(((i + 1) / (totalUnits + 1)) * 80)
+      );
     }
 
     const systemInstruction = `Você é um Revisor Editorial Sênior. Sua função é realizar a auditoria da unidade "${unit.title}".

@@ -12,7 +12,10 @@ function getValidUuid(projectId: string): string {
     return projectId;
   }
   // Construct deterministic pseudo-UUID from timestamp/id
-  const clean = projectId.replace(/[^a-f0-9]/gi, '').padEnd(32, '0').slice(0, 32);
+  const clean = projectId
+    .replace(/[^a-f0-9]/gi, '')
+    .padEnd(32, '0')
+    .slice(0, 32);
   return `${clean.slice(0, 8)}-${clean.slice(8, 12)}-4${clean.slice(13, 16)}-8${clean.slice(17, 20)}-${clean.slice(20, 32)}`;
 }
 
@@ -197,10 +200,10 @@ li {
         coverImageExt = coverImageMime.includes('png')
           ? 'png'
           : coverImageMime.includes('svg')
-          ? 'svg'
-          : coverImageMime.includes('webp')
-          ? 'webp'
-          : 'jpg';
+            ? 'svg'
+            : coverImageMime.includes('webp')
+              ? 'webp'
+              : 'jpg';
         zip.file(`OEBPS/images/cover.${coverImageExt}`, match[2], { base64: true });
         hasCoverImage = true;
       } else if (rawUrl.includes('data:image/svg+xml')) {
@@ -227,7 +230,8 @@ li {
   }
 
   // 5. Build Content Sections using Canonical Editorial AST
-  const items: { id: string; href: string; title: string; content: string; epubType?: string }[] = [];
+  const items: { id: string; href: string; title: string; content: string; epubType?: string }[] =
+    [];
 
   // Cover Page
   if (hasCoverImage) {

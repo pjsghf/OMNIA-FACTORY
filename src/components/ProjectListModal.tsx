@@ -29,7 +29,8 @@ export const ProjectListModal: React.FC<ProjectListModalProps> = ({
   const handleBackupAll = () => {
     try {
       const pkg = createBackupPackage(projects);
-      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(pkg, null, 2));
+      const dataStr =
+        'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(pkg, null, 2));
       const downloadAnchor = document.createElement('a');
       const filename = `omnia_backup_v2_${new Date().toISOString().slice(0, 10)}.json`;
       downloadAnchor.setAttribute('href', dataStr);
@@ -59,7 +60,9 @@ export const ProjectListModal: React.FC<ProjectListModalProps> = ({
   };
 
   const handleDeleteWithConfirm = (proj: BookProject) => {
-    if (confirmNameInput.trim().toLowerCase() !== (proj.metadata.titulo || '').trim().toLowerCase()) {
+    if (
+      confirmNameInput.trim().toLowerCase() !== (proj.metadata.titulo || '').trim().toLowerCase()
+    ) {
       alert('O nome digitado não corresponde ao título do livro. Exclusão cancelada.');
       return;
     }
@@ -87,7 +90,10 @@ export const ProjectListModal: React.FC<ProjectListModalProps> = ({
           onImportProject(parsed);
           setMigrationNotice('Projeto individual importado.');
         } else {
-          alert('Arquivo JSON de projeto ou backup inválido: ' + (restored.error || 'estrutura não reconhecida.'));
+          alert(
+            'Arquivo JSON de projeto ou backup inválido: ' +
+              (restored.error || 'estrutura não reconhecida.')
+          );
         }
       } catch (err) {
         alert('Erro ao ler e validar o arquivo JSON.');
@@ -107,9 +113,15 @@ export const ProjectListModal: React.FC<ProjectListModalProps> = ({
         <div className="flex items-center justify-between pb-3 border-b border-[#E7E5E4]">
           <div className="flex items-center space-x-2">
             <BookOpen className="w-5 h-5 text-[#1C1917]" />
-            <h3 className="font-serif italic font-bold text-base">Biblioteca de Projetos Editorial</h3>
+            <h3 className="font-serif italic font-bold text-base">
+              Biblioteca de Projetos Editorial
+            </h3>
           </div>
-          <button onClick={onClose} className="p-1 hover:bg-[#F5F5F4] text-[#78716C]" aria-label="Fechar modal">
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-[#F5F5F4] text-[#78716C]"
+            aria-label="Fechar modal"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -121,7 +133,8 @@ export const ProjectListModal: React.FC<ProjectListModalProps> = ({
             <span>Segurança de Dados e Migração</span>
           </div>
           <p className="text-amber-800 leading-relaxed">
-            Seus projetos estão salvos neste navegador. Gere backups periódicos para prevenir perda de dados.
+            Seus projetos estão salvos neste navegador. Gere backups periódicos para prevenir perda
+            de dados.
           </p>
           {migrationNotice && (
             <div className="p-2 bg-emerald-100 border border-emerald-300 text-emerald-900 font-medium">
@@ -134,7 +147,9 @@ export const ProjectListModal: React.FC<ProjectListModalProps> = ({
         <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
           {projects.map((proj) => {
             const isCurrent = proj.id === currentProjectId;
-            const completedCaps = proj.chapters.filter((c) => c.status === 'completed' || c.status === 'edited').length;
+            const completedCaps = proj.chapters.filter(
+              (c) => c.status === 'completed' || c.status === 'edited'
+            ).length;
             const totalWords = proj.chapters.reduce((sum, c) => sum + (c.wordCount || 0), 0);
             const isConfirmingDelete = deleteConfirmId === proj.id;
 
@@ -160,7 +175,8 @@ export const ProjectListModal: React.FC<ProjectListModalProps> = ({
                       )}
                     </div>
                     <p className={`text-xs ${isCurrent ? 'text-stone-300' : 'text-[#78716C]'}`}>
-                      {completedCaps} de {proj.metadata.qtdCapitulos} Capítulos • {totalWords.toLocaleString('pt-BR')} palavras
+                      {completedCaps} de {proj.metadata.qtdCapitulos} Capítulos •{' '}
+                      {totalWords.toLocaleString('pt-BR')} palavras
                     </p>
                   </div>
 
@@ -202,7 +218,10 @@ export const ProjectListModal: React.FC<ProjectListModalProps> = ({
 
                 {isConfirmingDelete && (
                   <div className="bg-rose-950 text-white p-3 space-y-2 text-xs border border-rose-800 animate-fade-in">
-                    <p>Digite <strong>{proj.metadata.titulo}</strong> para confirmar a exclusão permanente:</p>
+                    <p>
+                      Digite <strong>{proj.metadata.titulo}</strong> para confirmar a exclusão
+                      permanente:
+                    </p>
                     <div className="flex items-center space-x-2">
                       <input
                         type="text"

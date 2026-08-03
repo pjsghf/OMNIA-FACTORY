@@ -66,7 +66,11 @@ export const BookReaderModal: React.FC<BookReaderModalProps> = ({ project, onClo
     if (currentSection.type === 'cover') {
       return (
         <div className="flex flex-col items-center justify-center space-y-4 py-8">
-          <img src={content} alt="Capa do Livro" className="max-h-96 object-contain border shadow-lg" />
+          <img
+            src={content}
+            alt="Capa do Livro"
+            className="max-h-96 object-contain border shadow-lg"
+          />
         </div>
       );
     }
@@ -182,7 +186,10 @@ export const BookReaderModal: React.FC<BookReaderModalProps> = ({ project, onClo
               <h3 className="text-[10px] uppercase tracking-[0.2em] font-semibold text-stone-400">
                 Sumário Canônico Completo
               </h3>
-              <button onClick={() => setShowToc(false)} className="text-stone-400 hover:text-white text-xs p-1">
+              <button
+                onClick={() => setShowToc(false)}
+                className="text-stone-400 hover:text-white text-xs p-1"
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -205,7 +212,10 @@ export const BookReaderModal: React.FC<BookReaderModalProps> = ({ project, onClo
           </aside>
         )}
 
-        <main ref={readerScrollRef} className="flex-1 overflow-y-auto p-3 sm:p-8 md:p-12 flex justify-center items-start bg-stone-950/80">
+        <main
+          ref={readerScrollRef}
+          className="flex-1 overflow-y-auto p-3 sm:p-8 md:p-12 flex justify-center items-start bg-stone-950/80"
+        >
           <div
             className={`w-full max-w-2xl my-2 sm:my-6 p-4 sm:p-12 md:p-14 border shadow-2xl transition-all flex flex-col justify-between ${
               themeClasses[paperTheme]

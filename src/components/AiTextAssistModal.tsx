@@ -54,7 +54,9 @@ export const AiTextAssistModal: React.FC<AiTextAssistModalProps> = ({
         <div className="flex items-center justify-between pb-3 border-b border-[#E7E5E4]">
           <div className="flex items-center space-x-2">
             <Sparkles className="w-4 h-4 text-[#1C1917]" />
-            <h3 className="font-serif italic font-bold text-base text-[#1C1917]">Assistente de Redação Inteligente</h3>
+            <h3 className="font-serif italic font-bold text-base text-[#1C1917]">
+              Assistente de Redação Inteligente
+            </h3>
           </div>
           <button onClick={onClose} className="p-1 hover:bg-[#F5F5F4] text-[#78716C]">
             <X className="w-5 h-5" />
@@ -63,7 +65,9 @@ export const AiTextAssistModal: React.FC<AiTextAssistModalProps> = ({
 
         {/* Action Options */}
         <div className="space-y-3">
-          <label className="block text-[10px] uppercase tracking-[0.2em] font-semibold text-[#A8A29E]">Escolha a Ação Editorial</label>
+          <label className="block text-[10px] uppercase tracking-[0.2em] font-semibold text-[#A8A29E]">
+            Escolha a Ação Editorial
+          </label>
           <div className="grid grid-cols-3 gap-2 text-xs font-serif italic">
             <button
               onClick={() => setAction('expand')}
@@ -131,14 +135,18 @@ export const AiTextAssistModal: React.FC<AiTextAssistModalProps> = ({
         {/* Text comparison */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
           <div>
-            <span className="block font-semibold text-[10px] uppercase tracking-wider text-[#A8A29E] mb-1">Texto Original Selecionado:</span>
+            <span className="block font-semibold text-[10px] uppercase tracking-wider text-[#A8A29E] mb-1">
+              Texto Original Selecionado:
+            </span>
             <div className="bg-[#FDFCFB] border border-[#E7E5E4] p-3 h-40 overflow-y-auto text-[#44403C] font-serif leading-relaxed">
               {initialText}
             </div>
           </div>
 
           <div>
-            <span className="block font-semibold text-[10px] uppercase tracking-wider text-[#1C1917] mb-1">Sugestão Aprimorada pela IA:</span>
+            <span className="block font-semibold text-[10px] uppercase tracking-wider text-[#1C1917] mb-1">
+              Sugestão Aprimorada pela IA:
+            </span>
             <div className="bg-[#FDFCFB] border border-[#E7E5E4] p-3 h-40 overflow-y-auto text-[#1C1917] font-serif leading-relaxed">
               {isLoading ? (
                 <div className="h-full flex flex-col items-center justify-center text-[#A8A29E] space-y-2">

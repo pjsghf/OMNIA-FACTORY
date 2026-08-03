@@ -75,7 +75,9 @@ export function applyGranularFindingPatch({
   if (metadata) {
     const coverageReport = checkChapterCoverage(newContent, [], metadata);
     if (coverageReport.forbiddenTermsViolated.length > 0) {
-      warning = (warning ? warning + ' ' : '') + `Atenção: A alteração introduziu termos proibidos: ${coverageReport.forbiddenTermsViolated.join(', ')}.`;
+      warning =
+        (warning ? warning + ' ' : '') +
+        `Atenção: A alteração introduziu termos proibidos: ${coverageReport.forbiddenTermsViolated.join(', ')}.`;
     }
   }
 
