@@ -1686,7 +1686,7 @@ export const DesignExportStage: React.FC<DesignExportStageProps> = ({
             {downloadNotice && (
               <div className="bg-emerald-950 border border-emerald-500 p-4 shadow-xl text-emerald-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-fadeIn">
                 <div className="flex items-start space-x-3">
-                  <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
                   <div>
                     <h4 className="font-bold text-sm text-emerald-100">{downloadNotice.title}</h4>
                     <p className="text-xs text-emerald-300/90 mt-0.5">
