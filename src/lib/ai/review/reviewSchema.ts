@@ -111,5 +111,8 @@ export function sanitizeEditorialReport(raw: any, projectVersionHash = ''): Edit
       Math.max(0, Number(raw?.coberturaTotalUnidadesPercent || 100))
     ),
     obsoleto: Boolean(raw?.obsoleto),
+    unidadesComFalha: Array.isArray(raw?.unidadesComFalha)
+      ? raw.unidadesComFalha.map(String)
+      : undefined,
   };
 }

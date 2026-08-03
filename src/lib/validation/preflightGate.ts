@@ -85,7 +85,12 @@ export function checkProjectPreflight(project: BookProject | null): PreflightChe
   // 4. Review Check
   const hasReport = Boolean(project.editorialReport);
   const isReportFresh = hasReport && !project.editorialReport?.obsoleto;
-  const goodScore = isReportFresh && (project.editorialReport?.notaGeral || 0) >= 70;
+  const failedUnits = project.editorialReport?.unidadesComFalha || [];
+  // A partial audit cannot vouch for the book: the score only reflects the units
+  // that were actually analysed.
+  const isComplete = failedUnits.length === 0;
+  const goodScore =
+    isReportFresh && isComplete && (project.editorialReport?.notaGeral || 0) >= 70;
   items.push({
     stage: 'review',
     label: 'Auditoria e Revisão Editorial',
@@ -94,9 +99,11 @@ export function checkProjectPreflight(project: BookProject | null): PreflightChe
       ? `Auditoria atualizada realizada com nota ${project.editorialReport!.notaGeral}/100.`
       : hasReport && project.editorialReport?.obsoleto
         ? 'A auditoria editorial existente está obsoleta devido a edições recentes no texto.'
-        : hasReport
-          ? `Auditoria realizada com nota baixa (${project.editorialReport!.notaGeral}/100). Aplique melhorias.`
-          : 'Auditoria editorial não realizada.',
+        : hasReport && !isComplete
+          ? `Auditoria incompleta: ${failedUnits.length} unidade(s) não puderam ser analisadas (${failedUnits.join(', ')}). Execute a auditoria novamente.`
+          : hasReport
+            ? `Auditoria realizada com nota baixa (${project.editorialReport!.notaGeral}/100). Aplique melhorias.`
+            : 'Auditoria editorial não realizada.',
     targetStage: 'review',
   });
 
