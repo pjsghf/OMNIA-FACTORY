@@ -17,23 +17,18 @@ import {
   FileText,
   Code2,
   Wand2,
-  Eye,
   Maximize2,
   X,
-  RefreshCw,
   Palette,
-  Layers,
   Upload,
   UploadCloud,
   CheckCircle2,
-  FileCheck,
   Sliders,
   AlertCircle,
   ShieldCheck,
 } from 'lucide-react';
 import { checkProjectPreflight } from '../lib/validation/preflightGate';
 import { downloadBlobWithCleanup, sanitizeFilename } from '../lib/utils/downloadHelper';
-import { validateExportPreflight } from '../lib/validation/exportPreflight';
 import { validateUploadedImageBuffer } from '../lib/cover/coverBrief';
 
 interface DesignExportStageProps {
@@ -92,7 +87,7 @@ function convertMarkdownToHTML(markdown: string): string {
     } else if (trimmed.startsWith('* ') || trimmed.startsWith('- ')) {
       const listItems = trimmed
         .split('\n')
-        .map((l) => `<li>${formatInlineHTML(l.replace(/^[\*\-]\s*/, ''))}</li>`);
+        .map((l) => `<li>${formatInlineHTML(l.replace(/^[*-]\s*/, ''))}</li>`);
       html += `<ul class="print-ul">\n${listItems.join('\n')}\n</ul>\n`;
       isFirstP = true;
     } else if (trimmed.match(/^\d+\.\s/)) {
