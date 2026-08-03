@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookMetadata, EditorialReport, ReviewFinding } from '../types';
+import { EditorialReport, ReviewFinding } from '../types';
 import {
   CheckCircle2,
   AlertTriangle,
@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 
 interface ReviewStageProps {
-  metadata: BookMetadata;
   report: EditorialReport | null;
   onRunReview: () => void;
   onApplyReviewImprovements: (chapterIndex?: number) => Promise<void>;
@@ -24,7 +23,6 @@ interface ReviewStageProps {
 }
 
 export const ReviewStage: React.FC<ReviewStageProps> = ({
-  metadata,
   report,
   onRunReview,
   onApplyReviewImprovements,
