@@ -115,6 +115,40 @@ describe('Persistence, Backup & Endpoint Security (Integration Tests)', () => {
     expect(res.body.projectId).toBe('proj_999');
   });
 
+  it('PERSIST-011: API stays open when API_ACCESS_TOKEN is unset (default behaviour)', async () => {
+    // The gate must be strictly opt-in: existing local setups and deployments
+    // cannot start returning 401 just because the middleware was added.
+    expect(process.env.API_ACCESS_TOKEN).toBeFalsy();
+    const res = await request(app).get('/api/health');
+    expect(res.status).toBe(200);
+  });
+
+  it('PERSIST-012: Rejects wrong tokens and lets health probes through when enabled', async () => {
+    const { createApiAuthMiddleware } = await import('../../src/lib/security/apiKeyAuth');
+    const express = (await import('express')).default;
+
+    process.env.API_ACCESS_TOKEN = 'segredo-de-teste';
+    const guarded = express();
+    guarded.use('/api/', createApiAuthMiddleware());
+    guarded.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
+    guarded.post('/api/editorial/plan', (_req, res) => res.json({ success: true }));
+    delete process.env.API_ACCESS_TOKEN;
+
+    expect((await request(guarded).get('/api/health')).status).toBe(200);
+    expect((await request(guarded).post('/api/editorial/plan')).status).toBe(401);
+    expect(
+      (await request(guarded).post('/api/editorial/plan').set('Authorization', 'Bearer errado'))
+        .status
+    ).toBe(401);
+    expect(
+      (
+        await request(guarded)
+          .post('/api/editorial/plan')
+          .set('Authorization', 'Bearer segredo-de-teste')
+      ).status
+    ).toBe(200);
+  });
+
   it('PERSIST-009: Unknown /api routes answer JSON 404, not the SPA HTML shell', async () => {
     // The SPA catch-all used to swallow these and reply 200 text/html, so a
     // mistyped endpoint fed an HTML document to a client calling res.json().

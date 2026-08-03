@@ -26,6 +26,7 @@ import { CoverBrief, calculateSpineWidthMm } from './src/lib/cover/coverBrief';
 import { validateAndLoadEnv } from './src/lib/config/envValidator';
 import { createSecurityHeadersMiddleware } from './src/lib/security/headersMiddleware';
 import { globalApiRateLimiter, editorialAiRateLimiter } from './src/lib/security/rateLimiter';
+import { createApiAuthMiddleware } from './src/lib/security/apiKeyAuth';
 import { logger } from './src/lib/observability/logger';
 import { CURRENT_PRIVACY_POLICY } from './src/lib/security/privacyPolicy';
 
@@ -42,6 +43,11 @@ app.use(createSecurityHeadersMiddleware());
 // 10.4 Rate Limiting & Cost Budget Protection
 app.use('/api/', globalApiRateLimiter);
 app.use('/api/editorial/', editorialAiRateLimiter);
+
+// Optional shared-secret gate. No-op unless API_ACCESS_TOKEN is set, so local and
+// existing deployments are unchanged; set it before exposing the server publicly,
+// since every endpoint spends the server's own AI credits.
+app.use('/api/', createApiAuthMiddleware());
 
 // 10.5 Request Tracing Middleware
 app.use((req, res, next) => {
