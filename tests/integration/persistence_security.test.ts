@@ -114,4 +114,27 @@ describe('Persistence, Backup & Endpoint Security (Integration Tests)', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.projectId).toBe('proj_999');
   });
+
+  it('PERSIST-009: Unknown /api routes answer JSON 404, not the SPA HTML shell', async () => {
+    // The SPA catch-all used to swallow these and reply 200 text/html, so a
+    // mistyped endpoint fed an HTML document to a client calling res.json().
+    const res = await request(app).get('/api/endpoint-que-nao-existe');
+    expect(res.status).toBe(404);
+    expect(res.headers['content-type']).toMatch(/application\/json/);
+    expect(res.body.error.code).toBe('NOT_FOUND');
+  });
+
+  // Regression guard, not a fixed bug: the global 50mb parser runs before the
+  // per-route one, so the early 413 handler already covered this path. Pinned so
+  // that reordering the middleware stack cannot silently start returning HTML.
+  it('PERSIST-010: Rejects an oversized PDF export body with JSON, not an HTML stack trace', async () => {
+    const res = await request(app)
+      .post('/api/export/pdf')
+      .set('Content-Type', 'application/json')
+      .send(`{"project":{"metadata":{"titulo":"${'x'.repeat(60 * 1024 * 1024)}"}}}`);
+
+    expect(res.status).toBe(413);
+    expect(res.headers['content-type']).toMatch(/application\/json/);
+    expect(res.body.error.code).toBe('PAYLOAD_TOO_LARGE');
+  });
 });

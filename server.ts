@@ -68,8 +68,9 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Route-specific parser alias for larger payloads
-const json10mb = express.json({ limit: '50mb' });
+
+// Route-level parser for the large-payload endpoints (PDF export, backups).
+const largePayloadJson = express.json({ limit: '50mb' });
 
 // Express error handler for payload limits
 app.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -1106,6 +1107,13 @@ app.post('/api/editorial/generate-cover', async (req, res) => {
   }
 });
 
+// PDF export launches a full Chromium per request and accepts bodies up to 50MB.
+// Without a ceiling, a handful of concurrent exports exhausts memory and takes the
+// whole server down -- the global 300-req/15min limiter does not help, because the
+// cost here is measured in simultaneous browsers, not request rate.
+const MAX_CONCURRENT_PDF_EXPORTS = Number(process.env.MAX_CONCURRENT_PDF_EXPORTS) || 2;
+let activePdfExports = 0;
+
 // SSRF validation helper for image URLs
 function validateImageSource(urlStr?: string): string | undefined {
   if (!urlStr || typeof urlStr !== 'string') return undefined;
@@ -1136,8 +1144,20 @@ function validateImageSource(urlStr?: string): string | undefined {
 }
 
 // API Endpoint 7: Server-side PDF Export via Puppeteer
-app.post('/api/export/pdf', json10mb, async (req, res) => {
+app.post('/api/export/pdf', largePayloadJson, async (req, res) => {
   let browser: any = null;
+
+  if (activePdfExports >= MAX_CONCURRENT_PDF_EXPORTS) {
+    return res.status(503).json({
+      error: {
+        code: 'PDF_EXPORT_BUSY',
+        message:
+          'O servidor está gerando outros PDFs no momento. Aguarde alguns instantes e tente novamente.',
+      },
+    });
+  }
+
+  activePdfExports++;
   try {
     const { project, settings } = req.body;
 
@@ -1263,6 +1283,7 @@ app.post('/api/export/pdf', json10mb, async (req, res) => {
       },
     });
   } finally {
+    activePdfExports--;
     if (browser) {
       await browser.close().catch(() => undefined);
     }
@@ -1270,7 +1291,7 @@ app.post('/api/export/pdf', json10mb, async (req, res) => {
 });
 
 // API Endpoint 8: Dedicated Asset Upload (Separated from JSON payload)
-app.post('/api/assets/upload', json10mb, (req, res) => {
+app.post('/api/assets/upload', largePayloadJson, (req, res) => {
   try {
     const { assetType, dataUrl, filename } = req.body;
     if (!dataUrl || typeof dataUrl !== 'string') {
@@ -1308,7 +1329,7 @@ app.post('/api/assets/upload', json10mb, (req, res) => {
 });
 
 // API Endpoint 9: Create Versioned Backup Package
-app.post('/api/projects/backup', json10mb, (req, res) => {
+app.post('/api/projects/backup', largePayloadJson, (req, res) => {
   try {
     const { projects } = req.body;
     if (!Array.isArray(projects)) {
@@ -1333,7 +1354,7 @@ app.post('/api/projects/backup', json10mb, (req, res) => {
 });
 
 // API Endpoint 10: Validate and Restore Backup Package
-app.post('/api/projects/restore', json10mb, (req, res) => {
+app.post('/api/projects/restore', largePayloadJson, (req, res) => {
   try {
     const backupPkg = req.body;
     const result = validateAndRestoreBackup(backupPkg);
@@ -1390,6 +1411,42 @@ app.post('/api/editorial/projects/:id/delete-data', (req, res) => {
     projectId: id,
     message: `Dados do projeto ${id} marcados para remoção e limpos dos buffers da sessão.`,
     deletedAt: new Date().toISOString(),
+  });
+});
+
+// Unknown API routes must not fall through to the SPA catch-all below: in
+// production that returned index.html with status 200, so a typo'd endpoint gave
+// the client HTML where it expected JSON and blew up inside res.json().
+app.use('/api', (_req, res) => {
+  res.status(404).json({
+    error: { code: 'NOT_FOUND', message: 'Endpoint de API não encontrado.' },
+  });
+});
+
+// Final error handler. The 413 guard near the top only catches body-parser errors
+// raised by middleware registered before it; anything thrown later (including by
+// the per-route largePayloadJson parser) previously fell through to Express's default
+// handler, which replies with an HTML stack trace.
+app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  const requestId = (req as any).requestId;
+  logger.error(`Unhandled error on ${req.method} ${req.originalUrl}`, {
+    requestId,
+    error: err?.message,
+    stack: envConfig.nodeEnv === 'production' ? undefined : err?.stack,
+  });
+
+  if (res.headersSent) return;
+
+  const status = err?.status || err?.statusCode || 500;
+  res.status(status).json({
+    error: {
+      code: err?.type === 'entity.too.large' ? 'PAYLOAD_TOO_LARGE' : 'INTERNAL_ERROR',
+      message:
+        status === 413
+          ? 'O tamanho da requisição excede o limite permitido (413 Payload Too Large).'
+          : 'Erro interno no servidor.',
+      requestId,
+    },
   });
 });
 
