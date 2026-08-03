@@ -1,7 +1,6 @@
 import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
-import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import puppeteer from 'puppeteer';
 import { getStylePrompt, getTonePrompt } from './src/data/promptsAndOptions';
@@ -19,11 +18,10 @@ import { generateChapterInBlocks } from './src/lib/ai/generation/blockGenerator'
 import { generateFrontEndMatter } from './src/lib/ai/generation/matterGenerator';
 import { createInitialBookBibleMemory } from './src/lib/ai/memory/bookBibleMemory';
 import { normalizeProse } from './src/lib/ai/normalization/proseNormalizer';
-import { validateChapterContent } from './src/lib/ai/validation/contentValidator';
 import { checkChapterCoverage } from './src/lib/ai/validation/coverageChecker';
 import { runHierarchicalEditorialReview } from './src/lib/ai/review/hierarchicalReviewer';
 import { renderCompositeCoverSvg, svgToDataUri } from './src/lib/cover/coverCanvasRenderer';
-import { CoverBrief, COVER_FORMAT_SPECS, calculateSpineWidthMm } from './src/lib/cover/coverBrief';
+import { CoverBrief, calculateSpineWidthMm } from './src/lib/cover/coverBrief';
 
 import { validateAndLoadEnv } from './src/lib/config/envValidator';
 import { createSecurityHeadersMiddleware } from './src/lib/security/headersMiddleware';
@@ -72,7 +70,7 @@ app.use(express.json({ limit: '1mb' }));
 const json10mb = express.json({ limit: '10mb' });
 
 // Express error handler for payload limits
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
   if (err && (err.type === 'entity.too.large' || err.status === 413)) {
     return res.status(413).json({
       error: {
@@ -81,11 +79,11 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
       },
     });
   }
-  next(err);
+  return next(err);
 });
 
 // Clean JSON string from markdown code blocks e.g. ```json ... ```
-function cleanJsonString(str: string): string {
+export function cleanJsonString(str: string): string {
   if (!str) return '{}';
   let cleaned = str.trim();
   if (cleaned.startsWith('```')) {
@@ -152,7 +150,7 @@ async function callAiCompletion({
 }
 
 // High-quality artistic vector SVG book cover generator with multi-theme bestseller layout
-function generateSvgCoverUrl(
+export function generateSvgCoverUrl(
   titulo: string,
   autor: string,
   subtitulo?: string,
@@ -386,14 +384,14 @@ app.post('/api/editorial/plan', async (req, res) => {
 
     const reconciliation = reconcileEditorialPlan(rawPlan, metadata);
 
-    res.json({
+    return res.json({
       success: true,
       plan: reconciliation.reconciledPlan,
       adjustments: reconciliation.adjustmentsMade,
     });
   } catch (error: any) {
     console.error('Error generating editorial plan:', error);
-    res
+    return res
       .status(500)
       .json({ success: false, error: error.message || 'Erro ao gerar planejamento editorial.' });
   }
@@ -434,7 +432,7 @@ app.post('/api/editorial/generate-chapter', async (req, res) => {
       metadata
     );
 
-    res.json({
+    return res.json({
       success: true,
       chapterIndex,
       chapterNumber: currentCap.numero,
@@ -446,7 +444,9 @@ app.post('/api/editorial/generate-chapter', async (req, res) => {
     });
   } catch (error: any) {
     console.error('Error generating chapter:', error);
-    res.status(500).json({ success: false, error: error.message || 'Erro ao escrever capítulo.' });
+    return res
+      .status(500)
+      .json({ success: false, error: error.message || 'Erro ao escrever capítulo.' });
   }
 });
 
@@ -482,7 +482,7 @@ app.post('/api/editorial/generate-section', async (req, res) => {
       aiConfig,
     });
 
-    res.json({
+    return res.json({
       success: true,
       sectionType,
       title: sectionType,
@@ -490,7 +490,7 @@ app.post('/api/editorial/generate-section', async (req, res) => {
     });
   } catch (error: any) {
     console.error('Error generating section:', error);
-    res
+    return res
       .status(500)
       .json({ success: false, error: error.message || 'Erro ao gerar seção complementar.' });
   }
@@ -520,10 +520,10 @@ app.post('/api/editorial/review', async (req, res) => {
       aiConfig,
     });
 
-    res.json({ success: true, report });
+    return res.json({ success: true, report });
   } catch (error: any) {
     console.error('Error performing editorial review:', error);
-    res
+    return res
       .status(500)
       .json({ success: false, error: error.message || 'Erro na auditoria editorial.' });
   }
@@ -532,8 +532,7 @@ app.post('/api/editorial/review', async (req, res) => {
 // API Endpoint 4B: Apply Editorial Review Improvements to Chapter
 app.post('/api/editorial/apply-review', async (req, res) => {
   try {
-    const { metadata, plan, chapterIndex, chapterTitle, chapterContent, report, aiConfig } =
-      req.body;
+    const { metadata, chapterIndex, chapterTitle, chapterContent, report, aiConfig } = req.body;
 
     if (!chapterContent) {
       return res.status(400).json({ success: false, error: 'Conteúdo do capítulo está vazio.' });
@@ -601,7 +600,7 @@ Reescreva e aprimore o texto do capítulo em prosa limpa de livro impresso (SEM 
     const revisedContent = cleanMarkdownProse(rawContent);
     const wordCount = revisedContent.trim().split(/\s+/).length;
 
-    res.json({
+    return res.json({
       success: true,
       chapterIndex,
       chapterTitle,
@@ -610,7 +609,7 @@ Reescreva e aprimore o texto do capítulo em prosa limpa de livro impresso (SEM 
     });
   } catch (error: any) {
     console.error('Error applying review to chapter:', error);
-    res
+    return res
       .status(500)
       .json({ success: false, error: error.message || 'Erro ao aplicar melhorias no capítulo.' });
   }
@@ -652,26 +651,17 @@ Retorne APENAS o texto aprimorado sem introduções nem símbolos de markdown #:
 
     const result = cleanMarkdownProse(rawResult);
 
-    res.json({ success: true, result });
+    return res.json({ success: true, result });
   } catch (error: any) {
     console.error('Error assisting text:', error);
-    res
+    return res
       .status(500)
       .json({ success: false, error: error.message || 'Erro no assistente de texto.' });
   }
 });
 
-// Health Check Endpoint (Lightweight process check)
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-  });
-});
-
 // Readiness Endpoint (Checks backend readiness & AI Provider availability)
-app.get('/api/ready', async (req, res) => {
+app.get('/api/ready', async (_req, res) => {
   try {
     const aiHealth = await aiOrchestrator.healthCheck();
     const isReady = Object.values(aiHealth).some((p) => p.status === 'ok');
@@ -820,7 +810,7 @@ app.post('/api/editorial/generate-cover', async (req, res) => {
       formatProfile: 'ebook',
     };
     const svgComposite = renderCompositeCoverSvg({ brief: fallbackBrief, overlay: 'none' });
-    res.json({
+    return res.json({
       success: true,
       imageUrl: svgToDataUri(svgComposite),
       source: 'fallback_svg',
@@ -970,10 +960,10 @@ app.post('/api/export/pdf', json10mb, async (req, res) => {
       'Content-Disposition',
       `attachment; filename="${safeTitle}_${exportSettings.paperSize.toLowerCase()}.pdf"`
     );
-    res.send(Buffer.from(pdfBuffer));
+    return res.send(Buffer.from(pdfBuffer));
   } catch (error: any) {
     console.error('Error generating PDF on server:', error);
-    res.status(500).json({
+    return res.status(500).json({
       error: {
         code: 'PDF_GENERATION_FAILED',
         message: error.message || 'Erro ao gerar PDF no servidor.',
@@ -1079,7 +1069,7 @@ app.post('/api/projects/restore', json10mb, (req, res) => {
 });
 
 // API Endpoint 11: Health Check & System Diagnostics
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (_req, res) => {
   return res.json({
     status: 'ok',
     service: 'OMNIA Scriptor Editorial Studio',
@@ -1091,7 +1081,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // API Endpoint 12: Privacy Policy Manifest
-app.get('/api/privacy-policy', (req, res) => {
+app.get('/api/privacy-policy', (_req, res) => {
   return res.json({
     success: true,
     policy: CURRENT_PRIVACY_POLICY,
@@ -1121,8 +1111,8 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+    app.get('*', (_req, res) => {
+      return res.sendFile(path.join(distPath, 'index.html'));
     });
   }
 
