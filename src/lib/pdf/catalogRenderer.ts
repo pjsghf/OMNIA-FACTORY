@@ -34,7 +34,7 @@ export function renderCatalogPageHtml(project: BookProject, settings: PdfExportS
   }
 
   return `
-    <div class="page-sheet">
+    <div class="page-sheet" data-book-title="${escapeHtml(project.metadata.titulo)}">
       <div class="pdf-copyright-page">
         <div class="copyright-top">
           <p>© ${currentYear} <strong>${author}</strong>. Todos os direitos reservados.</p>

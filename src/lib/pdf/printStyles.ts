@@ -140,12 +140,32 @@ export function buildPrintStyles(settings: PdfExportSettings): string {
       counter-reset: page 0;
     }
 
+    /* Book title in bottom left corner (canto inferior esquerdo) */
+    .page-sheet:not(.cover-sheet)::before {
+      content: attr(data-book-title);
+      position: absolute;
+      bottom: 8mm;
+      left: ${metrics.innerMarginMm || 12}mm;
+      max-width: 55%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-family: 'Georgia', 'Garamond', 'Palatino Linotype', 'Times New Roman', serif;
+      font-size: 8.5pt;
+      font-weight: 500;
+      font-style: italic;
+      color: #71717a;
+      letter-spacing: 0.3px;
+      pointer-events: none;
+      z-index: 100;
+    }
+
     /* Page number indicator in bottom right corner (canto inferior direito) */
     .page-sheet:not(.cover-sheet)::after {
       content: "Pág. " counter(page);
       position: absolute;
       bottom: 8mm;
-      right: 12mm;
+      right: ${metrics.outerMarginMm || 12}mm;
       font-family: 'Georgia', 'Garamond', 'Palatino Linotype', 'Times New Roman', serif;
       font-size: 8.5pt;
       font-weight: 600;

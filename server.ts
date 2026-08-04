@@ -7,6 +7,7 @@ import { getStylePrompt, getTonePrompt } from './src/data/promptsAndOptions';
 import { buildPrintableBookHtml } from './src/lib/pdf/printTemplate';
 import { ensureNodeJsdom } from './src/lib/pdf/markdownRenderer';
 import { PdfExportSettings } from './src/lib/pdf/types';
+import { getPageMetrics } from './src/lib/pdf/pageMetrics';
 
 import { createBackupPackage, validateAndRestoreBackup } from './src/lib/backupService';
 import { aiOrchestrator } from './src/lib/ai/orchestrator';
@@ -1077,16 +1078,31 @@ app.post('/api/export/pdf', largePayloadJson, async (req, res) => {
     });
 
     const isA5 = exportSettings.paperSize === 'A5';
+    const metrics = getPageMetrics(exportSettings.paperSize);
+    const rawTitle = sanitizedProject.metadata.titulo || '';
+    const safeTitleHeader = rawTitle
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
 
     const pdfBuffer = await page.pdf({
       printBackground: true,
       preferCSSPageSize: true,
+      displayHeaderFooter: true,
+      headerTemplate: '<div style="font-size:1px;"></div>',
+      footerTemplate: `
+        <div style="width: 100%; font-size: 8.5pt; font-family: 'Georgia', 'Garamond', 'Palatino Linotype', serif; color: #52525b; padding: 0 ${metrics.outerMarginMm || 12}mm 6mm ${metrics.innerMarginMm || 12}mm; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
+          <span style="font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%;">${safeTitleHeader}</span>
+          <span style="font-weight: 600;">Pág. <span class="pageNumber"></span></span>
+        </div>
+      `,
       width: isA5 ? '148mm' : '210mm',
       height: isA5 ? '210mm' : '297mm',
       margin: {
         top: '0mm',
         right: '0mm',
-        bottom: '0mm',
+        bottom: `${metrics.bottomMarginMm || 18}mm`,
         left: '0mm',
       },
     });

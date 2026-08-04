@@ -116,7 +116,7 @@ export function buildPrintableBookHtml(options: PrintableBookOptions): string {
     </div>
 
     <!-- Title Page (Folha de Rosto) -->
-    <div class="page-sheet">
+    <div class="page-sheet" data-book-title="${escapeHtml(project.metadata.titulo)}">
       <div class="pdf-title-page">
         <div class="pub-header">${escapeHtml(project.metadata.editora || 'EDITORA OMNIA')}</div>
         <div>
@@ -139,7 +139,7 @@ export function buildPrintableBookHtml(options: PrintableBookOptions): string {
     ${renderCatalogPageHtml(project, settings)}
 
     <!-- Table of Contents (Sumário) -->
-    <div class="page-sheet">
+    <div class="page-sheet" data-book-title="${escapeHtml(project.metadata.titulo)}">
       <div class="pdf-toc-page">
         <h1 class="toc-heading">SUMÁRIO</h1>
         <div class="toc-items">
@@ -152,7 +152,7 @@ export function buildPrintableBookHtml(options: PrintableBookOptions): string {
     ${
       project.frontMatter.apresentacao
         ? `
-      <div class="page-sheet" id="front-apresentacao">
+      <div class="page-sheet" id="front-apresentacao" data-book-title="${escapeHtml(project.metadata.titulo)}">
         <div class="section-container">
           <h1 class="section-title">Apresentação</h1>
           <div class="section-content">${renderMarkdownForPrint(project.frontMatter.apresentacao)}</div>
@@ -165,7 +165,7 @@ export function buildPrintableBookHtml(options: PrintableBookOptions): string {
     ${
       project.frontMatter.introducao
         ? `
-      <div class="page-sheet" id="front-introducao">
+      <div class="page-sheet" id="front-introducao" data-book-title="${escapeHtml(project.metadata.titulo)}">
         <div class="section-container">
           <h1 class="section-title">Introdução</h1>
           <div class="section-content">${renderMarkdownForPrint(project.frontMatter.introducao)}</div>
@@ -179,7 +179,7 @@ export function buildPrintableBookHtml(options: PrintableBookOptions): string {
     ${project.chapters
       .map(
         (cap) => `
-      <div class="page-sheet" id="capitulo-${cap.numero}">
+      <div class="page-sheet" id="capitulo-${cap.numero}" data-book-title="${escapeHtml(project.metadata.titulo)}">
         <div class="chapter-container">
           <div class="chapter-opening">
             <div class="chapter-badge">CAPÍTULO ${cap.numero}</div>
@@ -196,7 +196,7 @@ export function buildPrintableBookHtml(options: PrintableBookOptions): string {
     ${
       project.endMatter.conclusao
         ? `
-      <div class="page-sheet" id="end-conclusao">
+      <div class="page-sheet" id="end-conclusao" data-book-title="${escapeHtml(project.metadata.titulo)}">
         <div class="section-container">
           <h1 class="section-title">Conclusão</h1>
           <div class="section-content">${renderMarkdownForPrint(project.endMatter.conclusao)}</div>
@@ -209,7 +209,7 @@ export function buildPrintableBookHtml(options: PrintableBookOptions): string {
     ${
       project.endMatter.exercicios
         ? `
-      <div class="page-sheet" id="end-exercicios">
+      <div class="page-sheet" id="end-exercicios" data-book-title="${escapeHtml(project.metadata.titulo)}">
         <div class="section-container">
           <h1 class="section-title">Exercícios e Materiais</h1>
           <div class="section-content">${renderMarkdownForPrint(project.endMatter.exercicios)}</div>
@@ -222,7 +222,7 @@ export function buildPrintableBookHtml(options: PrintableBookOptions): string {
     ${
       project.endMatter.agradecimentos
         ? `
-      <div class="page-sheet" id="end-agradecimentos">
+      <div class="page-sheet" id="end-agradecimentos" data-book-title="${escapeHtml(project.metadata.titulo)}">
         <div class="section-container">
           <h1 class="section-title">Agradecimentos</h1>
           <div class="section-content">${renderMarkdownForPrint(project.endMatter.agradecimentos)}</div>
@@ -235,7 +235,7 @@ export function buildPrintableBookHtml(options: PrintableBookOptions): string {
     ${
       project.endMatter.sobreAutor
         ? `
-      <div class="page-sheet" id="end-sobre-autor">
+      <div class="page-sheet" id="end-sobre-autor" data-book-title="${escapeHtml(project.metadata.titulo)}">
         <div class="section-container">
           <h1 class="section-title">Sobre o Autor</h1>
           <div class="section-content">${renderMarkdownForPrint(project.endMatter.sobreAutor)}</div>
