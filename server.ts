@@ -272,11 +272,15 @@ app.post('/api/editorial/generate-section', async (req, res) => {
       });
     }
 
-    const typeMap: Record<string, 'introducao' | 'conclusao' | 'exercicios' | 'sobreAutor'> = {
+    const typeMap: Record<
+      string,
+      'apresentacao' | 'introducao' | 'conclusao' | 'exercicios' | 'agradecimentos' | 'sobreAutor'
+    > = {
+      apresentacao: 'apresentacao',
       introducao: 'introducao',
-      apresentacao: 'introducao',
       conclusao: 'conclusao',
       exercicios: 'exercicios',
+      agradecimentos: 'agradecimentos',
       sobreAutor: 'sobreAutor',
     };
 

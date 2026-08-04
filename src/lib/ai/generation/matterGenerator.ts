@@ -13,7 +13,8 @@ export async function generateFrontEndMatter({
   metadata: BookMetadata;
   plan?: EditorialPlan | null;
   fullBookContent: string;
-  type: 'introducao' | 'conclusao' | 'exercicios' | 'sobreAutor';
+  type:
+    'apresentacao' | 'introducao' | 'conclusao' | 'exercicios' | 'agradecimentos' | 'sobreAutor';
   aiConfig?: any;
 }): Promise<string> {
   const promptPkg = buildMatterPrompt({

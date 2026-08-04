@@ -166,26 +166,55 @@ export function buildMatterPrompt({
   metadata: BookMetadata;
   plan?: EditorialPlan | null;
   fullBookContent: string;
-  type: 'introducao' | 'conclusao' | 'exercicios' | 'sobreAutor';
+  type:
+    'apresentacao' | 'introducao' | 'conclusao' | 'exercicios' | 'agradecimentos' | 'sobreAutor';
 }): PromptPackage {
   const titles: Record<string, string> = {
+    apresentacao: 'Apresentação da Obra',
     introducao: 'Introdução Oficial da Obra',
     conclusao: 'Conclusão e Encerramento',
-    exercicios: 'Guia Prático de Exercícios e Aplicações',
+    exercicios: 'Exercícios e Práticas',
+    agradecimentos: 'Agradecimentos',
     sobreAutor: 'Sobre o Autor',
   };
 
-  const systemInstruction = `Você é um Editor Chefe Literário. Escreva a seção "${titles[type]}" para o livro em ${metadata.idioma || 'Português'}.
-${type === 'sobreAutor' ? 'ATENÇÃO CRÍTICA: Use EXCLUSIVAMENTE as informações reais do autor fornecidas pelo usuário. JAMAIS invente diplomas, prêmios ou cargos não mencionados.' : ''}`;
+  const specificDirectives: Record<string, string> = {
+    apresentacao:
+      'Escreva uma Apresentação elegante e convidativa para a obra, contextualizando a proposta do livro e preparando o leitor.',
+    introducao:
+      'Escreva uma Introdução profunda sobre a tese central da obra, abordando os conceitos fundamentais que serão desenvolvidos nos capítulos.',
+    conclusao:
+      'Escreva uma Conclusão transformadora, sintetizando os principais aprendizados da obra e oferecendo uma mensagem final inspiradora.',
+    exercicios:
+      'Crie um guia prático com Exercícios, Perguntas de Reflexão, Desafios de Aplicação e Plano de Ação Prático estruturado com base nos ensinamentos dos capítulos do livro.',
+    agradecimentos:
+      'Escreva uma seção de Agradecimentos calorosa, elegante e sincera, reconhecendo leitores, mentores, colaboradores e apoiadores da jornada do autor.',
+    sobreAutor:
+      'Escreva um perfil bibliográfico/biografia autoral do autor em tom profissional e elegante. ATENÇÃO CRÍTICA: Use EXCLUSIVAMENTE as informações reais fornecidas pelo usuário. JAMAIS invente diplomas, prêmios ou cargos fictícios.',
+  };
 
-  const userPrompt = `OBRA: ${metadata.titulo} - ${metadata.subtitulo || ''}
+  const title = titles[type] || 'Seção Complementar';
+  const directive = specificDirectives[type] || 'Escreva o conteúdo da seção em prosa elegante.';
+
+  const systemInstruction = `Você é um Editor Chefe Literário de alta reputação. Sua missão é redigir a seção "${title}" para um livro publicado em ${metadata.idioma || 'Português'}.
+Estilo: ${metadata.estilo || 'Geral'} | Tom: ${metadata.tom || 'Conversacional e didático'}
+
+DIRETRIZ DA SEÇÃO:
+${directive}
+
+REGRAS RÍGIDAS DE REDAÇÃO:
+1. Escreva em prosa limpa de livro impresso (SEM SÍMBOLOS DE MARKDOWN TIPO '#' OU '---').
+2. NÃO inclua saudações nem comentários de IA. Escreva diretamente a prosa da seção.`;
+
+  const userPrompt = `OBRA: ${metadata.titulo} ${metadata.subtitulo ? `— ${metadata.subtitulo}` : ''}
 AUTOR: ${metadata.autor}
-PERFIL DO AUTOR / NOTAS: ${metadata.resumo}
+EDITORA: ${metadata.editora || 'Editora OMNIA'}
+RESUMO DO LIVRO: ${metadata.resumo}
 
-RESUMO DO CONTEÚDO EFETIVO DO LIVRO:
-${fullBookContent ? fullBookContent.slice(0, 15000) : 'Livro fundamentado na obra do autor.'}
+RESUMO DO CONTEÚDO DOS CAPÍTULOS:
+${fullBookContent ? fullBookContent.slice(0, 15000) : 'Obra fundamentada na proposta do autor.'}
 
-Escreva o texto completo da seção "${titles[type]}" em prosa elegante:`;
+Redija a seção "${title}" agora:`;
 
   return {
     taskVersion: '2.0.0-matter',
