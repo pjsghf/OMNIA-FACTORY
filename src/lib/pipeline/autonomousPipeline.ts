@@ -168,14 +168,18 @@ export class AutonomousPipelineRunner {
   }
 
   private async executeStepPlan(): Promise<boolean> {
-    for (let attempt = 1; attempt <= 3; attempt++) {
+    const maxAttempts = 10;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       if (this.cancelRequested) return false;
 
       if (attempt > 1) {
+        const backoffSec = Math.min(5 * Math.pow(1.4, attempt - 2), 30);
         this.emitTelemetry(
-          `Tentativa ${attempt} de 3: Reagendando geração do planejamento editorial com tempo expandido...`
+          `[Tentativa ${attempt}/${maxAttempts}] Reagendando geração do planejamento editorial (Aguardando ${Math.round(
+            backoffSec
+          )}s)...`
         );
-        await new Promise((r) => setTimeout(r, 4000));
+        await new Promise((r) => setTimeout(r, backoffSec * 1000));
       }
 
       try {
@@ -211,45 +215,59 @@ export class AutonomousPipelineRunner {
           return true;
         } else {
           this.emitTelemetry(
-            `Aviso na tentativa ${attempt} de planejamento: ${data.error || 'Erro no planejamento'}`
+            `Aviso na tentativa ${attempt}/${maxAttempts} de planejamento: ${data.error || 'Erro no planejamento'}`
           );
         }
       } catch (err: any) {
-        this.emitTelemetry(`Erro na tentativa ${attempt} de planejamento: ${err?.message || err}`);
+        this.emitTelemetry(
+          `Erro na tentativa ${attempt}/${maxAttempts} de planejamento: ${err?.message || err}`
+        );
       }
     }
 
-    this.emitTelemetry('Falha no planejamento após 3 tentativas.');
+    this.emitTelemetry(
+      `Falha no planejamento após ${maxAttempts} tentativas. Interrompendo pipeline.`
+    );
     return false;
   }
 
   private async executeStepFrontMatter() {
     for (const section of ['apresentacao', 'introducao'] as const) {
       if (this.cancelRequested) break;
-      try {
-        const res = await fetch('/api/editorial/generate-section', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            metadata: this.options.project.metadata,
-            plan: this.options.project.plan,
-            sectionType: section,
-            aiConfig: this.options.aiConfig,
-          }),
-        });
-        const data = await res.json();
-        if (data.success && data.content) {
-          this.options.onProjectUpdate((prev) => ({
-            ...prev,
-            frontMatter: {
-              ...prev.frontMatter,
-              [section]: data.content,
-            },
-          }));
-          this.emitTelemetry(`Seção pré-textual '${section}' gerada com sucesso.`);
+
+      for (let attempt = 1; attempt <= 5; attempt++) {
+        if (attempt > 1) {
+          await new Promise((r) => setTimeout(r, 4000));
         }
-      } catch (err: any) {
-        this.emitTelemetry(`Aviso: falha ao gerar pré-textual ${section}: ${err?.message}`);
+
+        try {
+          const res = await fetch('/api/editorial/generate-section', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              metadata: this.options.project.metadata,
+              plan: this.options.project.plan,
+              sectionType: section,
+              aiConfig: this.options.aiConfig,
+            }),
+          });
+          const data = await res.json();
+          if (data.success && data.content) {
+            this.options.onProjectUpdate((prev) => ({
+              ...prev,
+              frontMatter: {
+                ...prev.frontMatter,
+                [section]: data.content,
+              },
+            }));
+            this.emitTelemetry(`Seção pré-textual '${section}' gerada com sucesso.`);
+            break;
+          }
+        } catch (err: any) {
+          this.emitTelemetry(
+            `Aviso (Tentativa ${attempt}/5): falha em pré-textual ${section}: ${err?.message}`
+          );
+        }
       }
     }
   }
@@ -261,8 +279,17 @@ export class AutonomousPipelineRunner {
 
       this.emitTelemetry(`Redigindo Capítulo ${i + 1} de ${total}...`);
       let chapterSuccess = false;
+      const maxChapterAttempts = 5;
 
-      for (let attempt = 1; attempt <= 2; attempt++) {
+      for (let attempt = 1; attempt <= maxChapterAttempts; attempt++) {
+        if (attempt > 1) {
+          const waitSec = Math.min(4 * attempt, 20);
+          this.emitTelemetry(
+            `[Cap. ${i + 1}] Re-tentando redação (${attempt}/${maxChapterAttempts}) após ${waitSec}s...`
+          );
+          await new Promise((r) => setTimeout(r, waitSec * 1000));
+        }
+
         try {
           const res = await fetch('/api/editorial/generate-chapter', {
             method: 'POST',
@@ -302,13 +329,16 @@ export class AutonomousPipelineRunner {
             break;
           }
         } catch (err: any) {
-          this.emitTelemetry(`Tentativa ${attempt} falhou no Cap. ${i + 1}: ${err?.message}`);
-          await new Promise((r) => setTimeout(r, 3000));
+          this.emitTelemetry(
+            `Tentativa ${attempt}/${maxChapterAttempts} falhou no Cap. ${i + 1}: ${err?.message}`
+          );
         }
       }
 
       if (!chapterSuccess) {
-        this.emitTelemetry(`Capítulo ${i + 1} falhou nas tentativas. Continuando com o próximo...`);
+        this.emitTelemetry(
+          `Aviso: Capítulo ${i + 1} não foi gerado após ${maxChapterAttempts} tentativas. Continuando com o próximo...`
+        );
       }
     }
     return true;
@@ -317,30 +347,40 @@ export class AutonomousPipelineRunner {
   private async executeStepEndMatter() {
     for (const section of ['conclusao', 'exercicios', 'agradecimentos', 'sobreAutor'] as const) {
       if (this.cancelRequested) break;
-      try {
-        const res = await fetch('/api/editorial/generate-section', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            metadata: this.options.project.metadata,
-            plan: this.options.project.plan,
-            sectionType: section,
-            aiConfig: this.options.aiConfig,
-          }),
-        });
-        const data = await res.json();
-        if (data.success && data.content) {
-          this.options.onProjectUpdate((prev) => ({
-            ...prev,
-            endMatter: {
-              ...prev.endMatter,
-              [section]: data.content,
-            },
-          }));
-          this.emitTelemetry(`Seção pós-textual '${section}' gerada com sucesso.`);
+
+      for (let attempt = 1; attempt <= 5; attempt++) {
+        if (attempt > 1) {
+          await new Promise((r) => setTimeout(r, 4000));
         }
-      } catch (err: any) {
-        this.emitTelemetry(`Aviso: falha ao gerar pós-textual ${section}: ${err?.message}`);
+
+        try {
+          const res = await fetch('/api/editorial/generate-section', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              metadata: this.options.project.metadata,
+              plan: this.options.project.plan,
+              sectionType: section,
+              aiConfig: this.options.aiConfig,
+            }),
+          });
+          const data = await res.json();
+          if (data.success && data.content) {
+            this.options.onProjectUpdate((prev) => ({
+              ...prev,
+              endMatter: {
+                ...prev.endMatter,
+                [section]: data.content,
+              },
+            }));
+            this.emitTelemetry(`Seção pós-textual '${section}' gerada com sucesso.`);
+            break;
+          }
+        } catch (err: any) {
+          this.emitTelemetry(
+            `Aviso (Tentativa ${attempt}/5): falha em pós-textual ${section}: ${err?.message}`
+          );
+        }
       }
     }
   }
