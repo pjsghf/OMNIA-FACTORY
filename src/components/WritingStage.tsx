@@ -268,10 +268,17 @@ export const WritingStage: React.FC<WritingStageProps> = ({
                   isGeneratingSingleSection === key || isGeneratingFrontEndBatch;
 
                 return (
-                  <button
+                  <div
                     key={key}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setSelectedItem({ kind: 'matter', type: key })}
-                    className={`w-full text-left p-2.5 border transition-all flex items-center justify-between ${
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        setSelectedItem({ kind: 'matter', type: key });
+                      }
+                    }}
+                    className={`w-full text-left p-2.5 border transition-all flex items-center justify-between cursor-pointer ${
                       isSelected
                         ? 'bg-[#1C1917] text-white border-[#1C1917] shadow-xs'
                         : 'bg-[#FDFCFB] border-[#E7E5E4] hover:border-[#D6D3D1] text-[#44403C]'
@@ -289,19 +296,43 @@ export const WritingStage: React.FC<WritingStageProps> = ({
                     <div className="flex items-center space-x-1 flex-shrink-0">
                       {isGeneratingThis ? (
                         <Wand2 className="w-3.5 h-3.5 text-amber-500 animate-spin" />
-                      ) : generated ? (
-                        <CheckCircle
-                          className={`w-3.5 h-3.5 ${isSelected ? 'text-emerald-300' : 'text-emerald-600'}`}
-                        />
                       ) : (
-                        <span
-                          className={`text-[10px] font-mono ${isSelected ? 'text-stone-400' : 'text-[#A8A29E]'}`}
-                        >
-                          + Gerar
-                        </span>
+                        <div className="flex items-center space-x-1.5">
+                          {generated && (
+                            <CheckCircle
+                              className={`w-3.5 h-3.5 ${isSelected ? 'text-emerald-300' : 'text-emerald-600'}`}
+                            />
+                          )}
+                          <button
+                            type="button"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              setSelectedItem({ kind: 'matter', type: key });
+                              setIsGeneratingSingleSection(key);
+                              try {
+                                await onGenerateFrontOrEndMatter(key);
+                              } finally {
+                                setIsGeneratingSingleSection(null);
+                              }
+                            }}
+                            disabled={
+                              generatingIndex !== null ||
+                              isGeneratingSingleSection !== null ||
+                              isGeneratingBatch ||
+                              isGeneratingFrontEndBatch
+                            }
+                            className={`text-[10px] font-mono font-bold px-2 py-0.5 transition shadow-xs ${
+                              isSelected
+                                ? 'bg-amber-400 text-[#1C1917] hover:bg-amber-300'
+                                : 'bg-[#1C1917] text-white hover:bg-[#44403C]'
+                            }`}
+                          >
+                            {generated ? 'Regerar' : '⚡ Gerar'}
+                          </button>
+                        </div>
                       )}
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -394,10 +425,17 @@ export const WritingStage: React.FC<WritingStageProps> = ({
                   isGeneratingSingleSection === key || isGeneratingFrontEndBatch;
 
                 return (
-                  <button
+                  <div
                     key={key}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setSelectedItem({ kind: 'matter', type: key })}
-                    className={`w-full text-left p-2.5 border transition-all flex items-center justify-between ${
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        setSelectedItem({ kind: 'matter', type: key });
+                      }
+                    }}
+                    className={`w-full text-left p-2.5 border transition-all flex items-center justify-between cursor-pointer ${
                       isSelected
                         ? 'bg-[#1C1917] text-white border-[#1C1917] shadow-xs'
                         : 'bg-[#FDFCFB] border-[#E7E5E4] hover:border-[#D6D3D1] text-[#44403C]'
@@ -415,19 +453,43 @@ export const WritingStage: React.FC<WritingStageProps> = ({
                     <div className="flex items-center space-x-1 flex-shrink-0">
                       {isGeneratingThis ? (
                         <Wand2 className="w-3.5 h-3.5 text-amber-500 animate-spin" />
-                      ) : generated ? (
-                        <CheckCircle
-                          className={`w-3.5 h-3.5 ${isSelected ? 'text-emerald-300' : 'text-emerald-600'}`}
-                        />
                       ) : (
-                        <span
-                          className={`text-[10px] font-mono ${isSelected ? 'text-stone-400' : 'text-[#A8A29E]'}`}
-                        >
-                          + Gerar
-                        </span>
+                        <div className="flex items-center space-x-1.5">
+                          {generated && (
+                            <CheckCircle
+                              className={`w-3.5 h-3.5 ${isSelected ? 'text-emerald-300' : 'text-emerald-600'}`}
+                            />
+                          )}
+                          <button
+                            type="button"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              setSelectedItem({ kind: 'matter', type: key });
+                              setIsGeneratingSingleSection(key);
+                              try {
+                                await onGenerateFrontOrEndMatter(key);
+                              } finally {
+                                setIsGeneratingSingleSection(null);
+                              }
+                            }}
+                            disabled={
+                              generatingIndex !== null ||
+                              isGeneratingSingleSection !== null ||
+                              isGeneratingBatch ||
+                              isGeneratingFrontEndBatch
+                            }
+                            className={`text-[10px] font-mono font-bold px-2 py-0.5 transition shadow-xs ${
+                              isSelected
+                                ? 'bg-amber-400 text-[#1C1917] hover:bg-amber-300'
+                                : 'bg-[#1C1917] text-white hover:bg-[#44403C]'
+                            }`}
+                          >
+                            {generated ? 'Regerar' : '⚡ Gerar'}
+                          </button>
+                        </div>
                       )}
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
