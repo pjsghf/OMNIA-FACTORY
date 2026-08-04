@@ -308,13 +308,27 @@ export default function App() {
 
   // 1. Generate Editorial Plan & Outline
   const handleGeneratePlan = async () => {
+    const meta = getLiveProject().metadata;
+    if (!meta.titulo?.trim() || !meta.autor?.trim() || !meta.resumo?.trim()) {
+      const missing = [];
+      if (!meta.titulo?.trim()) missing.push('Título');
+      if (!meta.autor?.trim()) missing.push('Autor');
+      if (!meta.resumo?.trim()) missing.push('Resumo');
+      addToast(
+        'error',
+        'Dados Incompletos',
+        `Preencha os campos obrigatórios antes de gerar: ${missing.join(', ')}.`
+      );
+      return;
+    }
+
     setIsGeneratingPlan(true);
     try {
       const res = await fetch('/api/editorial/plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...activeProject.metadata,
+          ...meta,
           aiConfig,
         }),
       });
@@ -340,18 +354,21 @@ export default function App() {
         addToast(
           'success',
           'Planejamento Editorial Gerado',
-          'O plano de capítulos e diretrizes foi montado.'
+          'O plano de capítulos e diretrizes foi montado com sucesso.'
         );
       } else {
-        addToast(
-          'error',
-          'Falha no Planejamento',
-          data.error || 'Erro ao gerar planejamento editorial.'
-        );
+        const detailMsg = data.details
+          ? Object.values(data.details).join(' ')
+          : data.error || 'Erro ao gerar planejamento editorial.';
+        addToast('error', 'Falha no Planejamento', detailMsg);
       }
     } catch (err: any) {
       console.error(err);
-      addToast('error', 'Erro de Conexão', 'Erro na comunicação com o provedor de IA.');
+      addToast(
+        'error',
+        'Erro de Conexão',
+        err?.message || 'Erro na comunicação com o provedor de IA.'
+      );
     } finally {
       setIsGeneratingPlan(false);
     }

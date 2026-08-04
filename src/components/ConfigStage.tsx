@@ -750,25 +750,49 @@ IDEIAS E INFORMAÇÕES BRUTAS DO AUTOR SOBRE O LIVRO:
         </div>
 
         {/* Action Button */}
-        <div className="pt-6 border-t border-[#E7E5E4] flex justify-end">
-          <button
-            type="button"
-            onClick={onProceedToPlanning}
-            disabled={!metadata.titulo || !metadata.resumo || isGeneratingPlan}
-            className="flex items-center space-x-3 px-8 py-4 bg-[#1C1917] hover:bg-[#44403C] disabled:opacity-50 text-white font-bold text-xs uppercase tracking-widest transition shadow-xs"
-          >
-            {isGeneratingPlan ? (
-              <>
-                <Wand2 className="w-4 h-4 animate-spin" />
-                <span>Gerando Planejamento Editorial...</span>
-              </>
-            ) : (
-              <>
-                <span>Gerar Planejamento & Sumário (Etapa 2)</span>
-                <span className="text-base">→</span>
-              </>
-            )}
-          </button>
+        <div className="pt-6 border-t border-[#E7E5E4] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          {(!metadata.titulo || !metadata.autor || !metadata.resumo) && (
+            <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 p-2.5 flex items-center space-x-2 font-serif">
+              <ShieldAlert className="w-4 h-4 text-amber-700 shrink-0" />
+              <span>
+                Preencha o <strong>Título</strong>, <strong>Autor</strong> e <strong>Resumo</strong>{' '}
+                para liberar a geração do planejamento.
+              </span>
+            </div>
+          )}
+
+          <div className="flex justify-end ml-auto">
+            <button
+              type="button"
+              onClick={() => {
+                if (!metadata.titulo || !metadata.autor || !metadata.resumo) {
+                  const missing = [];
+                  if (!metadata.titulo) missing.push('Título');
+                  if (!metadata.autor) missing.push('Autor');
+                  if (!metadata.resumo) missing.push('Resumo');
+                  alert(
+                    `Por favor, preencha os seguintes campos obrigatórios: ${missing.join(', ')}.`
+                  );
+                  return;
+                }
+                onProceedToPlanning();
+              }}
+              disabled={isGeneratingPlan}
+              className="flex items-center space-x-3 px-8 py-4 bg-[#1C1917] hover:bg-[#44403C] disabled:opacity-50 text-white font-bold text-xs uppercase tracking-widest transition shadow-xs"
+            >
+              {isGeneratingPlan ? (
+                <>
+                  <Wand2 className="w-4 h-4 animate-spin" />
+                  <span>Gerando Planejamento Editorial...</span>
+                </>
+              ) : (
+                <>
+                  <span>Gerar Planejamento & Sumário (Etapa 2)</span>
+                  <span className="text-base">→</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 

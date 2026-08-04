@@ -41,25 +41,41 @@ export class AiOrchestrator {
     return provider;
   }
 
-  /**
-   * Generates free-form text via the provider named in `request.aiConfig.provider`
-   * (defaults to `'gemini'` if unset).
-   *
-   * @param request - Prompt, task type, and optional per-call model override.
-   * @returns The provider's raw text result plus token/cost/timing metadata.
-   * @throws Always a redacted `Error` from {@link normalizeAndThrowError} on any
-   *   provider failure — the underlying SDK/HTTP error is never propagated
-   *   directly, so callers only need to handle this one error shape (with a
-   *   `.code` — e.g. `RATE_LIMIT_EXCEEDED`, `MODEL_NOT_ALLOWED` — and `.provider`
-   *   property attached).
-   */
+  private resolveProviderName(aiConfig?: any): string {
+    const requested = aiConfig?.provider;
+    if (requested && this.providers.has(requested)) {
+      // If requested is gemini but GEMINI_API_KEY is unset while OPENCODE_API_KEY is set, default to opencode
+      if (requested === 'gemini' && !process.env.GEMINI_API_KEY && process.env.OPENCODE_API_KEY) {
+        return 'opencode';
+      }
+      return requested;
+    }
+    if (process.env.OPENCODE_API_KEY && !process.env.GEMINI_API_KEY) {
+      return 'opencode';
+    }
+    return 'gemini';
+  }
   async generateText(request: TextGenerationRequest): Promise<TextGenerationResult> {
-    const selectedProviderName = request.aiConfig?.provider || 'gemini';
+    const selectedProviderName = this.resolveProviderName(request.aiConfig);
     const provider = this.getProvider(selectedProviderName);
 
     try {
       return await provider.generateText(request);
     } catch (err: any) {
+      const fallbackProviderName = selectedProviderName === 'gemini' ? 'opencode' : 'gemini';
+      if (
+        String(err?.message || '').includes('não configurada') &&
+        this.providers.has(fallbackProviderName)
+      ) {
+        try {
+          return await this.getProvider(fallbackProviderName).generateText({
+            ...request,
+            aiConfig: { ...request.aiConfig, provider: fallbackProviderName as any },
+          });
+        } catch {
+          // Keep original error
+        }
+      }
       this.normalizeAndThrowError(err, selectedProviderName);
     }
   }
@@ -80,12 +96,26 @@ export class AiOrchestrator {
   async generateStructured<T>(
     request: StructuredRequest<T>
   ): Promise<{ data: T; result: TextGenerationResult }> {
-    const selectedProviderName = request.aiConfig?.provider || 'gemini';
+    const selectedProviderName = this.resolveProviderName(request.aiConfig);
     const provider = this.getProvider(selectedProviderName);
 
     try {
       return await provider.generateStructured<T>(request);
     } catch (err: any) {
+      const fallbackProviderName = selectedProviderName === 'gemini' ? 'opencode' : 'gemini';
+      if (
+        String(err?.message || '').includes('não configurada') &&
+        this.providers.has(fallbackProviderName)
+      ) {
+        try {
+          return await this.getProvider(fallbackProviderName).generateStructured<T>({
+            ...request,
+            aiConfig: { ...request.aiConfig, provider: fallbackProviderName as any },
+          });
+        } catch {
+          // Keep original error
+        }
+      }
       this.normalizeAndThrowError(err, selectedProviderName);
     }
   }
