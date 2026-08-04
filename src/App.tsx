@@ -19,6 +19,8 @@ import { ProjectListModal } from './components/ProjectListModal';
 import { AiSettingsModal } from './components/AiSettingsModal';
 import { TranslationModal } from './components/TranslationModal';
 import { LogConsoleModal } from './components/LogConsoleModal';
+import { AutonomousPipelineRunner, TelemetryState } from './lib/pipeline/autonomousPipeline';
+import { AutonomousPipelineModal } from './components/AutonomousPipelineModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastContainer, ToastMessage } from './components/common/Toast';
 import { createChapterVersion } from './lib/ai/review/versionManager';
@@ -200,6 +202,37 @@ export default function App() {
   const [isAiSettingsOpen, setIsAiSettingsOpen] = useState<boolean>(false);
   const [isTranslationModalOpen, setIsTranslationModalOpen] = useState<boolean>(false);
   const [isLogConsoleOpen, setIsLogConsoleOpen] = useState<boolean>(false);
+  const [pipelineRunner, setPipelineRunner] = useState<AutonomousPipelineRunner | null>(null);
+  const [pipelineTelemetry, setPipelineTelemetry] = useState<TelemetryState | null>(null);
+  const [isPipelineModalOpen, setIsPipelineModalOpen] = useState<boolean>(false);
+
+  const handleStartAutonomousPipeline = async () => {
+    setIsPipelineModalOpen(true);
+    const runner = new AutonomousPipelineRunner({
+      project: getLiveProject(),
+      aiConfig,
+      targetScore: 8.5,
+      maxReviewIterations: 3,
+      onTelemetry: (telemetry) => {
+        setPipelineTelemetry(telemetry);
+      },
+      onProjectUpdate: (updater) => {
+        updateActiveProject(updater);
+      },
+      addToast,
+    });
+
+    setPipelineRunner(runner);
+    const success = await runner.run();
+    if (success) {
+      setStage('design_export');
+      addToast(
+        'success',
+        'Piloto Automático Finalizado!',
+        'Sua obra foi planejada, escrita, auditada e está pronta para exportação.'
+      );
+    }
+  };
   const [aiAssistState, setAiAssistState] = useState<{
     text: string;
     action: string;
@@ -984,6 +1017,7 @@ export default function App() {
                 updateActiveProject((p) => ({ ...p, metadata: updated }))
               }
               onProceedToPlanning={handleGeneratePlan}
+              onStartAutonomousPipeline={handleStartAutonomousPipeline}
               isGeneratingPlan={isGeneratingPlan}
             />
           )}
@@ -1160,6 +1194,19 @@ export default function App() {
 
         {/* Live System Log & Diagnostic Console Modal */}
         <LogConsoleModal isOpen={isLogConsoleOpen} onClose={() => setIsLogConsoleOpen(false)} />
+
+        {/* Autonomous 1-Click Pipeline Telemetry Modal */}
+        {pipelineTelemetry && (
+          <AutonomousPipelineModal
+            isOpen={isPipelineModalOpen}
+            telemetry={pipelineTelemetry}
+            onCancel={() => {
+              pipelineRunner?.cancel();
+              setIsPipelineModalOpen(false);
+            }}
+            onMinimize={() => setIsPipelineModalOpen(false)}
+          />
+        )}
 
         {/* Footer */}
         <footer className="bg-[#1C1917] text-stone-400 text-xs py-5 px-6 border-t border-stone-800 font-serif">

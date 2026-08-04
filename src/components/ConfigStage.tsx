@@ -40,6 +40,7 @@ interface ConfigStageProps {
   metadata: BookMetadata;
   onChangeMetadata: (updated: BookMetadata) => void;
   onProceedToPlanning: () => void;
+  onStartAutonomousPipeline?: () => void;
   isGeneratingPlan: boolean;
 }
 
@@ -47,6 +48,7 @@ export const ConfigStage: React.FC<ConfigStageProps> = ({
   metadata,
   onChangeMetadata,
   onProceedToPlanning,
+  onStartAutonomousPipeline,
   isGeneratingPlan,
 }) => {
   const [showTemplateGuide, setShowTemplateGuide] = useState(false);
@@ -749,19 +751,24 @@ IDEIAS E INFORMAÇÕES BRUTAS DO AUTOR SOBRE O LIVRO:
           </div>
         </div>
 
-        {/* Action Button */}
+        {/* Action Buttons */}
         <div className="pt-6 border-t border-[#E7E5E4] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          {(!metadata.titulo || !metadata.autor || !metadata.resumo) && (
+          {!metadata.titulo || !metadata.autor || !metadata.resumo ? (
             <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 p-2.5 flex items-center space-x-2 font-serif">
               <ShieldAlert className="w-4 h-4 text-amber-700 shrink-0" />
               <span>
                 Preencha o <strong>Título</strong>, <strong>Autor</strong> e <strong>Resumo</strong>{' '}
-                para liberar a geração do planejamento.
+                para liberar a geração.
               </span>
+            </div>
+          ) : (
+            <div className="text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 p-2.5 flex items-center space-x-2 font-serif">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Dados fundamentais preenchidos! Escolha o modo de geração abaixo.</span>
             </div>
           )}
 
-          <div className="flex justify-end ml-auto">
+          <div className="flex flex-wrap items-center justify-end gap-3 ml-auto">
             <button
               type="button"
               onClick={() => {
@@ -770,28 +777,42 @@ IDEIAS E INFORMAÇÕES BRUTAS DO AUTOR SOBRE O LIVRO:
                   if (!metadata.titulo) missing.push('Título');
                   if (!metadata.autor) missing.push('Autor');
                   if (!metadata.resumo) missing.push('Resumo');
-                  alert(
-                    `Por favor, preencha os seguintes campos obrigatórios: ${missing.join(', ')}.`
-                  );
+                  alert(`Por favor, preencha os campos obrigatórios: ${missing.join(', ')}.`);
                   return;
                 }
                 onProceedToPlanning();
               }}
               disabled={isGeneratingPlan}
-              className="flex items-center space-x-3 px-8 py-4 bg-[#1C1917] hover:bg-[#44403C] disabled:opacity-50 text-white font-bold text-xs uppercase tracking-widest transition shadow-xs"
+              className="flex items-center space-x-2 px-6 py-4 bg-[#F5F5F4] hover:bg-[#E7E5E4] text-[#1C1917] border border-[#D6D3D1] disabled:opacity-50 font-bold text-xs uppercase tracking-widest transition shadow-xs"
+              aria-label="Gerar Planejamento & Sumário (Passo a Passo Manual)"
             >
-              {isGeneratingPlan ? (
-                <>
-                  <Wand2 className="w-4 h-4 animate-spin" />
-                  <span>Gerando Planejamento Editorial...</span>
-                </>
-              ) : (
-                <>
-                  <span>Gerar Planejamento & Sumário (Etapa 2)</span>
-                  <span className="text-base">→</span>
-                </>
-              )}
+              <span>Gerar Planejamento & Sumário (Passo a Passo)</span>
+              <span className="text-base">→</span>
             </button>
+
+            {onStartAutonomousPipeline && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (!metadata.titulo || !metadata.autor || !metadata.resumo) {
+                    const missing = [];
+                    if (!metadata.titulo) missing.push('Título');
+                    if (!metadata.autor) missing.push('Autor');
+                    if (!metadata.resumo) missing.push('Resumo');
+                    alert(
+                      `Por favor, preencha os campos obrigatórios para o piloto automático: ${missing.join(', ')}.`
+                    );
+                    return;
+                  }
+                  onStartAutonomousPipeline();
+                }}
+                disabled={isGeneratingPlan}
+                className="flex items-center space-x-3 px-8 py-4 bg-amber-400 hover:bg-amber-300 text-slate-950 border border-amber-500 disabled:opacity-50 font-extrabold text-xs uppercase tracking-widest transition shadow-md font-mono"
+              >
+                <Sparkles className="w-4 h-4 text-slate-950 animate-pulse" />
+                <span>🚀 Gerar Obra Completa em Piloto Automático</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
