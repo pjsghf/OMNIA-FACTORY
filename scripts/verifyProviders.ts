@@ -110,7 +110,10 @@ async function verifyOpenCode() {
     return;
   }
 
-  const keys = rawKey.split(/[\s,;]+/).map(k => k.trim()).filter(Boolean);
+  const keys = rawKey
+    .split(/[\s,;]+/)
+    .map((k) => k.trim())
+    .filter(Boolean);
   const apiKey = keys[0];
 
   const baseUrl = process.env.OPENCODE_BASE_URL || OPENCODE_DEFAULT_BASE_URL;
@@ -132,7 +135,11 @@ async function verifyOpenCode() {
 
     if (res.ok) {
       const content = JSON.parse(body)?.choices?.[0]?.message?.content;
-      report(PASS, `${baseUrl} respondeu`, `modelo ${model} (${keys.length} chave(s) configurada(s)), resposta: ${JSON.stringify(content)}`);
+      report(
+        PASS,
+        `${baseUrl} respondeu`,
+        `modelo ${model} (${keys.length} chave(s) configurada(s)), resposta: ${JSON.stringify(content)}`
+      );
     } else if (isEgressBlock(res.status, body)) {
       report(
         SKIP,

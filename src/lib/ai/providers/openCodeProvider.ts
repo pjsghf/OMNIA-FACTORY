@@ -45,7 +45,6 @@ function resolveApiKeys(clientKey?: string): string[] {
 
 let globalKeyIndex = 0;
 
-
 /**
  * Picks the model id, and refuses to substitute one silently.
  *
