@@ -9,12 +9,8 @@ import {
 } from './types';
 import { Header } from './components/Header';
 import { ConfigStage } from './components/ConfigStage';
-import { PlanningStage } from './components/PlanningStage';
-import { WritingStage } from './components/WritingStage';
-import { ReviewStage } from './components/ReviewStage';
 import { DesignExportStage } from './components/DesignExportStage';
 import { BookReaderModal } from './components/BookReaderModal';
-import { AiTextAssistModal } from './components/AiTextAssistModal';
 import { ProjectListModal } from './components/ProjectListModal';
 import { AiSettingsModal } from './components/AiSettingsModal';
 import { TranslationModal } from './components/TranslationModal';
@@ -558,7 +554,7 @@ export default function App() {
       for (let attempt = 1; attempt <= 2; attempt++) {
         if (attempt > 1) {
           addToast(
-            'warn',
+            'info',
             `Revisando Capítulo ${i + 1}`,
             `Reagendando tentativa ${attempt} de 2 após timeout do servidor...`
           );
@@ -583,7 +579,7 @@ export default function App() {
 
     if (failedIndex !== null) {
       addToast(
-        'warn',
+        'info',
         'Redação em Lote Pausada',
         `A geração parou no Capítulo ${failedIndex + 1}. Todos os capítulos anteriores foram salvos. Clique em "Continuar Redação em Lote" para continuar.`
       );
@@ -1061,20 +1057,9 @@ export default function App() {
             />
           )}
 
-          {activeProject.currentStage === 'planning' && (
-            <PlanningStage
-              plan={activeProject.plan}
-              metadata={activeProject.metadata}
-              onUpdatePlan={(updatedPlan) =>
-                updateActiveProject((p) => ({ ...p, plan: updatedPlan }))
-              }
-              onRegeneratePlan={handleGeneratePlan}
-              onProceedToWriting={() => setStage('writing')}
-              isGenerating={isGeneratingPlan}
-            />
-          )}
-
-          {activeProject.currentStage === 'writing' && (
+          {(activeProject.currentStage === 'writing' ||
+            activeProject.currentStage === 'planning' ||
+            activeProject.currentStage === 'review') && (
             <StudioStage
               project={activeProject}
               onUpdateChapterContent={(index, content) => {
@@ -1093,7 +1078,9 @@ export default function App() {
                   return { ...p, chapters };
                 });
               }}
-              onGenerateChapter={handleGenerateChapter}
+              onGenerateChapter={async (idx) => {
+                await handleGenerateChapter(idx);
+              }}
               onGenerateBatchChapters={handleGenerateBatchChapters}
               onRunAiAssist={async (text, action, chapterIndex) => {
                 setAiAssistState({ text, action, chapterIndex });
@@ -1102,18 +1089,6 @@ export default function App() {
               isGeneratingBatch={isGeneratingBatch}
               onProceedToReview={() => setStage('review')}
               onProceedToExport={() => setStage('design_export')}
-            />
-          )}
-
-          {activeProject.currentStage === 'review' && (
-            <ReviewStage
-              report={activeProject.editorialReport}
-              onRunReview={handleRunEditorialReview}
-              onApplyReviewImprovements={handleApplyReviewImprovements}
-              isReviewing={isReviewing}
-              isApplyingReview={isApplyingReview}
-              generatingIndex={generatingIndex}
-              totalWords={totalWords}
             />
           )}
 

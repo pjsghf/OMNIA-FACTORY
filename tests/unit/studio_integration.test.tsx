@@ -32,6 +32,9 @@ describe('Validação do Estúdio Centralizado e Persistência', () => {
       qtdCapitulos: 1,
       minPalavras: 500,
       maxPalavras: 1500,
+      materiais: '',
+      informacoesObrigatorias: '',
+      restricoes: '',
     },
     plan: null,
     chapters: [

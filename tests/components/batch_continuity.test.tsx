@@ -110,7 +110,7 @@ describe('Batch chapter generation continuity', () => {
     // Stage 2 -> advance to the writing stage.
     const toWriting = await screen.findByRole(
       'button',
-      { name: /Redação dos Capítulos/i },
+      { name: /Redação dos Capítulos|Estúdio Central/i },
       { timeout: 10000 }
     );
     await user.click(toWriting);
