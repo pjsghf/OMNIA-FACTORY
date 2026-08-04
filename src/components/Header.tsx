@@ -40,12 +40,10 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const stages: { id: EditorialStage; label: string; icon: React.ReactNode }[] = [
     { id: 'config', label: '1. Configuração', icon: <Layers className="w-3.5 h-3.5" /> },
-    { id: 'planning', label: '2. Planejamento', icon: <BookOpen className="w-3.5 h-3.5" /> },
-    { id: 'writing', label: '3. Redação', icon: <FileText className="w-3.5 h-3.5" /> },
-    { id: 'review', label: '4. Revisão Editorial', icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
+    { id: 'writing', label: '2. Estúdio Central', icon: <FileText className="w-3.5 h-3.5" /> },
     {
       id: 'design_export',
-      label: '5. Capa & Exportação',
+      label: '3. Capa & Exportação',
       icon: <Download className="w-3.5 h-3.5" />,
     },
   ];
