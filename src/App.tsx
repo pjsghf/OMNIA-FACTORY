@@ -192,13 +192,14 @@ export default function App() {
     initIndexedDB();
   }, []);
 
-  // Save projects to IndexedDB in background
+  // Save all projects to IndexedDB in background
   useEffect(() => {
-    const live = getLiveProject();
-    if (live) {
-      saveProjectDB(live);
+    if (projects.length > 0) {
+      Promise.all(projects.map((p) => saveProjectDB(p))).catch((err) =>
+        console.warn('[IndexedDB Storage Warning]: Falha ao sincronizar projetos:', err)
+      );
     }
-  }, [projects, currentProjectId]);
+  }, [projects]);
   const [storageWarning, setStorageWarning] = useState<string | null>(null);
 
   // Toasts

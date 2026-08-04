@@ -46,11 +46,13 @@ export interface AutonomousPipelineOptions {
 
 export class AutonomousPipelineRunner {
   private options: AutonomousPipelineOptions;
+  private currentProject: BookProject;
   private state: TelemetryState;
   private cancelRequested: boolean = false;
 
   constructor(options: AutonomousPipelineOptions) {
     this.options = options;
+    this.currentProject = options.project;
     const project = options.project;
     const totalCaps = project.metadata.qtdCapitulos || 7;
     const targetWords = project.metadata.maxPalavras || 15000;
@@ -76,6 +78,11 @@ export class AutonomousPipelineRunner {
       isPaused: false,
       isCancelled: false,
     };
+  }
+
+  private applyProjectUpdate(updater: (prev: BookProject) => BookProject) {
+    this.currentProject = updater(this.currentProject);
+    this.options.onProjectUpdate(() => this.currentProject);
   }
 
   private emitTelemetry(msg?: string) {
@@ -187,7 +194,7 @@ export class AutonomousPipelineRunner {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            ...this.options.project.metadata,
+            ...this.currentProject.metadata,
             aiConfig: this.options.aiConfig,
           }),
         });
@@ -203,7 +210,7 @@ export class AutonomousPipelineRunner {
             status: 'pending',
           }));
 
-          this.options.onProjectUpdate((prev) => ({
+          this.applyProjectUpdate((prev) => ({
             ...prev,
             plan,
             chapters,
@@ -245,15 +252,15 @@ export class AutonomousPipelineRunner {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              metadata: this.options.project.metadata,
-              plan: this.options.project.plan,
+              metadata: this.currentProject.metadata,
+              plan: this.currentProject.plan,
               sectionType: section,
               aiConfig: this.options.aiConfig,
             }),
           });
           const data = await res.json();
           if (data.success && data.content) {
-            this.options.onProjectUpdate((prev) => ({
+            this.applyProjectUpdate((prev) => ({
               ...prev,
               frontMatter: {
                 ...prev.frontMatter,
@@ -295,16 +302,16 @@ export class AutonomousPipelineRunner {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              metadata: this.options.project.metadata,
-              plan: this.options.project.plan,
+              metadata: this.currentProject.metadata,
+              plan: this.currentProject.plan,
               chapterIndex: i,
-              memory: this.options.project.bookBibleMemory,
+              memory: this.currentProject.bookBibleMemory,
               aiConfig: this.options.aiConfig,
             }),
           });
           const data = await res.json();
           if (data.success && data.content) {
-            this.options.onProjectUpdate((prev) => {
+            this.applyProjectUpdate((prev) => {
               const chapters = [...prev.chapters];
               chapters[i] = {
                 numero: data.chapterNumber || i + 1,
@@ -358,15 +365,15 @@ export class AutonomousPipelineRunner {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              metadata: this.options.project.metadata,
-              plan: this.options.project.plan,
+              metadata: this.currentProject.metadata,
+              plan: this.currentProject.plan,
               sectionType: section,
               aiConfig: this.options.aiConfig,
             }),
           });
           const data = await res.json();
           if (data.success && data.content) {
-            this.options.onProjectUpdate((prev) => ({
+            this.applyProjectUpdate((prev) => ({
               ...prev,
               endMatter: {
                 ...prev.endMatter,
@@ -400,10 +407,10 @@ export class AutonomousPipelineRunner {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            metadata: this.options.project.metadata,
-            chapters: this.options.project.chapters,
-            frontMatter: this.options.project.frontMatter,
-            endMatter: this.options.project.endMatter,
+            metadata: this.currentProject.metadata,
+            chapters: this.currentProject.chapters,
+            frontMatter: this.currentProject.frontMatter,
+            endMatter: this.currentProject.endMatter,
             aiConfig: this.options.aiConfig,
           }),
         });
@@ -412,7 +419,7 @@ export class AutonomousPipelineRunner {
           const report = dataAudit.report;
           const score = report.overallScore || 8.0;
           this.state.currentScore = score;
-          this.options.onProjectUpdate((prev) => ({
+          this.applyProjectUpdate((prev) => ({
             ...prev,
             reviewReport: report,
           }));
@@ -435,15 +442,15 @@ export class AutonomousPipelineRunner {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                metadata: this.options.project.metadata,
-                chapters: this.options.project.chapters,
+                metadata: this.currentProject.metadata,
+                chapters: this.currentProject.chapters,
                 report,
                 aiConfig: this.options.aiConfig,
               }),
             });
             const dataImp = await resImp.json();
             if (dataImp.success && Array.isArray(dataImp.updatedChapters)) {
-              this.options.onProjectUpdate((prev) => ({
+              this.applyProjectUpdate((prev) => ({
                 ...prev,
                 chapters: dataImp.updatedChapters,
               }));

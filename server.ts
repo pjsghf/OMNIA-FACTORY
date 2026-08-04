@@ -975,15 +975,19 @@ function validateImageSource(urlStr?: string): string | undefined {
   try {
     const parsed = new URL(urlStr);
     if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return undefined;
-    const hostname = parsed.hostname.toLowerCase();
+    const hostname = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '');
     if (
       hostname === 'localhost' ||
       hostname === '127.0.0.1' ||
       hostname === '0.0.0.0' ||
       hostname === '::1' ||
+      hostname === '::' ||
       hostname.startsWith('10.') ||
       hostname.startsWith('192.168.') ||
       hostname.startsWith('169.254.') ||
+      hostname.startsWith('fc') ||
+      hostname.startsWith('fd') ||
+      hostname.startsWith('fe80') ||
       /^172\.(1[6-9]|2[0-9]|3[01])\./.test(hostname)
     ) {
       return undefined;

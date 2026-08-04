@@ -119,7 +119,7 @@ export async function deleteProjectDB(id: string): Promise<void> {
 
 export async function migrateLocalStorageToIndexedDB(): Promise<number> {
   try {
-    const raw = localStorage.getItem('omnia_factory_projects_v2');
+    const raw = localStorage.getItem('scriptor_projects_v2');
     if (!raw) return 0;
 
     const legacyProjects: BookProject[] = JSON.parse(raw);
