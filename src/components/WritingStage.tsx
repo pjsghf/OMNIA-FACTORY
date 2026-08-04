@@ -239,7 +239,17 @@ export const WritingStage: React.FC<WritingStageProps> = ({
             ) : (
               <>
                 <Play className="w-3.5 h-3.5 fill-current" />
-                <span>Escrever Todos os Capítulos (IA)</span>
+                <span>
+                  {chapters.filter((c) => c.status === 'completed' && c.content?.trim()).length >
+                    0 &&
+                  chapters.filter((c) => c.status === 'completed' && c.content?.trim()).length <
+                    chapters.length
+                    ? `Continuar Redação em Lote (a partir do Cap. ${
+                        chapters.filter((c) => c.status === 'completed' && c.content?.trim())
+                          .length + 1
+                      })`
+                    : 'Escrever Todos os Capítulos (IA)'}
+                </span>
               </>
             )}
           </button>

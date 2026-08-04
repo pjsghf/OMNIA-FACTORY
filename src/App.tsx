@@ -472,6 +472,8 @@ export default function App() {
     setIsGeneratingBatch(true);
 
     const totalCaps = getLiveProject().plan!.sumario.length;
+    let failedIndex: number | null = null;
+
     for (let i = 0; i < totalCaps; i++) {
       const chaptersNow = getLiveProject().chapters;
       if (chaptersNow[i]?.status === 'completed' && chaptersNow[i]?.content?.trim()) {
@@ -479,16 +481,48 @@ export default function App() {
       }
 
       setGeneratingIndex(i);
-      const success = await handleGenerateChapter(i);
-      if (!success) break;
+
+      // Auto-retry up to 2 attempts per chapter for network/timeout resilience
+      let success = false;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        if (attempt > 1) {
+          addToast(
+            'warn',
+            `Revisando Capítulo ${i + 1}`,
+            `Reagendando tentativa ${attempt} de 2 após timeout do servidor...`
+          );
+          await new Promise((res) => setTimeout(res, 3500));
+        }
+        success = await handleGenerateChapter(i);
+        if (success) break;
+      }
+
+      if (!success) {
+        failedIndex = i;
+        break;
+      }
 
       if (i < totalCaps - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 2500));
+        await new Promise((resolve) => setTimeout(resolve, 2000));
       }
     }
 
     setIsGeneratingBatch(false);
     setGeneratingIndex(null);
+
+    if (failedIndex !== null) {
+      addToast(
+        'warn',
+        'Redação em Lote Pausada',
+        `A geração parou no Capítulo ${failedIndex + 1}. Todos os capítulos anteriores foram salvos. Clique em "Continuar Redação em Lote" para continuar.`
+      );
+    } else {
+      addToast(
+        'success',
+        'Redação em Lote Concluída!',
+        'Todos os capítulos foram redigidos e salvos na biblioteca.'
+      );
+    }
   };
 
   // 4. Generate Front/End Matter Section
