@@ -22,6 +22,7 @@ interface HeaderProps {
   onOpenAiSettings: () => void;
   onOpenTranslation?: () => void;
   onOpenLogConsole?: () => void;
+  onOpenSidebar?: () => void;
   totalWordCount: number;
 }
 
@@ -34,6 +35,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAiSettings,
   onOpenTranslation,
   onOpenLogConsole,
+  onOpenSidebar,
   totalWordCount,
 }) => {
   const stages: { id: EditorialStage; label: string; icon: React.ReactNode }[] = [
@@ -138,6 +140,17 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <Terminal className="w-3.5 h-3.5 text-amber-600" />
                 <span className="hidden sm:inline">Console Logs</span>
+              </button>
+            )}
+
+            {onOpenSidebar && (
+              <button
+                onClick={onOpenSidebar}
+                className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-950 bg-amber-400 hover:bg-amber-300 border border-amber-500 transition rounded-sm shadow-xs"
+                title="Abrir Painel Lateral de Controle OMNIA"
+              >
+                <Layers className="w-3.5 h-3.5 text-slate-950" />
+                <span className="hidden sm:inline">Painel OMNIA</span>
               </button>
             )}
 

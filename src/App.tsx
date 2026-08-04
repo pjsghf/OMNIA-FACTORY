@@ -21,6 +21,14 @@ import { TranslationModal } from './components/TranslationModal';
 import { LogConsoleModal } from './components/LogConsoleModal';
 import { AutonomousPipelineRunner, TelemetryState } from './lib/pipeline/autonomousPipeline';
 import { AutonomousPipelineModal } from './components/AutonomousPipelineModal';
+import { Sidebar } from './components/Sidebar';
+import { StudioStage } from './components/StudioStage';
+import {
+  saveProjectDB,
+  getAllProjectsDB,
+  deleteProjectDB,
+  migrateLocalStorageToIndexedDB,
+} from './lib/storage/indexedDBStorage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastContainer, ToastMessage } from './components/common/Toast';
 import { createChapterVersion } from './lib/ai/review/versionManager';
@@ -164,7 +172,36 @@ export default function App() {
     return DEFAULT_AI_CONFIG;
   });
 
-  // Persistence failure banner (quota exhausted, private-mode restrictions, ...)
+  // Sidebar Drawer state
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+
+  // Initial load from IndexedDB + migration
+  useEffect(() => {
+    async function initIndexedDB() {
+      await migrateLocalStorageToIndexedDB();
+      const loaded = await getAllProjectsDB();
+      if (loaded && loaded.length > 0) {
+        setProjectsState(loaded);
+        projectsRef.current = loaded;
+        if (
+          !currentProjectIdRef.current ||
+          !loaded.some((p) => p.id === currentProjectIdRef.current)
+        ) {
+          setCurrentProjectIdState(loaded[0]!.id);
+          currentProjectIdRef.current = loaded[0]!.id;
+        }
+      }
+    }
+    initIndexedDB();
+  }, []);
+
+  // Save projects to IndexedDB in background
+  useEffect(() => {
+    const live = getLiveProject();
+    if (live) {
+      saveProjectDB(live);
+    }
+  }, [projects, currentProjectId]);
   const [storageWarning, setStorageWarning] = useState<string | null>(null);
 
   // Toasts
@@ -1005,6 +1042,7 @@ export default function App() {
           onOpenAiSettings={() => setIsAiSettingsOpen(true)}
           onOpenTranslation={() => setIsTranslationModalOpen(true)}
           onOpenLogConsole={() => setIsLogConsoleOpen(true)}
+          onOpenSidebar={() => setIsSidebarOpen(true)}
           totalWordCount={totalWords}
         />
 
@@ -1036,20 +1074,9 @@ export default function App() {
           )}
 
           {activeProject.currentStage === 'writing' && (
-            <WritingStage
-              metadata={activeProject.metadata}
-              plan={
-                activeProject.plan || {
-                  conceitoCentral: '',
-                  promessaPrincipal: '',
-                  perfilLeitor: { descricao: '', doresEAnseios: [], oQueBuscaraNoLivro: [] },
-                  sumario: [],
-                }
-              }
-              chapters={activeProject.chapters}
-              frontMatter={activeProject.frontMatter}
-              endMatter={activeProject.endMatter}
-              onUpdateChapter={(index, content) => {
+            <StudioStage
+              project={activeProject}
+              onUpdateChapterContent={(index, content) => {
                 updateActiveProject((p) => {
                   const chapters = [...p.chapters];
                   const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
@@ -1065,17 +1092,15 @@ export default function App() {
                   return { ...p, chapters };
                 });
               }}
-              onUpdateFrontOrEndMatter={handleUpdateFrontOrEndMatter}
               onGenerateChapter={handleGenerateChapter}
               onGenerateBatchChapters={handleGenerateBatchChapters}
-              onGenerateFrontOrEndMatter={handleGenerateFrontOrEndMatter}
-              onGenerateBatchFrontAndEndMatter={handleGenerateBatchFrontAndEndMatter}
-              onOpenAiAssist={(text, action, chapterIndex) =>
-                setAiAssistState({ text, action, chapterIndex })
-              }
+              onRunAiAssist={async (text, action, chapterIndex) => {
+                setAiAssistState({ text, action, chapterIndex });
+              }}
+              isGeneratingIndex={generatingIndex}
               isGeneratingBatch={isGeneratingBatch}
-              isGeneratingFrontEndBatch={isGeneratingFrontEndBatch}
-              generatingIndex={generatingIndex}
+              onProceedToReview={() => setStage('review')}
+              onProceedToExport={() => setStage('design_export')}
             />
           )}
 
@@ -1207,6 +1232,22 @@ export default function App() {
             onMinimize={() => setIsPipelineModalOpen(false)}
           />
         )}
+
+        {/* OMNIA Unified Control Sidebar Drawer */}
+        <Sidebar
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+          projects={projects}
+          currentProjectId={currentProjectId}
+          onSelectProject={(id) => setCurrentProjectId(id)}
+          onNewProject={handleNewProject}
+          onDeleteProject={handleDeleteProject}
+          aiConfig={aiConfig}
+          onSaveAiConfig={(updated) => {
+            setAiConfig(updated);
+            addToast('success', 'Configuração Salva', 'Provedores de IA atualizados.');
+          }}
+        />
 
         {/* Footer */}
         <footer className="bg-[#1C1917] text-stone-400 text-xs py-5 px-6 border-t border-stone-800 font-serif">
