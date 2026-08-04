@@ -143,7 +143,10 @@ export class OpenCodeProvider implements AiProvider {
       providerName: 'opencode',
       maxAttempts: Math.max(3, apiKeys.length),
       operation: async (signal) => {
-        const apiKey = apiKeys[globalKeyIndex % apiKeys.length];
+        // Non-null: the index is always < apiKeys.length (modulo), and apiKeys.length > 0
+        // is guaranteed by the guard above. TS can't see that invariant through the
+        // modulo, hence the assertion rather than a redundant runtime check.
+        const apiKey = apiKeys[globalKeyIndex % apiKeys.length]!;
         globalKeyIndex = (globalKeyIndex + 1) % apiKeys.length;
 
         const res = await fetch(`${baseUrl}/chat/completions`, {
@@ -231,7 +234,10 @@ export class OpenCodeProvider implements AiProvider {
       providerName: 'opencode',
       maxAttempts: Math.max(3, apiKeys.length),
       operation: async (signal) => {
-        const apiKey = apiKeys[globalKeyIndex % apiKeys.length];
+        // Non-null: the index is always < apiKeys.length (modulo), and apiKeys.length > 0
+        // is guaranteed by the guard above. TS can't see that invariant through the
+        // modulo, hence the assertion rather than a redundant runtime check.
+        const apiKey = apiKeys[globalKeyIndex % apiKeys.length]!;
         globalKeyIndex = (globalKeyIndex + 1) % apiKeys.length;
 
         const res = await fetch(`${baseUrl}/chat/completions`, {

@@ -773,7 +773,7 @@ export default function App() {
           'Nova Auditoria Automática',
           'Auditando a obra novamente para verificar se os erros foram corrigidos...'
         );
-        await handleRunReview();
+        await handleRunEditorialReview();
       }
     } catch (err: any) {
       console.error(err);
