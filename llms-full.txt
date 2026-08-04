@@ -1,0 +1,54 @@
+# llms-full.txt - Contexto Completo de Negócio e Contratos de API para Agentes de IA
+
+# OMNIA FACTORY - ESPECIFICAÇÃO DE DOMÍNIO E CONTRATOS
+
+## 1. Visão Geral do Sistema e Arquitetura
+
+O OMNIA FACTORY é um sistema monolítico full-stack desacoplado. O frontend é construído com React 19 + Vite 6 + TailwindCSS 4 em `src/`, e o backend em `server.ts` utiliza Express 4 + Puppeteer.
+
+O pipeline editorial é dividido em 5 etapas principais:
+1. **Configuração (`ConfigStage.tsx`)**: Coleta de metadados do livro, gênero, estilo, tom, autor, editora, resumo e opções de IA.
+2. **Planejamento (`PlanningStage.tsx`)**: Geração do plano editorial com tese central, tom geral e sumário estruturado de capítulos (`ChapterPlan[]`).
+3. **Redação (`WritingStage.tsx`)**: Redação sequencial de capítulos em blocos com preservação de memória contextual (`BookBibleMemory`), além da geração de 6 seções pré e pós-textuais (`apresentacao`, `introducao`, `conclusao`, `exercicios`, `agradecimentos`, `sobreAutor`).
+4. **Revisão & Auditoria (`ReviewStage.tsx`)**: Auditoria hierárquica por unidade (100% de cobertura) com avaliação em 6 modalidades, geração de relatório de melhorias e botão de aplicação de correções com **re-auditoria automática** ao final.
+5. **Diagramação e Exportação (`DesignExportStage.tsx`)**: Exportação em EPUB e PDF de alta precisão gráfica via Puppeteer com rodapé estilizado (título do livro à esquerda e número da página à direita).
+
+---
+
+## 2. Contratos de API REST (`server.ts`)
+
+### `POST /api/editorial/plan`
+- **Descrição**: Gera o plano editorial do livro com base nos metadados.
+- **Entrada**: `{ metadata: BookMetadata, aiConfig?: AiConfig }`
+- **Saída**: `{ success: true, plan: EditorialPlan }`
+
+### `POST /api/editorial/generate-chapter`
+- **Descrição**: Gera o conteúdo de um capítulo específico em blocos sequenciais.
+- **Entrada**: `{ metadata: BookMetadata, plan: EditorialPlan, chapterIndex: number, memory: BookBibleMemory, aiConfig?: AiConfig }`
+- **Saída**: `{ success: true, content: string, wordCount: number, updatedMemory: BookBibleMemory }`
+
+### `POST /api/editorial/generate-section`
+- **Descrição**: Gera seções complementares pré ou pós-textuais.
+- **Entrada**: `{ metadata: BookMetadata, plan?: EditorialPlan, sectionType: 'apresentacao'|'introducao'|'conclusao'|'exercicios'|'agradecimentos'|'sobreAutor', fullBookContent: string, aiConfig?: AiConfig }`
+- **Saída**: `{ success: true, sectionType: string, title: string, content: string }`
+
+### `POST /api/editorial/review`
+- **Descrição**: Executa a auditoria hierárquica de 100% das unidades do livro.
+- **Entrada**: `{ project: BookProject, aiConfig?: AiConfig }`
+- **Saída**: `{ success: true, report: EditorialReport }`
+
+### `POST /api/editorial/apply-review`
+- **Descrição**: Aplica as sugestões da auditoria para aprimorar o texto dos capítulos.
+- **Entrada**: `{ metadata: BookMetadata, plan: EditorialPlan, chapterIndex: number, chapterTitle: string, chapterContent: string, report: EditorialReport, aiConfig?: AiConfig }`
+- **Saída**: `{ success: true, content: string, wordCount: number }`
+
+### `POST /api/export/pdf`
+- **Descrição**: Exporta o livro completo em PDF estilizado via Puppeteer headless.
+- **Entrada**: `{ project: BookProject, settings: PdfExportSettings }`
+- **Saída**: Buffer binário do PDF (`application/pdf`)
+
+---
+
+## 3. Diretrizes para Agentes de IA
+- **Preservação de Normalização de Prosa**: A função `normalizeProse` em `proseNormalizer.ts` limpa marcadores de markdown sem remover títulos essenciais.
+- **Preservação de Rotação Multi-Key**: `openCodeProvider.ts` lê `OPENCODE_API_KEY` dividida por vírgulas ou espaços para aplicar retentativa com rotação.

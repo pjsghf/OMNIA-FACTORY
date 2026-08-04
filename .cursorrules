@@ -1,0 +1,27 @@
+# .cursorrules - Diretrizes Operacionais para Agentes de IA
+
+# OMNIA FACTORY AI AGENT RULES
+
+## 1. Convenções de Código e Estilo
+- **Linguagem & Tipagem**: Todo código deve ser escrito em TypeScript estrito (`strict: true`). NUNCA use `any` a menos que seja estritamente necessário para integração com bibliotecas de terceiros legadas.
+- **Formatação**: Siga o padrão do Prettier pré-configurado (comprimento máximo de linha 100 caracteres, aspas simples, ponto e vírgula ativo).
+- **Componentes React**: Use Functional Components com `React.FC` e interfaces explicitamente tipadas para props.
+
+## 2. Tratamento de Erros e Logging
+- **Captura de Erros**: Sempre envolva chamadas de API externas (Gemini / OpenCode / Puppeteer) em blocos `try/catch`.
+- **Logger Centralizado**: Use `logger` em `src/lib/observability/logger.ts` para logs de servidor no formato JSON estruturado. NUNCA use `console.log` solto no `server.ts`.
+- **Mensagens Amigáveis**: Apresente mensagens de erro claras e em Português do Brasil para o usuário final via `addToast('error', ...)` no frontend.
+
+## 3. Diretrizes de Segurança (O que NUNCA fazer)
+- ❌ **NUNCA grave chaves de API, senhas ou tokens diretamente no código**. Sempre leia de `process.env`.
+- ❌ **NUNCA remova os middlewares de segurança em `server.ts`** (`helmet`, `rateLimiter`, `apiKeyAuth`).
+- ❌ **NUNCA desabilite a validação de sanitização de HTML/CSS** (`dompurify` ou `ensureNodeJsdom`).
+- ❌ **NUNCA ignore erros de limite de payload HTTP 413**.
+
+## 4. Diretrizes de Testes e Validação
+Sempre que fizer alterações no código, execute os seguintes comandos antes de concluir o seu turno:
+```bash
+npm run typecheck
+npm run test
+```
+Ganta que a suíte de 62 testes permaneça 100% passando.

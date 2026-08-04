@@ -1,0 +1,34 @@
+# llms.txt - Visão Executiva do Projeto OMNIA FACTORY para Agentes de IA
+
+# OMNIA FACTORY (v2.5.0)
+
+> Estúdio editorial de alta performance impulsionado por IA para planejamento estrutural, redação continuada por blocos com memória histórica (Book Bible Memory), auditoria hierárquica por unidade (100% cobertura) e diagramação profissional em PDF/EPUB via Puppeteer.
+
+## Finalidade do Sistema
+Automatizar o ciclo completo de criação literária e técnica de e-books e livros impressos de alta qualidade, garantindo coerência narrativa, conformidade com regras editoriais e formatação física perfeita sem alucinação de notas de auditoria.
+
+## Mapa de Arquivos Vitais (Core Files)
+- `server.ts`: Servidor Express, API Gateway, middleware de segurança (Helmet, Rate Limiting, Bearer Auth), logging de requisições e exportação Puppeteer PDF.
+- `src/App.tsx`: Gerenciador de estado principal da Single Page Application (SPA), persistência local debounced e orquestração de fluxo entre etapas.
+- `src/types.ts`: Tipos do domínio central (`BookProject`, `BookMetadata`, `EditorialPlan`, `ChapterContent`, `EditorialReport`, `ChapterVersion`).
+- `src/lib/ai/orchestrator.ts`: Fachada de orquestração de IA com fallback automático entre provedores (Gemini / OpenCode).
+- `src/lib/ai/providers/openCodeProvider.ts`: Provedor OpenCode com suporte a rotação multi-chaves (round-robin) e retentativas automáticas.
+- `src/lib/ai/generation/blockGenerator.ts`: Motor de geração continuada de capítulos em blocos com preservação e atualização de memória acumulada.
+- `src/lib/ai/generation/matterGenerator.ts`: Gerador de seções pré e pós-textuais (`apresentacao`, `introducao`, `conclusao`, `exercicios`, `agradecimentos`, `sobreAutor`).
+- `src/lib/ai/review/hierarchicalReviewer.ts`: Motor de auditoria hierárquica por unidade com nota de qualidade e checklist de 6 modalidades.
+- `src/lib/pdf/printTemplate.ts`: Gerador de HTML de livro impresso com suporte a CSS Paged Media (`@page`), `data-book-title` e rodapé dinâmico.
+- `src/lib/pdf/printStyles.ts`: Estilos CSS de alta precisão gráfica para impressão física e PDF.
+
+## Comandos Principais de Build e Testes
+- **Rodar Servidor Dev**: `npm run dev`
+- **Compilar para Produção**: `npm run build`
+- **Testes Unitários e Integração**: `npm run test`
+- **Validação de Tipos**: `npm run typecheck`
+- **Verificação de Provedores de IA**: `npm run verify:providers`
+
+## Regras Arquiteturais Invioláveis para Agentes de IA
+1. **NUNCA invente ou mocque notas de auditoria**: Toda nota no `EditorialReport` deve ser estritamente computada a partir das auditorias unitárias reais.
+2. **NUNCA remova `data-book-title` ou estruturas de rodapé**: A exportação PDF Puppeteer depende dos atributos de dados injetados nos `.page-sheet`.
+3. **Preserve a Assinatura de `generateFrontEndMatter` e `buildMatterPrompt`**: Suporte incondicional a todos os 6 tipos de matéria (`apresentacao`, `introducao`, `conclusao`, `exercicios`, `agradecimentos`, `sobreAutor`).
+4. **Preserve a Re-auditoria Automática**: Sempre que a função `handleApplyReviewImprovements` for executada com sucesso, ela DEVE chamar `handleRunReview()` no final.
+5. **NUNCA armazene credenciais estáticas no código**: Use `process.env.GEMINI_API_KEY` ou `process.env.OPENCODE_API_KEY`.
