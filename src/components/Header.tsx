@@ -9,6 +9,7 @@ import {
   Layers,
   Cpu,
   Globe,
+  Terminal,
 } from 'lucide-react';
 import { BookProject, EditorialStage } from '../types';
 
@@ -20,6 +21,7 @@ interface HeaderProps {
   onOpenProjectList: () => void;
   onOpenAiSettings: () => void;
   onOpenTranslation?: () => void;
+  onOpenLogConsole?: () => void;
   totalWordCount: number;
 }
 
@@ -31,6 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenProjectList,
   onOpenAiSettings,
   onOpenTranslation,
+  onOpenLogConsole,
   totalWordCount,
 }) => {
   const stages: { id: EditorialStage; label: string; icon: React.ReactNode }[] = [
@@ -126,6 +129,17 @@ export const Header: React.FC<HeaderProps> = ({
               <Cpu className="w-3.5 h-3.5 text-amber-600" />
               <span className="hidden sm:inline">Modelos IA</span>
             </button>
+
+            {onOpenLogConsole && (
+              <button
+                onClick={onOpenLogConsole}
+                className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-900 bg-slate-200 hover:bg-amber-400 hover:text-slate-950 border border-slate-400 transition rounded-sm shadow-xs font-mono"
+                title="Abrir Console de Logs e Diagnóstico em Tempo Real"
+              >
+                <Terminal className="w-3.5 h-3.5 text-amber-600" />
+                <span className="hidden sm:inline">Console Logs</span>
+              </button>
+            )}
 
             <button
               onClick={onOpenProjectList}

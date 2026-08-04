@@ -18,6 +18,7 @@ import { AiTextAssistModal } from './components/AiTextAssistModal';
 import { ProjectListModal } from './components/ProjectListModal';
 import { AiSettingsModal } from './components/AiSettingsModal';
 import { TranslationModal } from './components/TranslationModal';
+import { LogConsoleModal } from './components/LogConsoleModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastContainer, ToastMessage } from './components/common/Toast';
 import { createChapterVersion } from './lib/ai/review/versionManager';
@@ -198,6 +199,7 @@ export default function App() {
   const [isProjectModalOpen, setIsProjectModalOpen] = useState<boolean>(false);
   const [isAiSettingsOpen, setIsAiSettingsOpen] = useState<boolean>(false);
   const [isTranslationModalOpen, setIsTranslationModalOpen] = useState<boolean>(false);
+  const [isLogConsoleOpen, setIsLogConsoleOpen] = useState<boolean>(false);
   const [aiAssistState, setAiAssistState] = useState<{
     text: string;
     action: string;
@@ -935,6 +937,7 @@ export default function App() {
           onOpenProjectList={() => setIsProjectModalOpen(true)}
           onOpenAiSettings={() => setIsAiSettingsOpen(true)}
           onOpenTranslation={() => setIsTranslationModalOpen(true)}
+          onOpenLogConsole={() => setIsLogConsoleOpen(true)}
           totalWordCount={totalWords}
         />
 
@@ -1120,6 +1123,9 @@ export default function App() {
             onTranslationComplete={handleTranslationComplete}
           />
         )}
+
+        {/* Live System Log & Diagnostic Console Modal */}
+        <LogConsoleModal isOpen={isLogConsoleOpen} onClose={() => setIsLogConsoleOpen(false)} />
 
         {/* Footer */}
         <footer className="bg-[#1C1917] text-stone-400 text-xs py-5 px-6 border-t border-stone-800 font-serif">

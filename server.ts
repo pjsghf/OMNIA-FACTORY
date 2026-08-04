@@ -92,6 +92,22 @@ app.use((err: any, _req: express.Request, res: express.Response, next: express.N
   return next(err);
 });
 
+// System Diagnostic & Logging Endpoints
+app.get('/api/system/logs', (_req, res) => {
+  return res.json({
+    success: true,
+    logs: logger.getRecentLogs(),
+  });
+});
+
+app.delete('/api/system/logs', (_req, res) => {
+  logger.clearLogs();
+  return res.json({
+    success: true,
+    message: 'Histórico de logs do servidor limpo com sucesso.',
+  });
+});
+
 // Non-destructive AST/structure-preserving prose normalizer
 export function cleanMarkdownProse(
   text: string,

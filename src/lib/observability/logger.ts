@@ -50,49 +50,76 @@ function redactSensitiveData(obj: any): any {
   return redacted;
 }
 
+export interface LogEntry {
+  id: string;
+  timestamp: string;
+  level: 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
+  message: string;
+  context?: Record<string, unknown>;
+}
+
 export class StructuredLogger {
-  private formatLog(
+  private buffer: LogEntry[] = [];
+  private maxBufferSize = 250;
+
+  private pushEntry(
     level: 'INFO' | 'WARN' | 'ERROR' | 'DEBUG',
     message: string,
     context: LogContext = {}
   ) {
     const timestamp = new Date().toISOString();
     const safeContext = redactSensitiveData(context);
-    return JSON.stringify({
+    const entry: LogEntry = {
+      id: `log_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       timestamp,
       level,
       message,
-      ...safeContext,
-    });
+      context: safeContext,
+    };
+
+    this.buffer.push(entry);
+    if (this.buffer.length > this.maxBufferSize) {
+      this.buffer.shift();
+    }
+
+    return JSON.stringify(entry);
   }
 
   info(message: string, context?: LogContext) {
-    console.log(this.formatLog('INFO', message, context));
+    console.log(this.pushEntry('INFO', message, context));
   }
 
   warn(message: string, context?: LogContext) {
-    console.warn(this.formatLog('WARN', message, context));
+    console.warn(this.pushEntry('WARN', message, context));
   }
 
   error(message: string, context?: LogContext) {
-    console.error(this.formatLog('ERROR', message, context));
+    console.error(this.pushEntry('ERROR', message, context));
   }
 
   debug(message: string, context?: LogContext) {
     if (process.env.NODE_ENV !== 'production') {
-      console.debug(this.formatLog('DEBUG', message, context));
+      console.debug(this.pushEntry('DEBUG', message, context));
     }
   }
 
   metric(metricName: string, value: number, unit: string, context?: LogContext) {
     console.log(
-      this.formatLog('INFO', `METRIC: ${metricName}=${value}${unit}`, {
+      this.pushEntry('INFO', `METRIC: ${metricName}=${value}${unit}`, {
         metricName,
         value,
         unit,
         ...context,
       })
     );
+  }
+
+  getRecentLogs(): LogEntry[] {
+    return [...this.buffer];
+  }
+
+  clearLogs(): void {
+    this.buffer = [];
   }
 }
 
