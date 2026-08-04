@@ -30,5 +30,5 @@ Automatizar o ciclo completo de criação literária e técnica de e-books e liv
 1. **NUNCA invente ou mocque notas de auditoria**: Toda nota no `EditorialReport` deve ser estritamente computada a partir das auditorias unitárias reais.
 2. **NUNCA remova `data-book-title` ou estruturas de rodapé**: A exportação PDF Puppeteer depende dos atributos de dados injetados nos `.page-sheet`.
 3. **Preserve a Assinatura de `generateFrontEndMatter` e `buildMatterPrompt`**: Suporte incondicional a todos os 6 tipos de matéria (`apresentacao`, `introducao`, `conclusao`, `exercicios`, `agradecimentos`, `sobreAutor`).
-4. **Preserve a Re-auditoria Automática**: Sempre que a função `handleApplyReviewImprovements` for executada com sucesso, ela DEVE chamar `handleRunReview()` no final.
+4. **Preserve a Re-auditoria Automática**: Sempre que a função `handleApplyReviewImprovements` for executada com sucesso, ela DEVE chamar `handleRunEditorialReview()` no final. (Nota: uma versão anterior deste arquivo citava `handleRunReview()` — um nome que nunca existiu no código — e essa imprecisão na documentação chegou a ser copiada para `main`, quebrando o build por vários commits. Verifique nomes de função contra o código-fonte antes de documentá-los.)
 5. **NUNCA armazene credenciais estáticas no código**: Use `process.env.GEMINI_API_KEY` ou `process.env.OPENCODE_API_KEY`.

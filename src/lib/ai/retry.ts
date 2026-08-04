@@ -1,3 +1,13 @@
+/**
+ * Per-provider circuit breaker + exponential-backoff retry for AI provider calls.
+ *
+ * State (`circuitBreakers`) is a module-level in-memory `Record`, not persisted
+ * and not shared across processes. In a multi-instance deployment each instance
+ * breaks its own circuit independently; there is no shared coordination. That is
+ * an accepted simplification for this app's single-process deployment model, not
+ * an oversight — flag it if this ever runs behind a load balancer with several
+ * Node processes and true cross-instance circuit state becomes necessary.
+ */
 export interface CircuitState {
   failures: number;
   lastFailureTime: number;
@@ -8,6 +18,15 @@ const circuitBreakers: Record<string, CircuitState> = {};
 const FAILURE_THRESHOLD = 5;
 const CIRCUIT_RESET_MS = 60000; // 60 seconds cooldown
 
+/**
+ * Whether `providerName`'s circuit is currently open (failing fast, no calls
+ * attempted). Self-heals: once {@link CIRCUIT_RESET_MS} has elapsed since the
+ * last recorded failure, this call itself closes the circuit and resets the
+ * failure count — there is no separate timer/scheduler, the check IS the reset.
+ *
+ * @param providerName - `'gemini'` or `'opencode'` (matches `AiProvider.name`).
+ * @returns `true` if calls to this provider should be short-circuited right now.
+ */
 export function isCircuitOpen(providerName: string): boolean {
   const state = circuitBreakers[providerName];
   if (!state || !state.isOpen) return false;
@@ -46,6 +65,22 @@ export function recordFailure(providerName: string) {
   }
 }
 
+/**
+ * Classifies whether an error is worth retrying (network blip, rate limit,
+ * transient 5xx) versus permanent (bad request, auth failure, not found) where
+ * retrying would just repeat the same failure `maxAttempts` times for nothing.
+ *
+ * Deliberately conservative for the boundary case: an error with no recognizable
+ * status code AND no matching keyword returns `false` (not retried) rather than
+ * `true`. An unrecognized permanent error (e.g. a malformed-request 4xx that
+ * doesn't match the explicit list) is safer to surface immediately than to retry
+ * blindly.
+ *
+ * @param error - Any thrown value; duck-typed for `.status` / `.statusCode` /
+ *   `.response.status` / `.message`, so both SDK errors and plain fetch Response
+ *   errors work without a shared error type.
+ * @returns `true` if {@link executeWithRetry} should attempt another try.
+ */
 export function isTransientError(error: any): boolean {
   if (!error) return false;
   const errStr = String(error.message || error || '').toLowerCase();
@@ -74,6 +109,34 @@ export function isTransientError(error: any): boolean {
   return false;
 }
 
+/**
+ * Runs `operation` with a per-attempt timeout, exponential backoff between
+ * retries, and circuit-breaker short-circuiting. This is the single choke point
+ * every outbound AI provider HTTP/SDK call in this codebase goes through.
+ *
+ * Control flow per attempt: a fresh `AbortController` is created and wired to
+ * `operation` via its `signal` parameter — **`operation` must actually pass this
+ * signal into its underlying fetch/SDK call**, or the timeout fires but nothing
+ * is actually cancelled (the call keeps running in the background while this
+ * function has already moved on to the next attempt / thrown). On timeout the
+ * abort reason is rewritten into a Portuguese "Tempo limite excedido" message so
+ * callers never have to special-case a raw `AbortError`.
+ *
+ * @param providerName - Identifies the circuit breaker bucket; use the same
+ *   string consistently for one provider (`'gemini'` / `'opencode'`).
+ * @param operation - The call to attempt. Receives the `AbortSignal` for this
+ *   attempt; must forward it to the actual network call to make the timeout
+ *   effective.
+ * @param maxAttempts - Total attempts including the first (default 3).
+ * @param timeoutMs - Per-attempt budget in ms (default 90000 — sized for chapter
+ *   blocks generating up to 8192 output tokens; do not lower this without
+ *   checking generation latency at max output length first).
+ * @returns Whatever `operation` resolves with, on the attempt that succeeds.
+ * @throws The last error encountered, once retries are exhausted, the error is
+ *   classified non-transient by {@link isTransientError}, or the circuit for
+ *   `providerName` is already open (in which case it throws immediately, before
+ *   attempting anything, with a `[Circuit Breaker]`-prefixed message).
+ */
 export async function executeWithRetry<T>({
   providerName,
   operation,

@@ -65,10 +65,19 @@ function isPrivateIPv6(ip: string): boolean {
  * Validates external provider URLs against SSRF (Server Side Request Forgery) attacks.
  * Blocks private IPv4/IPv6 ranges, loopback, cloud metadata endpoints and non-HTTPS schemes.
  *
+ * Call this on every user/client-configurable base URL before it is used in a
+ * `fetch()` (currently: `openCodeProvider.ts`'s `opencodeBaseUrl`). Never throws;
+ * every failure mode returns `{ safe: false, reason }` instead, so a caller cannot
+ * accidentally skip the check by forgetting a try/catch.
+ *
  * Residual risk: this inspects the URL only. A public hostname that *resolves* to a
  * private address (DNS rebinding) still passes, because the name looks legitimate here.
  * Closing that requires resolving the host and validating the IP at connect time
  * (a pinned lookup + custom agent), which belongs at the socket layer, not here.
+ *
+ * @param rawUrl - Untrusted URL string, typically from client-supplied `aiConfig`.
+ * @returns `{ safe: true, sanitizedUrl }` (credentials/trailing slash stripped) or
+ *   `{ safe: false, reason }` with a Portuguese message safe to surface to the user.
  */
 export function validateProviderBaseUrl(rawUrl: string): SsrfCheckResult {
   if (!rawUrl || typeof rawUrl !== 'string') {
@@ -162,6 +171,27 @@ function isPrivateIPv4(ip: string): boolean {
 /**
  * Delimits untrusted user inputs (materials, restrictions, user notes) using strict XML tags
  * to defend against prompt injection attacks.
+ *
+ * This is prompt-level defense-in-depth, not a sanitizer in the HTML-escaping
+ * sense: it does not strip or reject anything the user wrote (a book manuscript
+ * legitimately needs almost any character), it *labels* the untrusted spans with
+ * `<materiais_usuario>` / `<restricoes_usuario>` tags and returns an instruction
+ * telling the model to treat that content as inert context, never as commands.
+ * The one active transformation is stripping literal occurrences of those same
+ * tag names from the user's own text, so a manuscript cannot forge a closing tag
+ * and escape the delimited block.
+ *
+ * Every provider call (`geminiProvider.ts`, `openCodeProvider.ts`) routes through
+ * this before the prompt reaches the model; do not bypass it for a "trusted" path
+ * — user-authored book content is exactly the untrusted input this defends.
+ *
+ * @param prompt - The already-assembled task prompt (instructions + task data).
+ * @param userMaterials - Optional raw user-supplied reference material.
+ * @param userRestrictions - Optional raw user-supplied constraints/restrictions.
+ * @returns `sanitizedPrompt` (the original `prompt` with the delimited blocks
+ *   appended) and `injectionGuardInstruction` (a system-instruction fragment the
+ *   caller must prepend/append to its own system instruction — this function does
+ *   not do that wiring itself).
  */
 export function sanitizePromptInputs(
   prompt: string,

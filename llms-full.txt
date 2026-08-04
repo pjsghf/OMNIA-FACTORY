@@ -4,51 +4,136 @@
 
 ## 1. Visão Geral do Sistema e Arquitetura
 
-O OMNIA FACTORY é um sistema monolítico full-stack desacoplado. O frontend é construído com React 19 + Vite 6 + TailwindCSS 4 em `src/`, e o backend em `server.ts` utiliza Express 4 + Puppeteer.
+O OMNIA FACTORY é um sistema monolítico full-stack desacoplado. O frontend é construído com React 19 + Vite 6 + TailwindCSS 4 em `src/`, e o backend em `server.ts` utiliza Express 4 + Puppeteer. Não há banco de dados: o estado de cada projeto vive no `localStorage` do navegador (com debounce de 800ms e tratamento de falha por cota excedida), com backup/restauração via arquivo JSON assinado por checksum.
 
 O pipeline editorial é dividido em 5 etapas principais:
 1. **Configuração (`ConfigStage.tsx`)**: Coleta de metadados do livro, gênero, estilo, tom, autor, editora, resumo e opções de IA.
 2. **Planejamento (`PlanningStage.tsx`)**: Geração do plano editorial com tese central, tom geral e sumário estruturado de capítulos (`ChapterPlan[]`).
 3. **Redação (`WritingStage.tsx`)**: Redação sequencial de capítulos em blocos com preservação de memória contextual (`BookBibleMemory`), além da geração de 6 seções pré e pós-textuais (`apresentacao`, `introducao`, `conclusao`, `exercicios`, `agradecimentos`, `sobreAutor`).
-4. **Revisão & Auditoria (`ReviewStage.tsx`)**: Auditoria hierárquica por unidade (100% de cobertura) com avaliação em 6 modalidades, geração de relatório de melhorias e botão de aplicação de correções com **re-auditoria automática** ao final.
-5. **Diagramação e Exportação (`DesignExportStage.tsx`)**: Exportação em EPUB e PDF de alta precisão gráfica via Puppeteer com rodapé estilizado (título do livro à esquerda e número da página à direita).
+4. **Revisão & Auditoria (`ReviewStage.tsx`)**: Auditoria hierárquica map-reduce por unidade com avaliação em 6 modalidades, geração de relatório de melhorias e botão de aplicação de correções com **re-auditoria automática** ao final.
+5. **Diagramação e Exportação (`DesignExportStage.tsx`)**: Exportação em EPUB 3, PDF de alta precisão gráfica via Puppeteer (rodapé com título à esquerda e número de página à direita), HTML (leitor imersivo autocontido) e Markdown.
+
+Camadas de segurança aplicadas a toda a superfície `/api/` (`server.ts`, em ordem): Helmet (CSP/headers) → Rate Limiter global (300 req/15min por IP) → Rate Limiter de `/api/editorial/` (30 req/1min por IP) → Autenticação opcional por Bearer token (`API_ACCESS_TOKEN`, desabilitada por padrão) → parser JSON (limite 50MB).
 
 ---
 
 ## 2. Contratos de API REST (`server.ts`)
 
-### `POST /api/editorial/plan`
-- **Descrição**: Gera o plano editorial do livro com base nos metadados.
-- **Entrada**: `{ metadata: BookMetadata, aiConfig?: AiConfig }`
-- **Saída**: `{ success: true, plan: EditorialPlan }`
+Todas as rotas retornam JSON. Erros seguem o formato `{ success: false, error: string, details?: object }` ou, nos endpoints de exportação/assets, `{ error: { code: string, message: string } }`.
 
-### `POST /api/editorial/generate-chapter`
-- **Descrição**: Gera o conteúdo de um capítulo específico em blocos sequenciais.
-- **Entrada**: `{ metadata: BookMetadata, plan: EditorialPlan, chapterIndex: number, memory: BookBibleMemory, aiConfig?: AiConfig }`
-- **Saída**: `{ success: true, content: string, wordCount: number, updatedMemory: BookBibleMemory }`
+### Geração Editorial
 
-### `POST /api/editorial/generate-section`
-- **Descrição**: Gera seções complementares pré ou pós-textuais.
+#### `POST /api/editorial/plan`
+Gera o plano editorial do livro a partir dos metadados.
+- **Entrada**: `{ ...BookMetadata, aiConfig?: AiConfig }` (metadados no nível raiz do body, não aninhados)
+- **Saída**: `{ success: true, plan: EditorialPlan, adjustments: string[] }`
+- **Validação**: `validateBookConfig` roda antes de qualquer chamada de IA; o plano bruto retornado pelo modelo passa por `reconcileEditorialPlan`, que corrige deterministicamente contagem de capítulos e faixas de palavras fora do solicitado.
+
+#### `POST /api/editorial/generate-chapter`
+Gera o conteúdo de um capítulo específico, em blocos sequenciais com memória de continuidade.
+- **Entrada**: `{ metadata: BookMetadata, plan: EditorialPlan, chapterIndex: number, memory: BookBibleMemory, previousSummaries?: string[], aiConfig?: AiConfig }`
+- **Saída**: `{ success: true, chapterIndex, chapterNumber, title, content: string, wordCount: number, updatedMemory: BookBibleMemory, coverageReport: CoverageReport }`
+- **Regra de negócio**: `previousSummaries` só é usado pelo prompt como *fallback* enquanto `memory.resumosCapitulos` ainda está vazio (ver `promptBuilder.ts`).
+
+#### `POST /api/editorial/generate-section`
+Gera uma das 6 seções pré/pós-textuais.
 - **Entrada**: `{ metadata: BookMetadata, plan?: EditorialPlan, sectionType: 'apresentacao'|'introducao'|'conclusao'|'exercicios'|'agradecimentos'|'sobreAutor', fullBookContent: string, aiConfig?: AiConfig }`
 - **Saída**: `{ success: true, sectionType: string, title: string, content: string }`
+- **Regra de negócio**: para `sobreAutor`, o prompt exige uso exclusivo de informações reais fornecidas pelo usuário — nunca inventar credenciais/prêmios.
 
-### `POST /api/editorial/review`
-- **Descrição**: Executa a auditoria hierárquica de 100% das unidades do livro.
+#### `POST /api/editorial/text-assist`
+Reescreve/expande/resume um trecho selecionado pelo usuário (assistente de edição inline).
+- **Entrada**: `{ action: 'expand'|'summarize'|'polish'|'changeTone'|'addExample'|'fixGrammar', text: string, context?: string, tone?: string, language?: string, aiConfig?: AiConfig }`
+- **Saída**: `{ success: true, result: string }`
+
+### Revisão e Auditoria
+
+#### `POST /api/editorial/review`
+Executa a auditoria hierárquica map-reduce de todas as unidades da obra (front matter + capítulos + end matter com conteúdo não vazio).
 - **Entrada**: `{ project: BookProject, aiConfig?: AiConfig }`
 - **Saída**: `{ success: true, report: EditorialReport }`
+- **Contrato de falha parcial**: se uma unidade falha na chamada de IA, ela é pulada (não aborta a auditoria inteira) e registrada em `report.unidadesComFalha`. Só lança erro se TODAS as unidades falharem. Ver `hierarchicalReviewer.ts`.
 
-### `POST /api/editorial/apply-review`
-- **Descrição**: Aplica as sugestões da auditoria para aprimorar o texto dos capítulos.
-- **Entrada**: `{ metadata: BookMetadata, plan: EditorialPlan, chapterIndex: number, chapterTitle: string, chapterContent: string, report: EditorialReport, aiConfig?: AiConfig }`
-- **Saída**: `{ success: true, content: string, wordCount: number }`
+#### `POST /api/editorial/apply-review`
+Aplica as sugestões da auditoria ao(s) capítulo(s), reescrevendo o texto.
+- **Entrada**: `{ metadata: BookMetadata, chapterIndex: number, chapterTitle: string, chapterContent: string, report: EditorialReport, aiConfig?: AiConfig }`
+- **Saída**: `{ success: true, chapterIndex, chapterTitle, content: string, wordCount: number }`
+- **Regra de negócio (cliente)**: `App.tsx`'s `handleApplyReviewImprovements` chama automaticamente `handleRunEditorialReview()` após aplicar melhorias com sucesso (re-auditoria automática pós-aprimoramento), para validar se os problemas apontados foram de fato resolvidos.
 
-### `POST /api/export/pdf`
-- **Descrição**: Exporta o livro completo em PDF estilizado via Puppeteer headless.
+### Tradução e Localização
+
+#### `POST /api/editorial/translate-section`
+Traduz um trecho de texto isolado.
+- **Entrada**: `{ text: string, targetLanguage: string, aiConfig?: AiConfig }`
+- **Saída**: `{ success: true, translatedText: string }`
+
+#### `POST /api/editorial/translate-book`
+Traduz e localiza culturalmente a obra inteira (metadados, front/end matter, todos os capítulos) e gera uma nova capa no idioma de destino.
+- **Entrada**: `{ project: BookProject, targetLanguage: string, aiConfig?: AiConfig }`
+- **Saída**: `{ success: true, translatedProject: BookProject, targetLanguage: string, coverImageUrl: string }`
+- **Custo**: uma chamada de IA por campo traduzido (metadados, cada capítulo, cada seção) — para um livro de N capítulos isso é ~O(N) chamadas sequenciais numa única requisição HTTP síncrona. Livros grandes podem exceder timeouts de proxy; é uma limitação conhecida, ainda sem fila de jobs assíncrona.
+
+### Capa e Mídia
+
+#### `POST /api/editorial/generate-cover`
+Gera a arte de fundo da capa via IA (Gemini Imagen) e compõe a tipografia deterministicamente por cima via SVG.
+- **Entrada**: `{ titulo, autor, subtitulo?, editora?, estilo?, resumo?, publicoAlvo?, promptCapa?, overlay?, formatProfile?, briefVersion?, totalPageCount?, renderFullPrintWrap?, aiConfig? }`
+- **Saída**: `{ success: true, imageUrl: string (data URI), source: 'ai'|'fallback_svg', providerUsed: string, spineWidthMm: number, ... }`
+- **Fallback**: se a geração de imagem por IA falhar OU o Gemini não estiver configurado, cai automaticamente para um compositor SVG vetorial (`coverCanvasRenderer.ts`) — nunca retorna erro por falta de capacidade de imagem.
+
+#### `POST /api/assets/upload`
+Valida e registra um asset (ex: capa enviada manualmente) fornecido como data URI.
+- **Entrada**: `{ assetType?: string, dataUrl: string, filename?: string }`
+- **Saída**: `{ success: true, asset: { id, type, url, filename, uploadedAt } }`
+- **Validação**: `validateImageSource` rejeita esquemas fora de `data:image/*` ou `http(s):`; `blob:` é rejeitado (referência de memória do navegador, inútil no servidor).
+
+### Exportação
+
+#### `POST /api/export/pdf`
+Renderiza o livro completo como PDF via Puppeteer headless.
 - **Entrada**: `{ project: BookProject, settings: PdfExportSettings }`
-- **Saída**: Buffer binário do PDF (`application/pdf`)
+- **Saída**: buffer binário `application/pdf`, OU `{ error: {...}, htmlFallback: string }` (500) se o Puppeteer não conseguir iniciar.
+- **Limite de concorrência**: no máximo `MAX_CONCURRENT_PDF_EXPORTS` (padrão 2) requisições simultâneas; excedentes recebem `503 { error: { code: 'PDF_EXPORT_BUSY' } }`.
+- **SSRF**: `metadata.coverImageUrl` passa por `validateImageSource` antes de ser injetado no HTML renderizado pelo Puppeteer.
+
+### Backup, Saúde e Conformidade
+
+#### `POST /api/projects/backup`
+Empacota uma lista de projetos com manifesto e checksum.
+- **Entrada**: `{ projects: BookProject[] }`
+- **Saída**: `{ success: true, backup: OmniaBackupPackage }`
+
+#### `POST /api/projects/restore`
+Valida e restaura um pacote de backup (formato atual `omnia-backup-v2` ou array legado).
+- **Entrada**: `OmniaBackupPackage` (body inteiro) ou array de `BookProject`
+- **Saída**: `{ success: true, restoredCount: number, projects: BookProject[] }`
+- **Nota**: um checksum divergente NÃO bloqueia a restauração sozinho — é reportado para a UI decidir (ver `backupService.ts`).
+
+#### `GET /api/health`
+Diagnóstico básico de disponibilidade do processo (sem checar provedores de IA).
+- **Saída**: `{ status: 'ok', service, timestamp, uptimeSeconds, environment, geminiConfigured: boolean }`
+
+#### `GET /api/ready`
+Prontidão incluindo checagem de saúde dos provedores de IA configurados.
+- **Saída (200)**: `{ status: 'ready', checks: { server: true, aiProviders: Record<string, ProviderHealth> } }`
+- **Saída (503)**: `{ status: 'not_ready', reason, checks }` se nenhum provedor estiver `ok`.
+
+#### `GET /api/privacy-policy`
+Retorna o manifesto de política de privacidade vigente (LGPD/GDPR).
+- **Saída**: `{ success: true, policy: PrivacyPolicy }`
+
+#### `POST /api/editorial/projects/:id/delete-data`
+Confirmação de exclusão de dados (LGPD/GDPR) — endpoint de conformidade; não há persistência server-side de fato a apagar (o dado vive no navegador do usuário).
+- **Saída**: `{ success: true, projectId, message, deletedAt }`
 
 ---
 
 ## 3. Diretrizes para Agentes de IA
-- **Preservação de Normalização de Prosa**: A função `normalizeProse` em `proseNormalizer.ts` limpa marcadores de markdown sem remover títulos essenciais.
-- **Preservação de Rotação Multi-Key**: `openCodeProvider.ts` lê `OPENCODE_API_KEY` dividida por vírgulas ou espaços para aplicar retentativa com rotação.
+
+- **Preservação de Normalização de Prosa**: `normalizeProse` (`proseNormalizer.ts`) limpa marcadores de markdown e falas de IA sem remover títulos essenciais. Ao editar, use SEMPRE `text.replace(placeholder, () => original)` (função) para restaurar trechos protegidos — `text.replace(placeholder, original)` (string) trata `$` no texto restaurado como metacaractere e corrompe fórmulas/código.
+- **Preservação de Rotação Multi-Key**: `openCodeProvider.ts` lê `OPENCODE_API_KEY` dividida por vírgula/espaço/ponto-e-vírgula para retentativa com rotação round-robin (`globalKeyIndex`, estado de módulo compartilhado entre chamadas concorrentes).
+- **Falha Alta em Seleção de Modelo**: se um `opencodeModel`/`geminiModel` explícito não existir no catálogo (`catalog.ts`), o provider DEVE lançar erro — nunca substituir silenciosamente pelo modelo padrão. Uma substituição silenciosa já produziu, no passado, um livro inteiro escrito por um modelo diferente do escolhido, sem nenhum sinal de erro.
+- **Contrato de Auditoria Parcial**: `unidadesComFalha` no `EditorialReport` deve refletir exatamente quais unidades falharam a análise; `coberturaTotalUnidadesPercent` deve ser calculado sobre unidades REALMENTE analisadas, nunca sobre unidades tentadas. `preflightGate.ts` depende disso para recusar publicação de obra com auditoria incompleta, independentemente da nota.
+- **Verifique nomes de função contra o código antes de documentá-los**: este arquivo e `.cursorrules`/`ARCHITECTURE.md` já continham, em versão anterior, uma referência a uma função (`handleRunReview`) que nunca existiu — a grafia certa é `handleRunEditorialReview`. Um agente que seguiu a documentação ao pé da letra teria escrito exatamente o bug que quebrou o build de produção por 6 commits seguidos. Trate estes arquivos como guia, não como fonte de verdade — a fonte de verdade é sempre `src/`.
+- **NUNCA remova `data-book-title` ou a estrutura de rodapé do PDF**: a exportação Puppeteer depende desses atributos/templates injetados nos elementos `.page-sheet` (ver `printTemplate.ts`, `catalogRenderer.ts`, `server.ts`'s `/api/export/pdf`).
+- **NUNCA armazene credenciais estáticas no código**: leia sempre de `process.env.GEMINI_API_KEY` / `process.env.OPENCODE_API_KEY` / `process.env.API_ACCESS_TOKEN`.

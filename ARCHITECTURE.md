@@ -106,7 +106,7 @@ sequenceDiagram
 ### ADR 004: Re-auditoria Automática Pós-Aplicação de Melhorias
 - **Status**: Aceito.
 - **Contexto**: O usuário precisa saber se as correções sugeridas pela IA realmente resolveram as inconsistências detectadas.
-- **Decisão**: Encadear a chamada de `handleRunReview()` automaticamente dentro de `handleApplyReviewImprovements()` assim que a reescrita for finalizada.
+- **Decisão**: Encadear a chamada de `handleRunEditorialReview()` automaticamente dentro de `handleApplyReviewImprovements()` assim que a reescrita for finalizada.
 - **Consequência**: Validação imediata sem necessidade de intervenção manual.
 
 ---
@@ -114,7 +114,9 @@ sequenceDiagram
 ## 5. Fronteiras de Segurança e Políticas de Proteção
 
 1. **Autenticação por Bearer Token (`API_ACCESS_TOKEN`)**: Opcional em dev, obrigatório para produção se o endpoint for exposto publicamente.
-2. **Rate Limiting em Camadas**:
-   - `/api/`: Limite global de 100 requisições / 15min por IP.
-   - `/api/editorial/`: Limite estrito de 20 requisições / 15min por IP para prevenir estouro de cota e ataques de DoS financeiro.
-3. **Limites de Payload**: `express.json({ limit: '50mb' })` para permitir backups completos do projeto e imagens base4 de capa, tratado com captura de erro HTTP 413.
+2. **Rate Limiting em Camadas** (`src/lib/security/rateLimiter.ts`):
+   - `/api/`: Limite global de 300 requisições / 15min por IP.
+   - `/api/editorial/`: Limite estrito de 30 requisições / **1min** por IP para prevenir estouro de cota e ataques de DoS financeiro.
+   - `/api/export/pdf`: Adicionalmente limitado por concorrência (não por janela de tempo) — no máximo `MAX_CONCURRENT_PDF_EXPORTS` (padrão 2) requisições simultâneas, já que cada uma sobe um Chromium headless inteiro via Puppeteer.
+3. **Autenticação Opcional por Token**: se `API_ACCESS_TOKEN` estiver definida, toda a superfície `/api/*` exige `Authorization: Bearer <token>`, exceto `/api/health`, `/api/ready` e `/api/privacy-policy`. Comparação em tempo constante (`crypto.timingSafeEqual`). Desabilitada por padrão.
+4. **Limites de Payload**: `express.json({ limit: '50mb' })` para permitir backups completos do projeto e imagens base64 de capa, tratado com captura de erro HTTP 413.

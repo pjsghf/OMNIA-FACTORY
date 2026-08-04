@@ -3,6 +3,12 @@ import { BookBibleMemory, formatMemoryForPrompt } from '../memory/bookBibleMemor
 import { detectSensitiveNiche } from '../policies/sensitiveNichePolicy';
 import { ChapterSectionPlan } from '../planning/chapterSectionPlanner';
 
+/**
+ * A fully-assembled, ready-to-send prompt pair plus the generation settings it
+ * was designed for. `taskVersion` is descriptive metadata only — nothing in this
+ * codebase parses or branches on it; it exists so a prompt can be identified in
+ * logs/telemetry if that is added later.
+ */
 export interface PromptPackage {
   taskVersion: string;
   systemInstruction: string;
@@ -11,6 +17,30 @@ export interface PromptPackage {
   temperature: number;
 }
 
+/**
+ * Builds the prompt for Phase 1 of the pipeline: the editorial plan (concept,
+ * reader profile, and chapter-by-chapter table of contents), as strict JSON.
+ *
+ * The returned prompt hardcodes `jsonMode: true` intent via its instructions,
+ * but does not itself force JSON mode on the provider — the caller
+ * (`aiOrchestrator.generateStructured`) is what actually sets
+ * `responseMimeType: 'application/json'` / `response_format`. If a caller uses
+ * this package with `generateText` instead of `generateStructured`, the model
+ * will likely still return JSON-shaped text (the prompt asks for it), but
+ * nothing enforces or parses it.
+ *
+ * Whatever this returns is expected to be run through
+ * `validation/planReconciler.ts`'s `reconcileEditorialPlan` before use — this
+ * function has no knowledge of `metadata.qtdCapitulos` being honored by the
+ * model; reconciliation is what deterministically corrects a wrong chapter
+ * count, out-of-range word estimates, etc.
+ *
+ * @param metadata - Book configuration; every field is interpolated directly
+ *   into the prompt text (already sanitized upstream by `configValidator.ts`
+ *   before this is called from `server.ts`).
+ * @returns A {@link PromptPackage} with `temperature: 0.2` (favors consistent,
+ *   structured output over creative variance) and `jsonMode: true`.
+ */
 export function buildPlanPrompt(metadata: BookMetadata): PromptPackage {
   const nichePolicy = detectSensitiveNiche(metadata);
 
@@ -81,6 +111,38 @@ Gere a estrutura em JSON exato:
 
 const PRECEDING_BLOCK_TAIL_CHARS = 1200;
 
+/**
+ * Builds the prompt for one block of one chapter — see
+ * `generation/blockGenerator.ts`'s `generateChapterInBlocks` for the calling
+ * loop and the full 3-layer continuity model this prompt is one piece of.
+ *
+ * Continuity context is assembled here from three optional sources, in this
+ * priority order within the rendered prompt text:
+ *   1. `memory` (formatted via `formatMemoryForPrompt`) — always included,
+ *      renders a "no prior chapters" placeholder when empty rather than an
+ *      empty string, so the model is never silently missing this section.
+ *   2. `previousSummaries` — appended ONLY when `memory.resumosCapitulos` is
+ *      still empty; once the BookBible has real entries, this fallback is
+ *      dropped entirely (not merged) to avoid presenting two summaries of the
+ *      same chapters with potentially different framings.
+ *   3. `precedingBlockText` — the last {@link PRECEDING_BLOCK_TAIL_CHARS}
+ *      characters of the immediately preceding block in the SAME chapter (not
+ *      truncated at a word boundary — a mid-word cut is accepted as the cost of
+ *      a simple, predictable slice).
+ *
+ * @param metadata - Book-level config (style/tone/language directives).
+ * @param plan - Full editorial plan, if available; only `plan.conceitoCentral`
+ *   is read (falls back to `metadata.resumo` if `plan` is absent).
+ * @param chapterPlan - This chapter's plan entry.
+ * @param sectionBlock - This specific block's plan (topics, purpose, word target).
+ * @param memory - BookBible memory; see priority order above.
+ * @param previousSummaries - Fallback chapter digests; see priority order above.
+ * @param precedingBlockText - Raw text of the previous block in this chapter, if
+ *   any (omit for the first block).
+ * @returns A {@link PromptPackage} with `temperature: 0.65` (favors prose
+ *   variety over the low-temperature structured-output settings used
+ *   elsewhere) and `jsonMode: false`.
+ */
 export function buildWriterSectionBlockPrompt({
   metadata,
   plan,
@@ -158,6 +220,33 @@ Escreva a prosa do bloco agora:`;
   };
 }
 
+/**
+ * Builds the prompt for one front/end-matter section (apresentação, introdução,
+ * conclusão, exercícios, agradecimentos, or sobre-o-autor).
+ *
+ * BUSINESS RULE (sobreAutor): the directive text explicitly instructs the model
+ * to use ONLY information the user actually provided and never invent
+ * credentials, awards, or titles. This is a factual-accuracy / defamation-risk
+ * guard specific to this one section type (a fabricated biography is a concrete
+ * harm in a way a fabricated example in a chapter generally is not) — do not
+ * remove or soften that instruction when editing `specificDirectives.sobreAutor`.
+ *
+ * `fullBookContent` (the already-written chapters, used so the section can
+ * reference real content rather than generic platitudes) is truncated to the
+ * first 15,000 characters before being interpolated — a long book's later
+ * chapters are invisible to this prompt. This is a deliberate prompt-size
+ * tradeoff, not a bug; if section quality for late-book content becomes an
+ * issue, consider summarizing instead of raising the character cap (raising it
+ * just shifts the same problem to an even longer book).
+ *
+ * @param metadata - Book-level config; `plan` is accepted in the parameter type
+ *   for call-site compatibility but is not read by this function.
+ * @param fullBookContent - Concatenated chapter text, or empty string if no
+ *   chapters are written yet (falls back to a generic placeholder line).
+ * @param type - Which section to write; an unrecognized value falls back to a
+ *   generic "Seção Complementar" title/directive rather than throwing.
+ * @returns A {@link PromptPackage} with `temperature: 0.5` and `jsonMode: false`.
+ */
 export function buildMatterPrompt({
   metadata,
   fullBookContent,

@@ -15,6 +15,27 @@ export interface PreflightCheckResult {
   items: PreflightItem[];
 }
 
+/**
+ * Computes publish-readiness across the 5 editorial stages (config, planning,
+ * writing, review, export), for the "ready to export" indicator in the UI.
+ *
+ * BUSINESS RULE (review gate): stage 4 only `passed: true` when the editorial
+ * report is fresh (`!obsoleto`), fully analysed (`unidadesComFalha` is empty —
+ * see {@link runHierarchicalEditorialReview} in `hierarchicalReviewer.ts`, which
+ * is what populates that field on a partial-failure audit), AND scores ≥ 70.
+ * A partial or stale audit cannot satisfy this stage even with a high
+ * `notaGeral`, by design: the score only means something once every unit was
+ * actually reviewed.
+ *
+ * Read-only / pure: does not mutate `project`, has no side effects, safe to call
+ * on every render.
+ *
+ * @param project - The active project, or `null` if none is selected/loaded.
+ * @returns `readyToPublish` (true only if every stage passed), a 0-100 `score`
+ *   (percentage of stages passed — NOT a quality score, just stage completion),
+ *   and per-stage `items` with a human-readable Portuguese `message` suitable
+ *   for direct display plus a `targetStage` for a "go fix this" navigation link.
+ */
 export function checkProjectPreflight(project: BookProject | null): PreflightCheckResult {
   if (!project) {
     return {

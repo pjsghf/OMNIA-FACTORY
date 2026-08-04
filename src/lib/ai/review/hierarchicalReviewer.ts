@@ -2,6 +2,23 @@ import { BookProject, EditorialReport, ReviewFinding } from '../../../types';
 import { aiOrchestrator } from '../orchestrator';
 import { sanitizeEditorialReport, sanitizeReviewFinding } from './reviewSchema';
 
+/**
+ * Deterministic fingerprint of a project's reviewable content (title, author,
+ * front/end matter, and every chapter's number+title+content, concatenated).
+ * Same non-cryptographic rolling-hash construction as
+ * `backupService.ts`'s `calculateChecksum` — see that function's doc for the
+ * "not a security primitive" caveat, which applies equally here.
+ *
+ * Used to stamp an {@link EditorialReport} with the exact content state it
+ * reviewed (`report.projectVersionHash`), so the UI can detect "this report is
+ * stale, the chapters changed since it was generated" by comparing hashes
+ * rather than tracking edits explicitly.
+ *
+ * @param project - The project to fingerprint.
+ * @returns A `"hash-<number>"` string. Any change to the fields listed above
+ *   changes the hash; anything NOT in that list (metadata fields other than
+ *   titulo/autor, plan, chapterVersions, editorialReport itself) does not.
+ */
 export function computeProjectVersionHash(project: BookProject): string {
   const contentString = [
     project.metadata.titulo,
@@ -22,6 +39,45 @@ export function computeProjectVersionHash(project: BookProject): string {
   return `hash-${Math.abs(hash)}`;
 }
 
+/**
+ * Runs the full editorial audit as a map-reduce over the book's units (front
+ * matter, each chapter, end matter): one AI call analyses each unit
+ * independently (MAP), then a final AI call synthesizes the per-unit findings
+ * into one {@link EditorialReport} with overall scores (REDUCE).
+ *
+ * PARTIAL-FAILURE CONTRACT — this is the part most worth reading before calling
+ * this function or changing it: a per-unit AI call failing (provider error,
+ * timeout, malformed JSON) does NOT abort the whole audit; that unit is skipped,
+ * its id recorded in `failedUnits`, and review continues with the remaining
+ * units. Only if EVERY unit fails does this function throw. This exists
+ * specifically so a report can never look like a clean pass when nothing was
+ * actually reviewed: a partial failure is surfaced in the returned report via
+ * `unidadesComFalha` (non-empty) and a `[AUDITORIA PARCIAL ...]` prefix
+ * prepended to `resumoAvaliatorio`, and `coberturaTotalUnidadesPercent` is
+ * computed from units ACTUALLY analysed, not units attempted. Callers such as
+ * `preflightGate.ts` key off `unidadesComFalha` to refuse export-readiness on a
+ * report that could not fully vouch for the book, regardless of `notaGeral`.
+ *
+ * If the REDUCE stage itself fails (separately from any MAP-stage failures),
+ * this function does not throw — it falls back to a default 80/100 report
+ * without global synthesis, while still returning whatever per-unit findings
+ * were collected. This is a UX tradeoff (still show the operator the granular
+ * findings) that {@link checkProjectPreflight}'s `>= 70` threshold happens to
+ * clear; it is not validated against `unidadesComFalha` the way MAP-stage
+ * failures are, since a REDUCE failure is orthogonal to per-unit coverage.
+ *
+ * @param project - The full project to audit. Only front matter, chapters, and
+ *   end matter with non-empty trimmed content become review units; empty
+ *   sections are silently skipped (not counted as failures).
+ * @param aiConfig - Provider/model selection, forwarded to every unit's review
+ *   call and the reduce-stage synthesis call.
+ * @param onProgress - Optional callback fired before each unit review and once
+ *   before the reduce stage, with a Portuguese status string and 0-100 percent.
+ * @returns A sanitized {@link EditorialReport} (see `reviewSchema.ts`'s
+ *   `sanitizeEditorialReport`) — always well-formed even under partial failure.
+ * @throws Only when `project` has zero reviewable units, or every unit's review
+ *   call failed (see the partial-failure contract above).
+ */
 export async function runHierarchicalEditorialReview({
   project,
   aiConfig,

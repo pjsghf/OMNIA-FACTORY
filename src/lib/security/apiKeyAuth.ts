@@ -13,6 +13,17 @@ import { timingSafeEqual } from 'crypto';
  * this deliberately does not make it. It only closes the "deployed and wide open"
  * case: set API_ACCESS_TOKEN and callers must present it. Unset -- the default --
  * leaves behaviour exactly as before.
+ *
+ * Reads `process.env.API_ACCESS_TOKEN` once, at middleware-construction time
+ * (when `app.use(createApiAuthMiddleware())` runs) — not per-request. Changing
+ * the env var requires a process restart to take effect; this is not a live
+ * feature flag.
+ *
+ * @returns An Express `RequestHandler`. If `API_ACCESS_TOKEN` is unset, the
+ *   returned handler is a permissive no-op (`(_req, _res, next) => next()`);
+ *   otherwise it enforces the token on every path except the `PUBLIC_PATHS`
+ *   allowlist defined in the function body (`/health`, `/ready`,
+ *   `/privacy-policy`).
  */
 export function createApiAuthMiddleware(): RequestHandler {
   const expectedToken = (process.env.API_ACCESS_TOKEN || '').trim();

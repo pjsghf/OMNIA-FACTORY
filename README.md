@@ -1,161 +1,176 @@
-# OMNIA Scriptor — Enterprise AI Editorial Studio
+# OMNIA Factory
 
-OMNIA Scriptor is an enterprise-grade AI-powered editorial studio designed for authors, publishers, and literary editors. It orchestrates book planning, hierarchical chapter drafting, multi-pass editorial review, typography composition, and production-ready exports (EPUB 3, PDF, HTML5, and Markdown).
+![CI](https://github.com/pjsghf/OMNIA-FACTORY/actions/workflows/ci.yml/badge.svg?branch=main)
+![Node](https://img.shields.io/badge/node-%3E%3D20-339933?logo=node.js&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)
+![License](https://img.shields.io/badge/license-unspecified-lightgrey)
+
+**Estúdio editorial orientado a IA** para planejamento, redação contínua por blocos, auditoria hierárquica e diagramação profissional (PDF/EPUB/HTML) de livros — do rascunho ao arquivo pronto para publicação.
+
+> Documentação relacionada: [`ARCHITECTURE.md`](./ARCHITECTURE.md) (fluxos de dados, ADRs, diagramas de sequência) · [`CONTRIBUTING.md`](./CONTRIBUTING.md) (padrão de commits, fluxo de PR) · [`llms.txt`](./llms.txt) / [`llms-full.txt`](./llms-full.txt) (contexto para agentes de IA) · [`.cursorrules`](./.cursorrules) (regras operacionais para agentes).
 
 ---
 
-## 🏛️ System Architecture
+## Visão geral
 
-The application is structured following a layered, domain-driven architecture:
+A aplicação conduz um livro por 5 etapas — **Configuração → Planejamento → Redação → Revisão → Diagramação/Exportação** — orquestrando chamadas de IA (Gemini ou OpenCode) para gerar o plano editorial, escrever capítulos em blocos com memória de continuidade (*BookBible Memory*), auditar a obra unidade por unidade, e exportar em PDF (via Puppeteer), EPUB 3 e HTML.
+
+É um monólito full-stack: um único servidor Express serve tanto a API quanto o front-end React (via middleware do Vite em desenvolvimento, ou arquivos estáticos empacotados em produção). Não há banco de dados — o estado do projeto vive no `localStorage` do navegador, com backup/restauração via arquivo JSON.
+
+## Arquitetura em um relance
+
+```mermaid
+flowchart TD
+    Browser["Navegador<br/>React 19 SPA · localStorage"]
+
+    subgraph Server["server.ts — Express 4 (porta 3000)"]
+        direction TB
+        MW["Middlewares de segurança<br/>Helmet · Rate Limiter · Bearer Auth (opcional)"]
+        Routes["Rotas /api/editorial/*<br/>plan · generate-chapter · generate-section<br/>review · apply-review · translate-book"]
+        PDF["Exportação PDF<br/>Puppeteer headless (máx. N concorrentes)"]
+    end
+
+    subgraph AI["Camada de IA (src/lib/ai)"]
+        Orch["AiOrchestrator<br/>seleção de provedor + redação de erros"]
+        Gemini["GeminiProvider<br/>@google/genai"]
+        OpenCode["OpenCodeProvider<br/>rotação multi-chave · fallback de modelo"]
+    end
+
+    Browser -->|"fetch JSON"| MW --> Routes
+    Routes --> Orch
+    Routes --> PDF
+    Orch --> Gemini
+    Orch --> OpenCode
+    Gemini -->|HTTPS| GeminiAPI[("generativelanguage.<br/>googleapis.com")]
+    OpenCode -->|HTTPS + SSRF check| OpenCodeAPI[("opencode.ai/zen/go/v1")]
+```
+
+Para os fluxos de sequência detalhados (redação em blocos com memória, auditoria + re-auditoria automática) e os *Architecture Decision Records*, veja [`ARCHITECTURE.md`](./ARCHITECTURE.md).
+
+## Pré-requisitos
+
+- **Node.js ≥ 20** (o `package.json` declara `engines.node: ">=20"`; testado em Node 22)
+- **npm 10+** (o repositório versiona `package-lock.json` — use `npm ci` em CI/produção)
+- Uma chave de API de pelo menos um provedor de IA: **Gemini** ([Google AI Studio](https://aistudio.google.com/apikey)) e/ou **OpenCode GO**
+- Nenhum banco de dados ou serviço externo além das APIs de IA é necessário
+
+## Instalação rápida
+
+```bash
+git clone https://github.com/pjsghf/OMNIA-FACTORY.git
+cd OMNIA-FACTORY
+npm install
+
+cp .env.example .env
+# edite .env e defina GEMINI_API_KEY e/ou OPENCODE_API_KEY
+
+npm run dev
+# abre em http://localhost:3000
+```
+
+Para produção:
+
+```bash
+npm run build   # compila o cliente (Vite) e empacota o servidor (esbuild -> dist/server.cjs)
+npm start       # NODE_ENV=production node dist/server.cjs
+```
+
+### Verificando os provedores de IA
+
+A suíte de testes automatizados **não** faz chamadas reais a nenhum provedor (propositalmente — custo e determinismo). Depois de configurar as chaves, confirme que elas realmente funcionam:
+
+```bash
+npm run verify:providers
+```
+
+| Código de saída | Significado |
+|---|---|
+| `0` | Tudo que está configurado foi alcançado e respondeu corretamente |
+| `1` | Algo configurado está genuinamente quebrado — leia a saída |
+| `2` | **Inconclusivo** (nenhuma chave configurada, ou rede bloqueando o host) — não é aprovação |
+
+## Variáveis de ambiente
+
+Todas em `.env.example`. Nenhuma é obrigatória para o servidor *subir*, mas sem pelo menos uma chave de IA nenhuma geração funciona.
+
+| Variável | Obrigatória | Descrição |
+|---|---|---|
+| `PORT` | Não (padrão `3000`) | Porta HTTP do servidor Express. |
+| `NODE_ENV` | Não | `development` usa o Vite como middleware; `production` serve `dist/` estático. |
+| `GEMINI_API_KEY` | Não* | Chave server-side do Google Gemini. Nunca prefixe com `VITE_` (vazaria para o bundle do cliente). |
+| `OPENCODE_API_KEY` | Não* | Chave do OpenCode GO. Aceita múltiplas chaves separadas por espaço, vírgula ou ponto e vírgula, para rotação round-robin com failover. |
+| `OPENCODE_EXTRA_MODELS` | Não | IDs de modelo OpenCode adicionais, além do catálogo embutido (separados por vírgula). Use quando o gateway expõe um modelo que o catálogo ainda não lista. |
+| `API_ACCESS_TOKEN` | Não | Se definida, exige `Authorization: Bearer <token>` (ou header `X-API-Key`) em toda a superfície `/api/*`, exceto `/api/health`, `/api/ready` e `/api/privacy-policy`. **Defina antes de expor o servidor publicamente** — sem isso, qualquer pessoa com a URL gasta a sua cota de IA. |
+| `FRAME_ANCESTORS` | Não | Origens adicionais autorizadas a incorporar a aplicação em `<iframe>` (CSP `frame-ancestors`). |
+| `EXTRA_CONNECT_SRC` | Não | Origens adicionais que o navegador pode contatar via `fetch` (CSP `connect-src`). |
+
+\* Pelo menos uma das duas é necessária para qualquer funcionalidade de IA (planejamento, redação, revisão, tradução). A geração de capa faz *fallback* automático para um compositor SVG vetorial quando o Gemini não está configurado.
+
+## Scripts disponíveis
+
+```bash
+npm run dev              # servidor de desenvolvimento (Vite middleware + Express)
+npm run build             # build de produção (cliente + servidor)
+npm start                  # roda o build de produção
+npm run typecheck          # tsc --noEmit
+npm run typecheck:strict   # tsc --noEmit com noUncheckedIndexedAccess e afins
+npm run lint                # eslint .
+npm run format:check        # prettier --check
+npm test                     # suíte completa (vitest)
+npm run test:unit            # apenas tests/unit
+npm run test:integration     # apenas tests/integration
+npm run test:security        # apenas tests/security
+npm run test:exports         # apenas tests/exports (EPUB/PDF)
+npm run test:coverage        # suíte completa + relatório de cobertura
+npm run verify:providers     # chamadas reais e mínimas aos provedores de IA configurados
+```
+
+## Solução de problemas (Troubleshooting)
+
+**`npm run verify:providers` retorna `SKIP` / código de saída `2` para o OpenCode, mencionando "Host not in allowlist"**
+Isso é um proxy de rede bloqueando a conexão de saída, não uma credencial inválida — o script diferencia deliberadamente os dois casos (um proxy que recusa o `CONNECT` também responde `403`, o que seria fácil de confundir com "chave rejeitada pelo provedor"). Rode o script fora do ambiente restrito (localmente, ou num CI sem egress bloqueado).
+
+**A geração de texto falha imediatamente com `MODEL_NOT_ALLOWED` ou "não é permitido"**
+O modelo padrão (`gemini-2.5-flash` / `deepseek-v4-flash`, ver `src/lib/ai/catalog.ts`) precisa existir na sua conta/gateway. Rode `npm run verify:providers` — ele lista os modelos reais disponíveis via `GET /v1beta/models` (Gemini) e testa uma chamada mínima (OpenCode). Um modelo do OpenCode fora do catálogo embutido precisa estar em `OPENCODE_EXTRA_MODELS`.
+
+**Exportação de PDF retorna `503 PDF_EXPORT_BUSY`**
+O servidor limita exportações de PDF simultâneas (Puppeteer sobe um Chromium inteiro por requisição). O padrão é 2 (`MAX_CONCURRENT_PDF_EXPORTS`); ajuste essa variável de ambiente se o host tiver memória de sobra, ou tente novamente em alguns segundos.
+
+**Erro de armazenamento local / obra "sumiu"**
+O app salva projetos no `localStorage` do navegador (com debounce), não em servidor. Se aparecer um aviso de falha ao salvar (cota do navegador esgotada, modo anônimo/privado), **exporte um backup imediatamente** (Biblioteca de Projetos → Backup) antes de fechar a aba — é o único jeito de não perder o trabalho nesse cenário.
+
+**`npm run build` funciona mas `npm start` falha ao gerar PDF**
+O Puppeteer baixa um binário do Chromium na instalação (`npm install`); confirme que essa etapa não foi pulada (`--ignore-scripts`) e que o host tem as dependências de sistema do Chromium (em imagens Docker minimalistas, isso costuma faltar — veja a imagem oficial do Puppeteer ou instale as libs do Chromium manualmente).
+
+**Erros de tipo aparecem só em `typecheck:strict`, não em `typecheck`**
+Isso é esperado e é o propósito de ter os dois scripts: `tsconfig.strict.json` liga `noUncheckedIndexedAccess` e outras checagens que `tsconfig.json` não tem. O CI roda ambos; um código que passa em `typecheck` mas falha em `typecheck:strict` deve ser corrigido, não silenciado.
+
+**Alterações não aparecem no GitHub / branch errada**
+Este projeto usa Pull Requests como gate de CI — commits diretos em `main` pulam a verificação automática (typecheck, lint, testes, build) até o momento do push, o que já causou pelo menos um build quebrado sem que ninguém notasse por várias execuções seguidas. Prefira sempre branch + PR, mesmo trabalhando sozinho; veja [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+
+## Estrutura do projeto
 
 ```
 src/
 ├── lib/
-│   ├── ai/                      # AI Orchestration, Prompts, Block Generators & Reviewers
-│   │   ├── generation/          # Sequential chapter block & front/end matter generators
-│   │   ├── memory/              # BookBible continuity memory engine
-│   │   ├── prompts/             # Dynamic prompt builders with directive enforcement
-│   │   ├── review/              # Map-reduce hierarchical editorial reviewer
-│   │   ├── validation/          # Schema, coverage, and config validators
-│   │   ├── orchestrator.ts      # Multi-provider fallback AI orchestrator
-│   │   └── types.ts             # AI task types and response interfaces
-│   ├── cover/                   # Cover Brief, Format Specs & Vector Compositor Engine
-│   │   ├── coverBrief.ts        # Specs for Ebook, Print A5, Trade 6x9, Square Catalog
-│   │   └── coverCanvasRenderer.ts # Vector SVG canvas renderer with burned-in typography
-│   ├── rendering/               # Unified Editorial AST & Export Engines
-│   │   ├── editorialAST.ts      # Abstract Syntax Tree parser and XHTML/HTML/MD renderers
-│   │   └── canonicalRenderer.ts # Canonical HTML reader renderer
-│   ├── pdf/                     # Puppeteer-backed PDF Print Generator & CSS paged media
-│   ├── security/                # CSP headers, Rate Limiters, Privacy Policy & LGPD
-│   ├── config/                  # Startup environment variable validation
-│   ├── observability/           # Structured JSON logger with sensitive data redaction
-│   └── validation/              # Preflight gate validators for publishing readiness
-├── components/                  # React 19 UI stages (Config, Outline, Editor, Audit, Export)
-└── server.ts                    # Express + Vite server with API endpoints
+│   ├── ai/                  # Orquestração de IA, prompts, geração em blocos, revisão hierárquica
+│   │   ├── providers/       # GeminiProvider, OpenCodeProvider (rotação multi-chave)
+│   │   ├── generation/      # Geração sequencial de capítulos e seções pré/pós-textuais
+│   │   ├── memory/          # BookBible: memória de continuidade entre capítulos
+│   │   ├── review/          # Auditoria hierárquica map-reduce + re-auditoria automática
+│   │   └── validation/      # Validação de config, conteúdo, cobertura, reconciliação de plano
+│   ├── security/             # Headers CSP, rate limiting, autenticação opcional por token
+│   ├── pdf/                   # Motor de exportação PDF via Puppeteer + CSS Paged Media
+│   ├── rendering/              # AST editorial unificado (Markdown -> HTML/XHTML/MD)
+│   └── validation/              # Gate de prontidão para publicação (preflight)
+├── components/                   # Telas React por etapa do pipeline editorial
+└── App.tsx                        # Estado raiz da SPA e orquestração entre etapas
+
+server.ts       # Servidor Express: rotas de API, segurança, exportação PDF
+scripts/        # Scripts utilitários (verify:providers)
+tests/          # Suítes vitest: unit, integration, security, exports, components
 ```
 
 ---
 
-## 🚀 Local Setup & Development
-
-### Prerequisites
-- Node.js 20+
-- npm 10+
-
-### Environment Configuration
-Copy `.env.example` to `.env` and set your configuration:
-
-```env
-PORT=3000
-NODE_ENV=development
-GEMINI_API_KEY=AIzaSy...
-```
-
-### Commands
-
-```bash
-# Install dependencies
-npm install
-
-# Start development server with live Vite middleware
-npm run dev
-
-# Run TypeScript typechecks and linting
-npm run lint
-
-# Build production bundle (client + server.cjs)
-npm run build
-
-# Start production server
-npm run start
-
-# Verify the AI providers against their live APIs (see below)
-npm run verify:providers
-```
-
-### Verifying the AI providers
-
-The automated suite never calls a real provider, so a wrong model id or a wrong
-base URL passes CI and only fails in front of a user. `npm run verify:providers`
-closes that gap: it lists the account's real Gemini models and checks every id in
-`catalog.ts` against them, then makes one minimal OpenCode completion.
-
-Run it after changing `catalog.ts` or a provider URL. Exit codes:
-
-| Code | Meaning |
-| --- | --- |
-| `0` | Everything configured was reached and works |
-| `1` | Something is genuinely broken — read the output |
-| `2` | Inconclusive: nothing ran (missing key, or egress blocked by a proxy) |
-
-Exit `2` is not a pass. A restrictive network answers `403` to the `CONNECT`,
-which looks identical to a provider rejecting the key — the script tells the two
-apart so a network policy is never mistaken for a bad credential.
-
----
-
-## 🛡️ Security & Privacy (LGPD / GDPR)
-
-1. **Security Headers (Helmet & CSP)**
-   - Strict Content Security Policy (CSP) allowing inline styles for previewing and data URIs for canvas export.
-   - HTTP Strict Transport Security (HSTS) enabled in production environments.
-   - `X-Content-Type-Options: nosniff` and `X-Frame-Options` configured to support AI Studio preview frames.
-
-2. **Rate Limiting & Cost Protection**
-   - Global API Rate Limiter: 300 requests per 15 minutes.
-   - Editorial AI Endpoint Limiter: 30 requests per minute.
-
-3. **Data Minimization & Privacy**
-   - Manuscripts processed server-side in memory; zero permanent third-party training.
-   - Project Data Deletion Endpoint (`POST /api/editorial/projects/:id/delete-data`).
-   - Privacy Policy Manifest Endpoint (`GET /api/privacy-policy`).
-
----
-
-## 📖 API Endpoints Reference
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/api/health` | Service health status, uptime, and env diagnostics |
-| `GET` | `/api/privacy-policy` | Privacy policy manifest and LGPD/GDPR rights |
-| `POST` | `/api/editorial/validate-config` | Validates genre, target audience, and directive parameters |
-| `POST` | `/api/editorial/plan-book` | Generates a structured editorial outline with chapter briefs |
-| `POST` | `/api/editorial/generate-chapter-block` | Generates chapter content in sequential, coherent blocks |
-| `POST` | `/api/editorial/generate-matter` | Generates front matter and end matter sections |
-| `POST` | `/api/editorial/review-hierarchical` | Runs map-reduce editorial audit across all chapters |
-| `POST` | `/api/editorial/generate-cover` | Background artwork + vector typography composite rendering |
-| `POST` | `/api/editorial/generate-pdf` | Generates printable PDF via headless Puppeteer browser |
-| `POST` | `/api/projects/backup` | Exports versioned project backup package |
-| `POST` | `/api/projects/restore` | Validates and restores project backup package |
-| `POST` | `/api/editorial/projects/:id/delete-data` | LGPD project data deletion confirmation |
-
----
-
-## 📋 Operational Runbooks
-
-### Runbook 1: Production Deployment Procedure
-1. Run `npm run lint` to ensure zero TypeScript or compilation errors.
-2. Execute `npm run build` to compile static Vite assets into `/dist` and create `/dist/server.cjs`.
-3. Set `NODE_ENV=production` and verify `process.env.PORT` binding.
-4. Launch via `npm run start` and verify health check via `GET /api/health`.
-
-### Runbook 2: Key Rotation Procedure
-1. Generate new API key in Google AI Studio / GCP Console.
-2. Update `GEMINI_API_KEY` in environment secrets manager.
-3. Perform zero-downtime server restart. Check `/api/health` for `geminiConfigured: true`.
-
-### Runbook 3: Provider Outage Fallback
-If primary AI provider experiences elevated latencies or HTTP 429:
-- The `AiOrchestrator` automatically retries with exponential backoff (up to 3 attempts).
-- Fallback vector compositors trigger automatically for cover artwork generation.
-
----
-
-## 🟢 Release Gate & Preflight Criteria
-
-Before exporting production books, the **Preflight Gate Engine** checks:
-- [x] All chapters present with text > 100 words.
-- [x] Metadata complete (Title, Author, BCP-47 language tag).
-- [x] No placeholder text (e.g. `Lorem Ipsum`, `[INSIRA AQUI]`).
-- [x] Offline assets resolved (data URIs / embedded SVGs).
-- [x] EPUB3 validation compliance (strict XHTML schema and metadata tags).
+<p align="center"><sub>OMNIA Factory · Editora OMNIA</sub></p>

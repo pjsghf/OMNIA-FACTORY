@@ -154,6 +154,20 @@ export const OPENCODE_MODEL_CATALOG: Record<string, ModelCapability> = {
   },
 };
 
+/**
+ * Looks up a model's static capability record (limits, pricing, allowed tasks).
+ *
+ * This is the allowlist: a model id that is not a key in {@link GEMINI_MODEL_CATALOG}
+ * or {@link OPENCODE_MODEL_CATALOG} is, by construction, not usable by this
+ * application — there is no other path to reach the provider API with an id.
+ *
+ * @param provider - Which catalog to search.
+ * @param modelId - Exact id string (e.g. `"gemini-2.5-flash"`, `"deepseek-v4-flash"`).
+ *   OpenCode ids admitted via `OPENCODE_EXTRA_MODELS` (see openCodeProvider.ts) are
+ *   intentionally NOT in this catalog and will return `null` here; callers on that
+ *   path fall back to the default model's capability for cost/token estimation.
+ * @returns The capability record, or `null` if `modelId` is not in the catalog.
+ */
 export function getModelCapability(
   provider: 'gemini' | 'opencode',
   modelId: string
@@ -165,6 +179,24 @@ export function getModelCapability(
   }
 }
 
+/**
+ * Checks whether a model may be used for a given task type.
+ *
+ * Two independent gates, both must pass: the model must exist in the catalog
+ * (see {@link getModelCapability}), and its `allowedTasks` must include `task`
+ * (e.g. Imagen models are `image`-only and are rejected for `writing`/`plan`/etc).
+ *
+ * Never throws. Callers are expected to check `.valid` and surface `.reason`
+ * (already human-readable, Portuguese) as the user-facing error — this is the
+ * validation both provider implementations run before making an upstream call,
+ * so a `false` result here means the request never leaves the process.
+ *
+ * @param provider - Which catalog to validate against.
+ * @param modelId - The model id requested (by the client or a caller default).
+ * @param task - The task the model is about to be used for.
+ * @returns `{ valid: true }`, or `{ valid: false, reason }` with a message safe
+ *   to return directly to the end user.
+ */
 export function validateModelForTask(
   provider: 'gemini' | 'opencode',
   modelId: string,
@@ -188,6 +220,28 @@ export function validateModelForTask(
   return { valid: true };
 }
 
+/**
+ * Resolves which model id to use when the caller did not pin one explicitly.
+ *
+ * Resolution order: (1) the catalog entry flagged `isDefault: true` that also
+ * supports `task`; (2) failing that, the first catalog entry (in object key
+ * order) that supports `task`; (3) a hardcoded last-resort id, only reachable if
+ * the whole catalog were emptied of entries supporting `task` (should not happen
+ * with the shipped catalogs — every task type has at least one flash/default model).
+ *
+ * BUSINESS RULE: only one entry per catalog should carry `isDefault: true`. If two
+ * did, `Object.values(...).find(...)` would silently pick whichever comes first in
+ * object insertion order — no error, just an arbitrary choice. Not enforced at
+ * runtime; keep it true by inspection when editing the catalogs.
+ *
+ * @param provider - `'gemini'` or `'opencode'`.
+ * @param task - The task the resolved model must support.
+ * @returns A model id string. Always returns *something* — callers do not need to
+ *   handle an empty/undefined case — but the returned id is only guaranteed to
+ *   exist in the catalog for cases (1) and (2); the tier-3 fallback ids
+ *   (`'gemini-2.5-flash'`, `'opencode/claude-3-5-sonnet'`) are current catalog
+ *   members today but are not re-validated against the catalog at return time.
+ */
 export function getDefaultModel(provider: 'gemini' | 'opencode', task: AiTaskType): string {
   const catalog = provider === 'gemini' ? GEMINI_MODEL_CATALOG : OPENCODE_MODEL_CATALOG;
   const match = Object.values(catalog).find((m) => m.isDefault && m.allowedTasks.includes(task));
@@ -200,6 +254,22 @@ export function getDefaultModel(provider: 'gemini' | 'opencode', task: AiTaskTyp
       : 'opencode/claude-3-5-sonnet';
 }
 
+/**
+ * Estimates the USD cost of one completion, for logging/observability only.
+ *
+ * Not a billing figure: `inputTokens`/`outputTokens` are themselves estimates
+ * (≈4 characters per token; see the `Math.ceil(text.length / 4)` call sites in
+ * geminiProvider.ts / openCodeProvider.ts, not an actual tokenizer), and image
+ * generation is a flat per-image price rather than token-based. Nothing in this
+ * function affects what is actually sent to or billed by the provider.
+ *
+ * @param modelCapability - Pricing/task info for the model that was used.
+ * @param inputTokens - Estimated input token count.
+ * @param outputTokens - Estimated output token count.
+ * @returns Estimated cost in USD, rounded to 6 decimal places. For image-capable
+ *   models this is the flat `outputCostPer1k` value (repurposed as "cost per
+ *   image", not literally "per 1k of anything").
+ */
 export function calculateEstimatedCost(
   modelCapability: ModelCapability,
   inputTokens: number,
