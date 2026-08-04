@@ -603,7 +603,7 @@ export default function App() {
     }
   };
 
-  // 5B. Apply Editorial Review Improvements to Chapters
+  // 5B. Apply Editorial Review Improvements to Chapters + Automatic Re-Audit
   const handleApplyReviewImprovements = async (chapterIndex?: number) => {
     if (!getLiveProject().editorialReport) {
       addToast('error', 'Sem Relatório', 'Execute a auditoria editorial primeiro.');
@@ -611,6 +611,7 @@ export default function App() {
     }
 
     setIsApplyingReview(true);
+    let appliedSuccess = false;
 
     try {
       if (typeof chapterIndex === 'number') {
@@ -639,6 +640,7 @@ export default function App() {
 
         const data = await res.json();
         if (data.success) {
+          appliedSuccess = true;
           updateActiveProject((p) => {
             const chapters = [...p.chapters];
             const newContent = data.content;
@@ -759,8 +761,19 @@ export default function App() {
         }
 
         if (appliedCount > 0) {
+          appliedSuccess = true;
           addToast('success', 'Obra Polida', `Melhorias aplicadas em ${appliedCount} capítulo(s).`);
         }
+      }
+
+      // AUTOMATIC RE-AUDIT POST-IMPROVEMENTS
+      if (appliedSuccess) {
+        addToast(
+          'info',
+          'Nova Auditoria Automática',
+          'Auditando a obra novamente para verificar se os erros foram corrigidos...'
+        );
+        await handleRunReview();
       }
     } catch (err: any) {
       console.error(err);

@@ -88,12 +88,12 @@ export const ReviewStage: React.FC<ReviewStageProps> = ({
               {isApplyingReview ? (
                 <>
                   <Wand2 className="w-4 h-4 animate-spin text-amber-400" />
-                  <span>Aplicando Melhorias na Obra...</span>
+                  <span>{isReviewing ? 'Re-auditando Obra...' : 'Aplicando Melhorias...'}</span>
                 </>
               ) : (
                 <>
                   <Sparkles className="w-4 h-4 text-amber-400" />
-                  <span>Aplicar Melhorias na Obra (IA)</span>
+                  <span>Aplicar Melhorias & Re-auditar</span>
                 </>
               )}
             </button>
@@ -141,14 +141,14 @@ export const ReviewStage: React.FC<ReviewStageProps> = ({
             <div className="space-y-1 text-center sm:text-left">
               <div className="flex items-center justify-center sm:justify-start space-x-2 text-amber-400 text-xs font-mono font-bold uppercase tracking-wider">
                 <Sparkles className="w-4 h-4" />
-                <span>Aprimoramento Automático com IA</span>
+                <span>Aprimoramento + Re-auditoria Automática</span>
               </div>
               <h3 className="font-serif italic font-bold text-base text-white">
                 Deseja aplicar as correções sugeridas aos capítulos?
               </h3>
               <p className="text-xs text-stone-300 font-serif">
-                A IA reescreverá e polirá as unidades auditadas preservando o estilo do autor e
-                gerando histórico de versões.
+                A IA reescreverá e polirá as unidades auditadas e, em seguida, fará uma nova
+                auditoria automática para verificar se todos os erros foram resolvidos.
               </p>
             </div>
             <button
@@ -156,8 +156,16 @@ export const ReviewStage: React.FC<ReviewStageProps> = ({
               disabled={isApplyingReview || isReviewing}
               className="px-6 py-3 bg-amber-400 hover:bg-amber-300 text-[#1C1917] font-bold text-xs uppercase tracking-widest transition shadow-xs flex-shrink-0 flex items-center space-x-2"
             >
-              <Wand2 className={`w-4 h-4 ${isApplyingReview ? 'animate-spin' : ''}`} />
-              <span>{isApplyingReview ? 'Reescrevendo...' : 'Aplicar Melhorias Agora'}</span>
+              <Wand2
+                className={`w-4 h-4 ${isApplyingReview || isReviewing ? 'animate-spin' : ''}`}
+              />
+              <span>
+                {isApplyingReview
+                  ? isReviewing
+                    ? 'Re-auditando...'
+                    : 'Reescrevendo...'
+                  : 'Aplicar Melhorias & Re-auditar'}
+              </span>
             </button>
           </div>
 
