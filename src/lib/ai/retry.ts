@@ -16,7 +16,7 @@ export interface CircuitState {
 
 const circuitBreakers: Record<string, CircuitState> = {};
 const FAILURE_THRESHOLD = 5;
-const CIRCUIT_RESET_MS = 60000; // 60 seconds cooldown
+const CIRCUIT_RESET_MS = 15000; // 15 seconds fast cooldown
 
 /**
  * Whether `providerName`'s circuit is currently open (failing fast, no calls
@@ -144,7 +144,7 @@ export async function executeWithRetry<T>({
   // A chapter block is generated with up to 8192 output tokens; 30s was not a
   // realistic budget for that and turned normal long completions into timeouts
   // (which then burned two more retries before surfacing).
-  timeoutMs = 90000,
+  timeoutMs = 180000,
 }: {
   providerName: string;
   operation: (signal: AbortSignal) => Promise<T>;

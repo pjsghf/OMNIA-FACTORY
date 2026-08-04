@@ -187,7 +187,8 @@ export class OpenCodeProvider implements AiProvider {
 
     const responseContent = await executeWithRetry({
       providerName: 'opencode',
-      maxAttempts: Math.max(3, apiKeys.length),
+      maxAttempts: Math.max(4, apiKeys.length * 2),
+      timeoutMs: 180000,
       operation: async (signal) => {
         // Non-null: the index is always < apiKeys.length (modulo), and apiKeys.length > 0
         // is guaranteed by the guard above. TS can't see that invariant through the
@@ -288,7 +289,8 @@ export class OpenCodeProvider implements AiProvider {
 
     const responseContent = await executeWithRetry({
       providerName: 'opencode',
-      maxAttempts: Math.max(3, apiKeys.length),
+      maxAttempts: Math.max(4, apiKeys.length * 2),
+      timeoutMs: request.taskType === 'plan' ? 240000 : 180000,
       operation: async (signal) => {
         // Non-null: the index is always < apiKeys.length (modulo), and apiKeys.length > 0
         // is guaranteed by the guard above. TS can't see that invariant through the

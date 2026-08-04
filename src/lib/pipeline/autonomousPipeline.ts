@@ -168,40 +168,59 @@ export class AutonomousPipelineRunner {
   }
 
   private async executeStepPlan(): Promise<boolean> {
-    const res = await fetch('/api/editorial/plan', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...this.options.project.metadata,
-        aiConfig: this.options.aiConfig,
-      }),
-    });
-    const data = await res.json();
-    if (data.success && data.plan) {
-      const plan: EditorialPlan = data.plan;
-      const chapters: ChapterContent[] = (plan.sumario || []).map((c) => ({
-        numero: c.numero,
-        titulo: c.titulo,
-        subtitulo: c.subtitulo,
-        content: '',
-        wordCount: 0,
-        status: 'pending',
-      }));
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      if (this.cancelRequested) return false;
 
-      this.options.onProjectUpdate((prev) => ({
-        ...prev,
-        plan,
-        chapters,
-      }));
-      this.state.totalChapters = plan.sumario?.length || 7;
-      this.emitTelemetry(
-        `Planejamento concluído com ${this.state.totalChapters} capítulos no sumário.`
-      );
-      return true;
-    } else {
-      this.emitTelemetry(`Falha no planejamento: ${data.error || 'Erro desconhecido'}`);
-      return false;
+      if (attempt > 1) {
+        this.emitTelemetry(
+          `Tentativa ${attempt} de 3: Reagendando geração do planejamento editorial com tempo expandido...`
+        );
+        await new Promise((r) => setTimeout(r, 4000));
+      }
+
+      try {
+        const res = await fetch('/api/editorial/plan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...this.options.project.metadata,
+            aiConfig: this.options.aiConfig,
+          }),
+        });
+        const data = await res.json();
+        if (data.success && data.plan) {
+          const plan: EditorialPlan = data.plan;
+          const chapters: ChapterContent[] = (plan.sumario || []).map((c) => ({
+            numero: c.numero,
+            titulo: c.titulo,
+            subtitulo: c.subtitulo,
+            content: '',
+            wordCount: 0,
+            status: 'pending',
+          }));
+
+          this.options.onProjectUpdate((prev) => ({
+            ...prev,
+            plan,
+            chapters,
+          }));
+          this.state.totalChapters = plan.sumario?.length || 7;
+          this.emitTelemetry(
+            `Planejamento concluído com ${this.state.totalChapters} capítulos no sumário.`
+          );
+          return true;
+        } else {
+          this.emitTelemetry(
+            `Aviso na tentativa ${attempt} de planejamento: ${data.error || 'Erro no planejamento'}`
+          );
+        }
+      } catch (err: any) {
+        this.emitTelemetry(`Erro na tentativa ${attempt} de planejamento: ${err?.message || err}`);
+      }
     }
+
+    this.emitTelemetry('Falha no planejamento após 3 tentativas.');
+    return false;
   }
 
   private async executeStepFrontMatter() {
