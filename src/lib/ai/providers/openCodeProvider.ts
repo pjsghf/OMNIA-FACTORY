@@ -327,7 +327,29 @@ export class OpenCodeProvider implements AiProvider {
         .replace(/```json/gi, '')
         .replace(/```/g, '')
         .trim();
-      parsedData = JSON.parse(cleanJsonStr);
+      try {
+        parsedData = JSON.parse(cleanJsonStr);
+      } catch (_firstErr) {
+        // Attempt JSON repair for unclosed brackets/quotes if truncated
+        let repairedStr = cleanJsonStr;
+        // Fix unclosed strings
+        const openQuotes = (repairedStr.match(/"/g) || []).length;
+        if (openQuotes % 2 !== 0) {
+          repairedStr += '"';
+        }
+        // Balance brackets
+        const openBraces = (repairedStr.match(/\{/g) || []).length;
+        const closeBraces = (repairedStr.match(/\}/g) || []).length;
+        for (let i = 0; i < openBraces - closeBraces; i++) {
+          repairedStr += '}';
+        }
+        const openBracket = (repairedStr.match(/\[/g) || []).length;
+        const closeBracket = (repairedStr.match(/\]/g) || []).length;
+        for (let i = 0; i < openBracket - closeBracket; i++) {
+          repairedStr += ']';
+        }
+        parsedData = JSON.parse(repairedStr);
+      }
     } catch (parseErr) {
       throw new Error(
         `Falha ao converter a resposta da OpenCode GO para JSON: ${parseErr instanceof Error ? parseErr.message : String(parseErr)}`

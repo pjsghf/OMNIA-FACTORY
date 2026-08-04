@@ -78,6 +78,10 @@ REGRAS RÍGIDAS DE PLANEJAMENTO:
 - Informações Obrigatórias a Incluir: ${metadata.informacoesObrigatorias || 'Nenhuma'}
 - Restrições e Proibições: ${metadata.restricoes || 'Nenhuma'}
 
+REGRAS DE CONCISÃO:
+- Seja ultra-direto e sucinto nos valores dos campos para garantir um JSON completo sem cortes.
+- Retorne no máximo 3 tópicos e 2 subtópicos por capítulo.
+
 Gere a estrutura em JSON exato:
 {
   "conceitoCentral": "string",
