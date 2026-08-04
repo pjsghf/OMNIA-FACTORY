@@ -10,6 +10,18 @@ import {
 import { GeminiProvider } from './providers/geminiProvider';
 import { OpenCodeProvider } from './providers/openCodeProvider';
 
+/**
+ * Facade over the concrete AI providers ({@link GeminiProvider}, {@link OpenCodeProvider}).
+ *
+ * This is the ONLY entry point application code (server.ts, generation/*, review/*)
+ * should call for text/structured/image generation — never import a provider class
+ * directly. Routing here means every call automatically gets: provider selection
+ * from `request.aiConfig.provider`, and error redaction + taxonomy via
+ * {@link normalizeAndThrowError} regardless of which provider or SDK raised it.
+ *
+ * A singleton instance is exported as {@link aiOrchestrator}; there is normally no
+ * reason to construct a second `AiOrchestrator`.
+ */
 export class AiOrchestrator {
   private providers: Map<string, AiProvider> = new Map();
 
@@ -29,6 +41,18 @@ export class AiOrchestrator {
     return provider;
   }
 
+  /**
+   * Generates free-form text via the provider named in `request.aiConfig.provider`
+   * (defaults to `'gemini'` if unset).
+   *
+   * @param request - Prompt, task type, and optional per-call model override.
+   * @returns The provider's raw text result plus token/cost/timing metadata.
+   * @throws Always a redacted `Error` from {@link normalizeAndThrowError} on any
+   *   provider failure — the underlying SDK/HTTP error is never propagated
+   *   directly, so callers only need to handle this one error shape (with a
+   *   `.code` — e.g. `RATE_LIMIT_EXCEEDED`, `MODEL_NOT_ALLOWED` — and `.provider`
+   *   property attached).
+   */
   async generateText(request: TextGenerationRequest): Promise<TextGenerationResult> {
     const selectedProviderName = request.aiConfig?.provider || 'gemini';
     const provider = this.getProvider(selectedProviderName);
@@ -40,6 +64,19 @@ export class AiOrchestrator {
     }
   }
 
+  /**
+   * Generates JSON-structured output (used for the editorial plan and the
+   * per-unit / reduce-stage review reports).
+   *
+   * @param request - Same as {@link generateText}, plus an optional `validator`
+   *   the provider runs against the parsed JSON before returning it.
+   * @returns `data` (parsed and, if `request.validator` was supplied,
+   *   validator-approved JSON) alongside the same result metadata as
+   *   {@link generateText}.
+   * @throws A redacted `Error` (see {@link generateText}) — additionally, this
+   *   is where a model returning malformed JSON, or JSON that fails
+   *   `request.validator`, surfaces as `INVALID_SCHEMA_RESPONSE`.
+   */
   async generateStructured<T>(
     request: StructuredRequest<T>
   ): Promise<{ data: T; result: TextGenerationResult }> {
@@ -53,6 +90,24 @@ export class AiOrchestrator {
     }
   }
 
+  /**
+   * Generates a cover background image.
+   *
+   * BUSINESS RULE: hardcoded to the `'gemini'` provider regardless of
+   * `request.aiConfig.provider` — OpenCode has no image-generation capability
+   * wired up ({@link OpenCodeProvider} does not implement `generateImage`), so
+   * routing here is not configurable per-request the way text generation is.
+   *
+   * @param request - Image prompt plus cover metadata (title/author/etc, used by
+   *   some callers for prompt context, not by this method directly).
+   * @returns The generated image as a data URI, or throws (see below) — callers
+   *   in `server.ts` catch this and fall back to the vector SVG cover compositor,
+   *   so a thrown error here is an expected, handled path, not a hard failure of
+   *   cover generation as a whole.
+   * @throws A redacted `Error` (see {@link generateText}) if Gemini's image API
+   *   fails, or a plain `Error` if somehow invoked when the `'gemini'` provider
+   *   entry lacked `generateImage` (defensive; not currently reachable).
+   */
   async generateImage(request: ImageGenerationRequest): Promise<ImageResult> {
     const provider = this.getProvider('gemini'); // Gemini Imagen provider for covers
 
@@ -84,6 +139,29 @@ export class AiOrchestrator {
     return results;
   }
 
+  /**
+   * Redacts and re-throws a provider error with a stable `.code` classification.
+   *
+   * The `never` return type is load-bearing, not decorative: every caller in
+   * this class invokes it as the sole statement in a `catch` block with no
+   * `return`/`throw` after it (e.g. `catch (err) { this.normalizeAndThrowError(...) }`
+   * as the last line of an `async` method). TypeScript accepts those methods as
+   * satisfying their `Promise<T>` return type only because it can see this
+   * function never returns normally. If you ever change this to sometimes
+   * `return` instead of always throwing, every call site becomes a "not all code
+   * paths return a value" compile error — that is the safety net working, not a
+   * bug to work around.
+   *
+   * Redaction covers Gemini API key patterns (`AIzaSy...`) and `Bearer <token>`
+   * headers; classification is substring-matching on the (already redacted)
+   * message against known phrases from `security.ts` / `catalog.ts` / the
+   * provider HTTP clients — it is a best-effort taxonomy for clean API
+   * responses, not a guarantee every error lands in the "right" bucket.
+   *
+   * @param err - The raw error caught from a provider call.
+   * @param providerName - Attached to the thrown error as `.provider`.
+   * @throws Always. Never returns.
+   */
   private normalizeAndThrowError(err: any, providerName: string): never {
     const rawMsg = String(err?.message || err || 'Erro interno no serviço de IA.');
 

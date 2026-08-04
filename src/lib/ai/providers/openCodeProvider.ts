@@ -30,8 +30,20 @@ function redactApiKey(text: string, apiKey: string): string {
 }
 
 /**
- * Resolves the OpenCode credentials.
- * Supports comma, semicolon, space, or newline-separated API keys for rotation/failover.
+ * Resolves the OpenCode credential pool for key rotation / failover.
+ *
+ * Precedence: a client-supplied key takes the ENTIRE `clientKey` string (client
+ * config is not multi-key aware) over `process.env.OPENCODE_API_KEY` — it is not
+ * merged with the env value. Only when `clientKey` is empty does the function
+ * fall back to the server env var, which MAY itself contain multiple keys
+ * separated by whitespace, commas, or semicolons (any mix); each is trimmed and
+ * empty entries dropped.
+ *
+ * @param clientKey - `aiConfig.opencodeApiKey` from the request, if the caller
+ *   supplied one.
+ * @returns Zero or more non-empty key strings, in the order they appeared in the
+ *   source string. An empty array means "not configured" — callers must check
+ *   `.length === 0` and throw before attempting any request.
  */
 function resolveApiKeys(clientKey?: string): string[] {
   const fromClient = (clientKey || '').trim();
@@ -98,9 +110,43 @@ function resolveCapability(modelId: string) {
   );
 }
 
+/**
+ * {@link AiProvider} implementation for the OpenCode GO gateway
+ * (`OPENCODE_DEFAULT_BASE_URL`, an OpenAI-chat-completions-compatible API).
+ *
+ * Not meant to be used directly by application code — go through
+ * {@link AiOrchestrator} (`orchestrator.ts`), which selects this provider based
+ * on `request.aiConfig.provider === 'opencode'` and applies the same error
+ * redaction to whatever this class throws.
+ */
 export class OpenCodeProvider implements AiProvider {
   public name = 'opencode';
 
+  /**
+   * Generates free-form text.
+   *
+   * Key rotation: on each retry attempt (see `executeWithRetry`'s `maxAttempts`,
+   * raised here to `Math.max(3, apiKeys.length)` so every configured key gets at
+   * least one attempt across a single logical call), the NEXT key in
+   * `apiKeys` is used, round-robin, via a MODULE-LEVEL `globalKeyIndex` shared
+   * across all in-flight calls and all `OpenCodeProvider` instances in this
+   * process. Concurrent calls interleave their key usage rather than each
+   * starting from key 0 — this is intentional (it's what makes "rotation"
+   * actually distribute load across keys under concurrency) but means key
+   * selection for any single call is not deterministic/reproducible if other
+   * calls are in flight at the same time.
+   *
+   * @param request - Prompt, task type, and optional per-call overrides
+   *   (`aiConfig.opencodeApiKey`, `.opencodeBaseUrl`, `.opencodeModel`).
+   * @returns Provider result with estimated token counts (≈4 chars/token, not a
+   *   real tokenizer) and cost.
+   * @throws If no API key is resolved (see {@link resolveApiKeys}), if
+   *   `opencodeBaseUrl` fails the SSRF check ({@link validateProviderBaseUrl}),
+   *   if the requested model fails validation and is not in
+   *   `OPENCODE_EXTRA_MODELS` (see {@link resolveOpenCodeModel} — this is a loud
+   *   failure by design, not a silent fallback to the default model), or if the
+   *   HTTP call itself fails after exhausting all retry attempts.
+   */
   async generateText(request: TextGenerationRequest): Promise<TextGenerationResult> {
     const apiKeys = resolveApiKeys(request.aiConfig?.opencodeApiKey);
     if (apiKeys.length === 0) {
@@ -186,6 +232,16 @@ export class OpenCodeProvider implements AiProvider {
     };
   }
 
+  /**
+   * Generates JSON-structured output. Same key rotation, model resolution, SSRF
+   * checking, and throw conditions as {@link generateText} — see that method's
+   * doc for the full contract. Differs only in requesting
+   * `response_format: { type: 'json_object' }` from the gateway, parsing the
+   * result as JSON, and running `request.validator` against it if supplied.
+   *
+   * @throws Additionally throws if the response is not valid JSON, or if
+   *   `request.validator` rejects the parsed object.
+   */
   async generateStructured<T>(
     request: StructuredRequest<T>
   ): Promise<{ data: T; result: TextGenerationResult }> {

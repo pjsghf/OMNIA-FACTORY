@@ -16,6 +16,52 @@ export interface GenerationProgressCallback {
   }): void;
 }
 
+/**
+ * Generates one chapter's full text by writing it in sequential blocks (see
+ * {@link buildChapterSectionPlan} for how a chapter is split — typically 2-4
+ * blocks of 700-1200 words each), then folds the finished chapter into the
+ * running {@link BookBibleMemory}.
+ *
+ * CONTINUITY MODEL (the reason this function exists rather than one big prompt):
+ * three layers hand context forward so blocks and chapters do not repeat
+ * themselves or contradict each other:
+ *   1. Within THIS chapter: each block after the first receives the raw tail of
+ *      the immediately preceding block's text (`precedingBlockText`), so it can
+ *      pick the thread back up instead of re-explaining what was just written.
+ *   2. Across PAST chapters, once memory exists: `memory.resumosCapitulos` (the
+ *      BookBible) is the authoritative summary of every chapter written so far.
+ *   3. Across PAST chapters, before memory exists: `previousSummaries` (caller-
+ *      supplied chapter digests) is used ONLY as a fallback while
+ *      `memory.resumosCapitulos` is still empty — see `promptBuilder.ts`'s
+ *      `buildWriterSectionBlockPrompt`. This matters for a project restored
+ *      from an old backup predating the BookBible memory feature.
+ *
+ * PER-BLOCK RETRY: each block gets up to 3 generation attempts if
+ * {@link validateChapterContent} rejects the output (too short, truncated,
+ * wrong language). On the 3rd attempt the result is accepted regardless of
+ * validation — this function never throws for a "bad" block, it always returns
+ * *something* for every block position. Validation quality is only visible to
+ * the caller via `console.warn` logs, not the return value.
+ *
+ * @param metadata - Book-level config (language, style, tone, word targets).
+ * @param plan - The full editorial plan, if available (used for cross-chapter
+ *   concept references in the prompt); `chapterPlan` alone is sufficient to
+ *   generate this one chapter.
+ * @param chapterPlan - This specific chapter's plan entry (number, title,
+ *   topics, target word count).
+ * @param memory - The BookBible memory accumulated from prior chapters.
+ * @param previousSummaries - Fallback chapter digests; see layer 3 above.
+ * @param aiConfig - Provider/model selection, forwarded to every block's
+ *   generation call unchanged.
+ * @param onProgress - Optional callback invoked before each block starts, with
+ *   the concatenation of already-completed blocks as `partialContent` (for a
+ *   live-preview UI; the blocks after `partialContent` are not yet written).
+ * @returns `fullChapterText` (all blocks joined with a blank line), `wordCount`,
+ *   `updatedMemory` (memory with this chapter's entry added/replaced — the
+ *   caller is responsible for persisting this back onto the project), and
+ *   `completedBlocks` (always equals the planned block count — see the retry
+ *   note above, this is not a count of *successful* blocks).
+ */
 export async function generateChapterInBlocks({
   metadata,
   plan,

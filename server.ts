@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import puppeteer from 'puppeteer';
 import { getStylePrompt, getTonePrompt } from './src/data/promptsAndOptions';
 import { buildPrintableBookHtml } from './src/lib/pdf/printTemplate';
+import { escapeHtml } from './src/lib/pdf/coverRenderer';
 import { ensureNodeJsdom } from './src/lib/pdf/markdownRenderer';
 import { PdfExportSettings } from './src/lib/pdf/types';
 import { getPageMetrics } from './src/lib/pdf/pageMetrics';
@@ -1083,12 +1084,7 @@ app.post('/api/export/pdf', largePayloadJson, async (req, res) => {
 
     const isA5 = exportSettings.paperSize === 'A5';
     const metrics = getPageMetrics(exportSettings.paperSize);
-    const rawTitle = sanitizedProject.metadata.titulo || '';
-    const safeTitleHeader = rawTitle
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+    const safeTitleHeader = escapeHtml(sanitizedProject.metadata.titulo || '');
 
     const pdfBuffer = await page.pdf({
       printBackground: true,
