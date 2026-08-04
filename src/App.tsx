@@ -22,6 +22,7 @@ import { LogConsoleModal } from './components/LogConsoleModal';
 import { AutonomousPipelineRunner, TelemetryState } from './lib/pipeline/autonomousPipeline';
 import { AutonomousPipelineModal } from './components/AutonomousPipelineModal';
 import { Sidebar } from './components/Sidebar';
+import { SidebarDrawer } from './components/SidebarDrawer';
 import { StudioStage } from './components/StudioStage';
 import {
   saveProjectDB,
@@ -1247,6 +1248,14 @@ export default function App() {
             setAiConfig(updated);
             addToast('success', 'Configuração Salva', 'Provedores de IA atualizados.');
           }}
+        />
+
+        <SidebarDrawer
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+          onOpenProjects={() => setIsProjectModalOpen(true)}
+          onOpenSettings={() => setIsAiSettingsOpen(true)}
+          onOpenLogs={() => setIsLogConsoleOpen(true)}
         />
 
         {/* Footer */}
