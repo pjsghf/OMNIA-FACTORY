@@ -26,6 +26,7 @@ import { renderCompositeCoverSvg, svgToDataUri } from './src/lib/cover/coverCanv
 import { CoverBrief, calculateSpineWidthMm } from './src/lib/cover/coverBrief';
 
 import { validateAndLoadEnv } from './src/lib/config/envValidator';
+import { validateProviderBaseUrl } from './src/lib/ai/security';
 import { createSecurityHeadersMiddleware } from './src/lib/security/headersMiddleware';
 import { globalApiRateLimiter, editorialAiRateLimiter } from './src/lib/security/rateLimiter';
 import { createApiAuthMiddleware } from './src/lib/security/apiKeyAuth';
@@ -969,30 +970,16 @@ let activePdfExports = 0;
 function validateImageSource(urlStr?: string): string | undefined {
   if (!urlStr || typeof urlStr !== 'string') return undefined;
   if (urlStr.startsWith('data:image/')) return urlStr;
-  // Note: blob: URLs are browser-memory references unusable by server-side Puppeteer
   if (urlStr.startsWith('blob:')) return undefined;
 
   try {
     const parsed = new URL(urlStr);
     if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return undefined;
-    const hostname = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '');
-    if (
-      hostname === 'localhost' ||
-      hostname === '127.0.0.1' ||
-      hostname === '0.0.0.0' ||
-      hostname === '::1' ||
-      hostname === '::' ||
-      hostname.startsWith('10.') ||
-      hostname.startsWith('192.168.') ||
-      hostname.startsWith('169.254.') ||
-      hostname.startsWith('fc') ||
-      hostname.startsWith('fd') ||
-      hostname.startsWith('fe80') ||
-      /^172\.(1[6-9]|2[0-9]|3[01])\./.test(hostname)
-    ) {
-      return undefined;
-    }
-    return parsed.toString();
+
+    // Standardize protocol to https for validateProviderBaseUrl check, or evaluate host
+    const testUrl = `https://${parsed.host}${parsed.pathname}`;
+    const check = validateProviderBaseUrl(testUrl);
+    return check.safe ? parsed.toString() : undefined;
   } catch {
     return undefined;
   }

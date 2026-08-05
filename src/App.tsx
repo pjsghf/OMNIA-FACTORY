@@ -1084,7 +1084,40 @@ export default function App() {
               }}
               onGenerateBatchChapters={handleGenerateBatchChapters}
               onRunAiAssist={async (text, action, chapterIndex) => {
-                setAiAssistState({ text, action, chapterIndex });
+                if (chapterIndex === undefined || !activeProject) return;
+                addToast('info', 'Assistente IA', `Processando assistente (${action})...`);
+                try {
+                  const res = await fetch('/api/editorial/generate-section', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      metadata: activeProject.metadata,
+                      plan: activeProject.plan,
+                      sectionType: 'introducao',
+                      customPrompt: `Ação de IA (${action}): ${text}`,
+                      aiConfig,
+                    }),
+                  });
+                  const data = await res.json();
+                  if (data.success && data.content) {
+                    updateActiveProject((p) => {
+                      const chapters = [...p.chapters];
+                      const target = chapters[chapterIndex];
+                      if (!target) return p;
+                      const newContent = target.content ? `${target.content}\n\n${data.content}` : data.content;
+                      chapters[chapterIndex] = {
+                        ...target,
+                        content: newContent,
+                        wordCount: newContent.trim().split(/\s+/).filter(Boolean).length,
+                        status: 'edited',
+                      };
+                      return { ...p, chapters };
+                    });
+                    addToast('success', 'Assistente IA Concluído', 'Conteúdo atualizado no editor.');
+                  }
+                } catch (err: any) {
+                  addToast('error', 'Falha no Assistente', err?.message || 'Erro ao processar IA.');
+                }
               }}
               isGeneratingIndex={generatingIndex}
               isGeneratingBatch={isGeneratingBatch}
@@ -1113,49 +1146,6 @@ export default function App() {
         {/* Reader Modal */}
         {isReaderOpen && (
           <BookReaderModal project={activeProject} onClose={() => setIsReaderOpen(false)} />
-        )}
-
-        {/* AI Text Assist Modal */}
-        {aiAssistState && (
-          <AiTextAssistModal
-            initialText={aiAssistState.text}
-            initialAction={aiAssistState.action}
-            language={activeProject.metadata.idioma}
-            aiConfig={aiConfig}
-            onApply={(replacementText) => {
-              if (aiAssistState.chapterIndex !== undefined && activeProject) {
-                const idx = aiAssistState.chapterIndex;
-                updateActiveProject((p) => {
-                  const chapters = [...p.chapters];
-                  const targetCap = chapters[idx];
-                  if (!targetCap) return p;
-
-                  let updatedContent = targetCap.content;
-                  if (updatedContent.includes(aiAssistState.text)) {
-                    updatedContent = updatedContent.replace(aiAssistState.text, replacementText);
-                  } else {
-                    updatedContent = replacementText;
-                  }
-
-                  const updatedCap: ChapterContent = {
-                    ...targetCap,
-                    content: updatedContent,
-                    wordCount: updatedContent.trim().split(/\s+/).filter(Boolean).length,
-                    status: 'edited',
-                  };
-                  chapters[idx] = updatedCap;
-
-                  return {
-                    ...p,
-                    chapters,
-                  };
-                });
-              }
-              setAiAssistState(null);
-              addToast('success', 'Texto Substituído', 'A sugestão da IA foi aplicada no editor.');
-            }}
-            onClose={() => setAiAssistState(null)}
-          />
         )}
 
         {/* Project Library Switcher Modal */}

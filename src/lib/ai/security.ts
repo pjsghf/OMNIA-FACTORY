@@ -39,12 +39,23 @@ function normalizeHostname(rawHostname: string): { hostname: string; isIpv6Liter
  */
 function isPrivateIPv6(ip: string): boolean {
   // Strip a zone index ("fe80::1%eth0") before classifying.
-  const addr = ip.split('%')[0] || '';
-  if (addr === '::1' || addr === '::') return true;
+  const addr = (ip.split('%')[0] || '').toLowerCase();
+  if (addr === '::1' || addr === '::' || addr === '0:0:0:0:0:0:0:1' || addr === '0:0:0:0:0:0:0:0') return true;
 
-  // IPv4-mapped / IPv4-compatible: defer to the IPv4 classifier.
-  const mapped = addr.match(/^::(?:ffff:)?(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/);
-  if (mapped && mapped[1]) return isPrivateIPv4(mapped[1]);
+  // IPv4-mapped in dotted-decimal notation: ::ffff:127.0.0.1 or 0:0:0:0:0:ffff:127.0.0.1
+  const mappedDotted = addr.match(/^(?:[0:]*):?(?:ffff:)?(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/i);
+  if (mappedDotted && mappedDotted[1]) {
+    return isPrivateIPv4(mappedDotted[1]);
+  }
+
+  // IPv4-mapped in hex notation: ::ffff:7f00:1 or 0:0:0:0:0:ffff:7f00:1
+  const mappedHex = addr.match(/^(?:[0:]*):?ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i);
+  if (mappedHex && mappedHex[1] && mappedHex[2]) {
+    const hi = parseInt(mappedHex[1], 16);
+    const lo = parseInt(mappedHex[2], 16);
+    const ipv4 = `${hi >> 8}.${hi & 0xff}.${lo >> 8}.${lo & 0xff}`;
+    return isPrivateIPv4(ipv4);
+  }
 
   // Expand the leading group enough to test the well-known private prefixes.
   const firstGroup = addr.split(':')[0] || '';

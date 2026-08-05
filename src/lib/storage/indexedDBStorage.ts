@@ -3,6 +3,7 @@ import { BookProject } from '../../types';
 const DB_NAME = 'OmniaFactoryDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'projects';
+const LOCAL_STORAGE_FALLBACK_KEY = 'scriptor_projects_v2';
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -46,14 +47,14 @@ export async function saveProjectDB(project: BookProject): Promise<void> {
       err
     );
     try {
-      const stored = JSON.parse(localStorage.getItem('omnia_factory_projects_v2') || '[]');
+      const stored = JSON.parse(localStorage.getItem(LOCAL_STORAGE_FALLBACK_KEY) || '[]');
       const index = stored.findIndex((p: any) => p.id === project.id);
       if (index >= 0) {
         stored[index] = project;
       } else {
         stored.unshift(project);
       }
-      localStorage.setItem('omnia_factory_projects_v2', JSON.stringify(stored));
+      localStorage.setItem(LOCAL_STORAGE_FALLBACK_KEY, JSON.stringify(stored));
     } catch (e) {
       console.error('[LocalStorage Fallback Error]:', e);
     }
@@ -94,7 +95,7 @@ export async function getAllProjectsDB(): Promise<BookProject[]> {
       err
     );
     try {
-      return JSON.parse(localStorage.getItem('omnia_factory_projects_v2') || '[]');
+      return JSON.parse(localStorage.getItem(LOCAL_STORAGE_FALLBACK_KEY) || '[]');
     } catch {
       return [];
     }
@@ -119,7 +120,7 @@ export async function deleteProjectDB(id: string): Promise<void> {
 
 export async function migrateLocalStorageToIndexedDB(): Promise<number> {
   try {
-    const raw = localStorage.getItem('scriptor_projects_v2');
+    const raw = localStorage.getItem(LOCAL_STORAGE_FALLBACK_KEY);
     if (!raw) return 0;
 
     const legacyProjects: BookProject[] = JSON.parse(raw);
